@@ -1,0 +1,22 @@
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.iml
+
+# Build outputs
+/backend/target/
+/dashboard/.next/
+/dashboard/out/
+/mobile/app/build/
+/mobile/build/
+
+# Dependencies
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
