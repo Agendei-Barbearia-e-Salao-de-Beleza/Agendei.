@@ -121,11 +121,11 @@ export default function AppointmentsPage() {
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="btn-primary px-6 py-3"
+          className="btn-primary px-8 py-3"
         >
-          <Plus className="w-5 h-5" />
           Novo Agendamento
         </button>
+
 
       </div>
 

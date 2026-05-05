@@ -92,11 +92,11 @@ export default function ServicesPage() {
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="bg-amber-500 text-zinc-950 font-bold px-6 py-3 rounded-2xl flex items-center gap-2 hover:bg-amber-400 transition-all shadow-lg shadow-amber-500/10 active:scale-95"
+          className="btn-primary px-8 py-3"
         >
-          <Plus className="w-5 h-5" />
           Novo Serviço
         </button>
+
       </div>
 
       {/* Toolbar */}
