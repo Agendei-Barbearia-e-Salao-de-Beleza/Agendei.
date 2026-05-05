@@ -4,55 +4,49 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
-/* Variáveis de Tema - MODO ESCURO (Padrão) */
+/* Variáveis de Tema - MODO ESCURO (Premium Amber) */
 :root {
   --background: #09090b;
   --foreground: #fafafa;
-  --card: #18181b;
+  --card: #111113;
   --card-foreground: #fafafa;
-  --border: #27272a;
-  --accent: #f59e0b; /* Amber 500 */
+  --border: #202023;
+  --accent: #f59e0b; 
   --muted: #71717a;
   --sidebar: #09090b;
+  --shadow: 0 0 0 0 transparent;
 }
 
-/* Variáveis de Tema - MODO CLARO (Refinado) */
+/* Variáveis de Tema - MODO CLARO (Executive Slate & Indigo) */
 :root.light {
-  --background: #f8fafc; /* Slate 50 - Fundo Gelado */
-  --foreground: #0f172a; /* Slate 900 - Texto Profundo */
-  --card: #ffffff;      /* Branco Puro para os Cards */
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --card: #f8fafc;
   --card-foreground: #1e293b;
-  --border: #e2e8f0;    /* Slate 200 - Bordas Suaves */
-  --accent: #d97706;    /* Amber 600 */
-  --muted: #64748b;     /* Slate 500 */
-  --sidebar: #ffffff;
+  --border: #e2e8f0;
+  --accent: #4f46e5; /* Indigo para um ar mais limpo no claro */
+  --muted: #64748b;
+  --sidebar: #f1f5f9;
+  --shadow: 0 10px 15px -3px rgb(0 0 0 / 0.04), 0 4px 6px -4px rgb(0 0 0 / 0.04);
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Aplicando as variáveis em componentes globais */
+/* Componentes Globais */
 aside {
   background-color: var(--sidebar) !important;
   border-color: var(--border) !important;
 }
 
-main {
-  background-color: var(--background);
-}
-
 .bg-card {
   background-color: var(--card) !important;
   border: 1px solid var(--border) !important;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05); /* Sombra suave para o modo claro */
-}
-
-:root.light .bg-card {
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.04);
+  box-shadow: var(--shadow);
 }
 
 .text-title {
@@ -63,42 +57,45 @@ main {
   border-color: var(--border) !important;
 }
 
-/* Forçar cores de botões secundários no modo claro */
-:root.light .bg-zinc-900\/50, 
-:root.light .bg-zinc-900\/30,
-:root.light .bg-zinc-800 {
-  background-color: #f1f5f9 !important; /* Slate 100 */
-  border-color: #e2e8f0 !important;
-}
-
-:root.light .text-zinc-100, 
-:root.light .text-zinc-300 {
-  color: #1e293b !important;
-}
-
-:root.light .text-zinc-500 {
-  color: #64748b !important;
-}
-
-/* Cursor Pointer em tudo que é clicável */
-button, a, select, input[type="submit"], input[type="checkbox"], input[type="radio"] {
+/* Utilitários de Hover e Botões */
+button, a {
   cursor: pointer !important;
+  transition: all 0.2s ease;
 }
 
-/* Scrollbar adaptativa */
+button:active {
+  transform: scale(0.96);
+}
+
+/* Inputs Premium */
+input, select, textarea {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+input:focus {
+  border-color: var(--accent) !important;
+  ring: 2px var(--accent);
+  ring-opacity: 0.2;
+}
+
+/* Dropdowns e Modais */
+.dropdown-content {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+  border-radius: 12px;
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: var(--background);
 }
-
 ::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--muted);
 }
