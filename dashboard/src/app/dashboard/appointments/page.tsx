@@ -94,21 +94,34 @@ export default function AppointmentsPage() {
         return;
     }
 
-    const newApp: Appointment = {
-      id: Date.now(),
-      customer: formData.customer,
-      services: selectedServices,
-      date: "05 Mai 2026",
-      time: formData.time,
-      totalPrice: calculateTotal(),
-      status: "Confirmado"
-    };
+    if (editingApp) {
+      const updated = appointments.map(a => a.id === editingApp.id ? {
+        ...a,
+        customer: formData.customer,
+        services: selectedServices,
+        time: formData.time,
+        totalPrice: calculateTotal()
+      } : a);
+      setAppointments(updated);
+      toast.success("Agendamento atualizado!");
+    } else {
+      const newApp: Appointment = {
+        id: Date.now(),
+        customer: formData.customer,
+        services: selectedServices,
+        date: "05 Mai 2026",
+        time: formData.time,
+        totalPrice: calculateTotal(),
+        status: "Confirmado"
+      };
+      setAppointments([newApp, ...appointments]);
+      toast.success("Agendamento criado!");
+    }
 
-    setAppointments([newApp, ...appointments]);
     setIsModalOpen(false);
+    setEditingApp(null);
     setSelectedServices([]);
     setFormData({ customer: "", time: "10:00" });
-    toast.success("Agendamento multi-serviço criado!");
   };
 
   return (
@@ -209,7 +222,7 @@ export default function AppointmentsPage() {
 
                     {isDropdownOpen === app.id && (
                         <div className="absolute right-6 top-12 z-50 w-40 bg-card border border-subtle rounded-xl shadow-xl p-1">
-                            <DropdownItem icon={<Edit3 size={14}/>} label="Editar" />
+                            <DropdownItem icon={<Edit3 size={14}/>} label="Editar" onClick={() => openEditModal(app)} />
                             <DropdownItem icon={<Check size={14}/>} label="Concluir" color="text-emerald-500" />
                             <div className="h-px bg-subtle my-1" />
                             <DropdownItem 
@@ -222,6 +235,7 @@ export default function AppointmentsPage() {
                                 }}
                             />
                         </div>
+
                     )}
                   </td>
                 </motion.tr>

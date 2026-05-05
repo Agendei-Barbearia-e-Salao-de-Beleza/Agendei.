@@ -1,156 +1,159 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { 
-    Users, 
-    Calendar, 
-    DollarSign, 
-    TrendingUp,
-    MoreHorizontal,
-    Clock,
-    CheckCircle2,
-    AlertCircle
+  Users, Calendar, DollarSign, Clock, 
+  MoreHorizontal, TrendingUp, AlertCircle, ChevronRight
 } from "lucide-react";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-const stats = [
-  { label: "Clientes Totais", value: "1,284", icon: Users, color: "text-blue-500", bg: "bg-blue-500/10", trend: "+12%" },
-  { label: "Agendamentos/Mês", value: "456", icon: Calendar, iconColor: "text-amber-500", bg: "bg-amber-500/10", trend: "+8%" },
-  { label: "Receita Mensal", value: "R$ 12.450", icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-500/10", trend: "+18%" },
-  { label: "Taxa de Retorno", value: "84%", icon: TrendingUp, color: "text-purple-500", bg: "bg-purple-500/10", trend: "+5%" },
-];
-
-const todayAppointments = [
-  { id: 1, customer: "Carlos Alberto", service: "Corte Degradê + Barba", time: "14:00", status: "Confirmado", avatar: "CA" },
-  { id: 2, customer: "Juliana Silva", service: "Coloração Completa", time: "15:30", status: "Em Espera", avatar: "JS" },
-  { id: 3, customer: "Roberto Mendes", service: "Corte Masculino", time: "16:15", status: "Concluído", avatar: "RM" },
-  { id: 4, customer: "Amanda Ferreira", service: "Hidratação Profunda", time: "17:00", status: "Confirmado", avatar: "AF" },
-];
+import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { toast } from "sonner";
 
 export default function DashboardOverview() {
+  const [isEditingMeta, setIsEditingMeta] = useState(false);
+
+  const todayAppointments = [
+    { id: 1, customer: "Carlos Alberto", service: "Corte Degradê + Barba", time: "14:00", avatar: "CA", status: "CONFIRMADO" },
+    { id: 2, customer: "Juliana Silva", service: "Coloração Completa", time: "15:30", avatar: "JS", status: "EM ESPERA" },
+    { id: 3, customer: "Roberto Mendes", service: "Corte Masculino", time: "16:15", avatar: "RM", status: "CONCLUÍDO" },
+    { id: 4, customer: "Amanda Ferreira", service: "Hidratação Profunda", time: "17:00", avatar: "AF", status: "CONFIRMADO" },
+  ];
+
+  const handleQuickAction = (action: string) => {
+    toast.info(`Abrindo: ${action}`);
+    // Aqui no futuro abriremos o modal específico
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Welcome Header */}
       <div className="flex flex-col gap-1">
-        <h2 className="text-3xl font-bold tracking-tight text-title">Olá, Matheus Lucindo! 👋</h2>
-        <p className="text-zinc-500">Veja o que está acontecendo no seu negócio hoje.</p>
+        <h2 className="text-3xl font-black tracking-tight text-title">Olá, Matheus Lucindo! 👋</h2>
+        <p className="text-zinc-500 font-medium">Veja o que temos para hoje na sua barbearia.</p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="bg-card border border-subtle p-6 rounded-3xl"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-2.5 rounded-2xl ${stat.bg}`}>
-                <stat.icon className={`w-5 h-5 ${stat.iconColor || stat.color}`} />
-              </div>
-              <span className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-full">
-                {stat.trend}
-              </span>
-            </div>
-            <div className="space-y-1">
-              <p className="text-zinc-500 text-sm font-medium">{stat.label}</p>
-              <p className="text-2xl font-bold text-title">{stat.value}</p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Content Grid */}
+      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Feed: Today's Appointments */}
-        <div className="lg:col-span-2 space-y-4">
+        
+        {/* Left: Agenda de Hoje */}
+        <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold text-title">Agenda de Hoje</h3>
-            <button className="text-sm font-bold text-amber-500 hover:underline">Ver tudo</button>
+            <h3 className="text-xl font-extrabold text-title">Agenda de Hoje</h3>
+            <Link href="/dashboard/appointments" className="text-sm font-bold text-accent hover:underline">
+              Ver tudo
+            </Link>
           </div>
-          
-          <div className="bg-card border border-subtle rounded-3xl overflow-hidden">
-            <div className="divide-y border-subtle">
-              {todayAppointments.map((app) => (
-                <div key={app.id} className="p-4 flex items-center justify-between hover:bg-zinc-500/5 transition-colors group">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-500/10 flex items-center justify-center font-bold text-zinc-500 group-hover:bg-amber-500 group-hover:text-zinc-950 transition-colors">
-                      {app.avatar}
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-title">{app.customer}</h4>
-                      <p className="text-xs text-zinc-500">{app.service}</p>
-                    </div>
+
+          <div className="bg-card border border-subtle rounded-[32px] overflow-hidden divide-y divide-subtle">
+            {todayAppointments.map((app) => (
+              <motion.div 
+                key={app.id}
+                whileHover={{ backgroundColor: "rgba(255,255,255,0.02)" }}
+                className="p-5 flex items-center justify-between group cursor-pointer"
+                onClick={() => toast.info(`Editando agendamento de ${app.customer}`)}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-zinc-500/10 flex items-center justify-center font-black text-zinc-500 group-hover:bg-accent group-hover:text-zinc-950 transition-all">
+                    {app.avatar}
                   </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-right">
-                      <div className="flex items-center gap-1.5 text-zinc-500">
-                        <Clock className="w-3.5 h-3.5 text-amber-500" />
-                        <span className="text-sm font-bold">{app.time}</span>
-                      </div>
-                      <span className={cn(
-                        "text-[10px] font-bold uppercase tracking-widest",
-                        app.status === "Confirmado" && "text-blue-500",
-                        app.status === "Em Espera" && "text-amber-500",
-                        app.status === "Concluído" && "text-emerald-500"
-                      )}>
-                        {app.status}
-                      </span>
-                    </div>
-                    <button className="p-2 hover:bg-zinc-500/10 rounded-lg text-zinc-600">
-                      <MoreHorizontal className="w-5 h-5" />
-                    </button>
+                  <div>
+                    <h4 className="text-sm font-black text-title">{app.customer}</h4>
+                    <p className="text-xs text-zinc-500 font-medium">{app.service}</p>
                   </div>
                 </div>
-              ))}
-            </div>
+                
+                <div className="flex items-center gap-8">
+                  <div className="text-right space-y-1">
+                    <div className="flex items-center gap-1.5 text-zinc-500 font-bold text-sm">
+                      <Clock className="w-3.5 h-3.5 text-accent" />
+                      {app.time}
+                    </div>
+                    <span className={cn(
+                      "text-[10px] font-black tracking-widest",
+                      app.status === "CONFIRMADO" && "text-blue-500",
+                      app.status === "EM ESPERA" && "text-amber-500",
+                      app.status === "CONCLUÍDO" && "text-emerald-500"
+                    )}>
+                      {app.status}
+                    </span>
+                  </div>
+                  <button className="p-2 hover:bg-zinc-500/10 rounded-xl text-zinc-600 transition-colors">
+                    <MoreHorizontal className="w-5 h-5" />
+                  </button>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
 
-        {/* Sidebar Cards: Stats/Alerts */}
+        {/* Right: Sidebar Stats */}
         <div className="space-y-6">
-          <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-6 rounded-3xl shadow-xl shadow-amber-500/10">
-            <h3 className="text-zinc-950 font-extrabold text-lg mb-2">Meta Semanal</h3>
-            <div className="flex items-end justify-between mb-4">
-              <p className="text-zinc-950 font-bold text-3xl">72%</p>
-              <p className="text-zinc-800 text-sm font-bold">R$ 8.640 / R$ 12k</p>
+          {/* Meta Semanal Card */}
+          <motion.div 
+            whileHover={{ scale: 1.02 }}
+            className="bg-accent p-8 rounded-[40px] shadow-2xl shadow-accent/10 cursor-pointer group"
+            onClick={() => setIsEditingMeta(true)}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-zinc-950 font-black text-xl">Meta Semanal</h3>
+              <TrendingUp className="text-zinc-950/40 w-6 h-6" />
             </div>
-            <div className="w-full bg-zinc-950/20 h-2.5 rounded-full overflow-hidden">
-              <div className="bg-zinc-950 h-full w-[72%]" />
+            <div className="flex items-baseline justify-between mb-4">
+              <p className="text-zinc-950 font-black text-5xl tracking-tighter">72%</p>
+              <p className="text-zinc-950/60 text-xs font-black uppercase tracking-widest">R$ 8.640 / R$ 12k</p>
             </div>
-          </div>
+            <div className="w-full bg-zinc-950/10 h-3 rounded-full overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: "72%" }}
+                className="bg-zinc-950 h-full" 
+              />
+            </div>
+          </motion.div>
 
-          <div className="bg-card border border-subtle p-6 rounded-3xl">
-            <h3 className="text-title font-bold mb-4">Ações Rápidas</h3>
+          {/* Ações Rápidas Section */}
+          <div className="bg-card border border-subtle p-8 rounded-[40px] space-y-6">
+            <h3 className="text-title font-black text-lg">Ações Rápidas</h3>
             <div className="space-y-3">
-              <QuickActionButton icon={<Calendar />} label="Novo Agendamento" color="bg-amber-500" />
-              <QuickActionButton icon={<Users />} label="Cadastrar Cliente" color="bg-blue-500" />
-              <QuickActionButton icon={<DollarSign />} label="Lançar Despesa" color="bg-red-500" />
+              <QuickActionButton 
+                icon={<Calendar />} 
+                label="Novo Agendamento" 
+                onClick={() => handleQuickAction("Novo Agendamento")}
+              />
+              <QuickActionButton 
+                icon={<Users />} 
+                label="Cadastrar Cliente" 
+                onClick={() => handleQuickAction("Cadastrar Cliente")}
+              />
+              <QuickActionButton 
+                icon={<DollarSign />} 
+                label="Lançar Despesa" 
+                onClick={() => handleQuickAction("Lançar Despesa")}
+              />
             </div>
           </div>
         </div>
       </div>
-
     </div>
   );
 }
 
-function QuickActionButton({ icon, label, color }: { icon: any; label: string; color: string }) {
+function QuickActionButton({ icon, label, onClick }: { icon: any; label: string; onClick: () => void }) {
   return (
-    <button className="w-full flex items-center gap-3 p-3 rounded-2xl bg-zinc-500/5 hover:bg-accent/10 border border-subtle hover:border-accent transition-all text-left group">
-      <div className={`p-2 rounded-xl bg-accent text-zinc-950 shadow-lg shadow-accent/20 group-hover:scale-110 transition-transform`}>
-        {React.cloneElement(icon, { size: 16 })}
+    <button 
+      onClick={onClick}
+      className="w-full flex items-center justify-between p-5 rounded-3xl bg-zinc-500/5 border border-subtle hover:border-accent/30 hover:bg-zinc-500/10 transition-all group"
+    >
+      <div className="flex items-center gap-4">
+        <div className="text-zinc-500 group-hover:text-accent transition-colors">
+          {React.cloneElement(icon, { size: 18 })}
+        </div>
+        <span className="text-sm font-bold text-zinc-500 group-hover:text-title transition-colors">
+          {label}
+        </span>
       </div>
-      <span className="text-sm font-bold text-zinc-500 group-hover:text-title">{label}</span>
+      <ChevronRight className="w-4 h-4 text-zinc-700 group-hover:text-accent transition-all group-hover:translate-x-1" />
     </button>
   );
 }
-
