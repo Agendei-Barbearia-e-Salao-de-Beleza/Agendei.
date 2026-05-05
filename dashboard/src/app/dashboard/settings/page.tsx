@@ -94,7 +94,7 @@ function SettingsTab({ icon, label, id, active, onClick }: any) {
                     : "text-zinc-500 hover:bg-zinc-900/50 hover:text-zinc-300 border border-transparent"
             }`}
         >
-            {React.cloneElement(icon, { size: 20 })}
+            {React.cloneElement(icon as React.ReactElement<any>, { size: 20 })}
             <span className="font-bold text-sm">{label}</span>
         </button>
     );

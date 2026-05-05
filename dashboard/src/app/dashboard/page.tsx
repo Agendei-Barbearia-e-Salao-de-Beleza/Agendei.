@@ -385,7 +385,7 @@ function QuickActionButton({
     >
       <div className="flex items-center gap-4">
         <div className="text-zinc-400 dark:text-zinc-500 group-hover:text-[#fd9602] transition-colors">
-          {React.cloneElement(icon as React.ReactElement, { size: 18 })}
+          {React.cloneElement(icon as React.ReactElement<any>, { size: 18 })}
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-950 dark:group-hover:text-white transition-colors">
