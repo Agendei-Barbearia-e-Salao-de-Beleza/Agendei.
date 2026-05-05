@@ -1,6 +1,6 @@
 # Agendei. 🪒💇‍♂️
 
-**Agendei.** é uma plataforma completa de agendamento e gestão para barbearias e salões de beleza, desenvolvida como projeto acadêmico com foco em elegância, performance e arquitetura moderna.
+**Agendei.** é uma plataforma completa de agendamento e gestão para barbearias e salões de beleza, desenvolvida como projeto acadêmico com foco em elegância, performance e simplicidade.
 
 ## 🚀 Tecnologias
 
@@ -12,7 +12,7 @@
 ### Backend
 - **Linguagem:** Java 21+
 - **Framework:** Spring Boot 3.x
-- **Arquitetura:** Clean Architecture (Domain-Driven Design principles)
+- **Arquitetura:** MVC (Model-View-Controller) - Simples e Eficiente
 - **Segurança:** Spring Security + JWT
 - **Documentação:** Swagger/OpenAPI
 

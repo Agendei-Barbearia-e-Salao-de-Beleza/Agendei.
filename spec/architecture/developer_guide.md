@@ -1,22 +1,26 @@
 # Developer Guide: Agendei. 🎓
 
-Este guia foi criado para ajudar a equipe a entender os padrões técnicos utilizados no projeto, facilitando o aprendizado de Java, Kotlin e TypeScript.
+Este guia foi criado para ajudar a equipe a entender os padrões técnicos utilizados no projeto, focando na simplicidade do padrão **MVC** para o backend.
 
 ---
 
 ## ☕ Backend (Java + Spring Boot)
 
-### Clean Architecture Simplificada
-Para não complicar o aprendizado, usaremos uma estrutura de 4 camadas principais:
+### Padrão MVC (Model-View-Controller)
+Para facilitar o desenvolvimento em grupo, usaremos o padrão MVC tradicional do Spring Boot:
 
-1.  **Domain (Entidades)**: Onde definimos o que é um "Agendamento" ou "Cliente".
-    *   *Exemplo*: `User.java`
-2.  **Application (Casos de Uso/Services)**: Onde fica a lógica de negócio.
-    *   *Exemplo*: "Para agendar, o horário deve estar vago."
-3.  **Infrastructure (Repositories)**: Onde salvamos os dados (PostgreSQL/MongoDB).
-4.  **Web (Controllers)**: Onde recebemos as requisições da internet.
-
-**Dica para iniciantes**: Pense no Controller como o "garçom" que anota o pedido, o Service como o "cozinheiro" que executa a lógica, e o Repository como a "despensa" onde os ingredientes (dados) estão guardados.
+1.  **Model (Entidades)**: Representam as tabelas do banco de dados.
+    *   *Pasta*: `com.agendei.api.model`
+    *   *Exemplo*: `User.java`, `Appointment.java`.
+2.  **Repository**: Interface que faz a ponte com o banco de dados (Select, Insert, etc.).
+    *   *Pasta*: `com.agendei.api.repository`
+    *   *Exemplo*: `UserRepository.java`.
+3.  **Service**: Onde fica a "regra de negócio" (Cálculos, validações de horário).
+    *   *Pasta*: `com.agendei.api.service`
+    *   *Exemplo*: `AppointmentService.java`.
+4.  **Controller**: Onde criamos os Endpoints que o App e o Dashboard vão chamar.
+    *   *Pasta*: `com.agendei.api.controller`
+    *   *Exemplo*: `AuthController.java`.
 
 ---
 
@@ -24,11 +28,9 @@ Para não complicar o aprendizado, usaremos uma estrutura de 4 camadas principai
 
 ### Padrão MVVM (Model-View-ViewModel)
 
-*   **View (Compose)**: Apenas código visual (botões, textos). Não deve ter lógica.
-*   **ViewModel**: Ponte entre os dados e a tela. Gerencia o "estado" (ex: "está carregando?").
-*   **Model**: Representação dos dados vindos da API.
-
-**Dica para iniciantes**: No Jetpack Compose, a tela "reage" ao estado. Se o estado mudar, a tela se redesenha sozinha.
+*   **View (Compose)**: Apenas código visual (botões, textos).
+*   **ViewModel**: Ponte entre os dados e a tela. Gerencia o "estado".
+*   **Model**: Classes de dados (Data Classes).
 
 ---
 
@@ -36,17 +38,17 @@ Para não complicar o aprendizado, usaremos uma estrutura de 4 camadas principai
 
 ### Componentização e Tipagem
 
-*   **TypeScript**: Usamos para evitar erros bobos. Se você disser que um preço é um `number`, o código não vai deixar você colocar um texto lá.
-*   **Hooks (useState, useEffect)**: Ferramentas do React para controlar dados e ações que acontecem na tela.
+*   **TypeScript**: Tipagem estrita para evitar erros de undefined.
+*   **Next.js (App Router)**: Sistema de pastas para rotas automáticas.
 
 ---
 
 ## 🛠 Boas Práticas Comuns
 
-1.  **Nomes em Inglês**: Classes e variáveis devem ser em inglês (padrão de mercado).
-2.  **Commits Pequenos**: Faça uma coisa de cada vez.
-3.  **Peça Ajuda**: Como líder técnico, o USER está aqui para guiar. Use as `specs` para discutir ideias antes de codar.
+1.  **KISS (Keep It Simple, Stupid)**: Não complique o código desnecessariamente.
+2.  **Nomes em Inglês**: Classes e variáveis devem ser em inglês.
+3.  **DRY (Don't Repeat Yourself)**: Evite código duplicado.
 
 ---
 
-*Vamos construir algo grande e aprender juntos! 🚀*
+*Vamos focar no simples que funciona! 🚀*

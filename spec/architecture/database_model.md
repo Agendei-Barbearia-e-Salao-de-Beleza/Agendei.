@@ -1,6 +1,6 @@
 # Database Model: Agendei.
 
-Este documento define a estrutura de dados inicial para o projeto Agendei. utilizando uma abordagem híbrida (PostgreSQL + MongoDB).
+Este documento define a estrutura de dados inicial para o projeto Agendei. utilizando uma abordagem híbrida (PostgreSQL + MongoDB). **Todas as tabelas e colunas estão em Português.**
 
 ## 🐘 PostgreSQL (Core & Relational)
 
@@ -8,64 +8,64 @@ O PostgreSQL será utilizado para dados que exigem integridade referencial e tra
 
 ### Entidades Principais
 
-#### 1. `users`
+#### 1. `usuarios`
 - `id`: UUID (PK)
-- `name`: VARCHAR(255)
+- `nome`: VARCHAR(255)
 - `email`: VARCHAR(255) (Unique)
-- `password_hash`: TEXT (Null if social login)
+- `senha_hash`: TEXT (Null if social login)
 - `social_id`: VARCHAR(255) // ID do Google para login social
-- `phone`: VARCHAR(20)
-- `gender`: ENUM ('MALE', 'FEMALE', 'OTHER')
-- `role`: ENUM ('ADMIN', 'CUSTOMER', 'BARBER')
+- `telefone`: VARCHAR(20)
+- `genero`: ENUM ('MASCULINO', 'FEMININO', 'OUTRO')
+- `perfil`: ENUM ('ADMIN', 'CLIENTE', 'BARBEIRO')
 - `firebase_token`: TEXT
-- `created_at`: TIMESTAMP
+- `criado_em`: TIMESTAMP
 
-#### 2. `establishments` (Salões/Barbearias)
+#### 2. `estabelecimentos` (Salões/Barbearias)
 - `id`: UUID (PK)
-- `owner_id`: UUID (FK -> users)
-- `name`: VARCHAR(255)
-- `type`: ENUM ('BARBERSHOP', 'SALON', 'UNISEX')
-- `specialties`: JSONB
-- `address`: TEXT
-- `phone`: VARCHAR(20)
-- `whatsapp_number`: VARCHAR(20) // Para comunicação direta via WA.ME
-- `rating`: DECIMAL(2,1)
-- `opening_hours`: JSONB
-- `created_at`: TIMESTAMP
+- `proprietario_id`: UUID (FK -> usuarios)
+- `nome`: VARCHAR(255)
+- `tipo`: ENUM ('BARBEARIA', 'SALAO', 'UNISSEX')
+- `especialidades`: JSONB
+- `endereco`: TEXT
+- `telefone`: VARCHAR(20)
+- `whatsapp`: VARCHAR(20)
+- `avaliacao`: DECIMAL(2,1)
+- `horario_funcionamento`: JSONB
+- `criado_em`: TIMESTAMP
 
-#### 3. `services`
+#### 3. `servicos`
 - `id`: UUID (PK)
-- `establishment_id`: UUID (FK -> establishments)
-- `name`: VARCHAR(255)
-- `description`: TEXT
-- `price`: DECIMAL(10,2)
-- `discount_price`: DECIMAL(10,2)
-- `duration_minutes`: INTEGER
+- `estabelecimento_id`: UUID (FK -> estabelecimentos)
+- `nome`: VARCHAR(255)
+- `descricao`: TEXT
+- `preco`: DECIMAL(10,2)
+- `preco_desconto`: DECIMAL(10,2)
+- `duracao_minutos`: INTEGER
 
-#### 4. `appointments` (Agendamentos)
+#### 4. `agendamentos`
 - `id`: UUID (PK)
-- `customer_id`: UUID (FK -> users)
-- `establishment_id`: UUID (FK -> establishments)
-- `services`: JSONB
-- `total_price`: DECIMAL(10,2)
-- `appointment_time`: TIMESTAMP
-- `status`: ENUM ('REQUESTED', 'APPROVED', 'CANCELLED', 'COMPLETED', 'LATE')
-- `is_for_guest`: BOOLEAN
-- `guest_name`: VARCHAR(255)
-- `created_at`: TIMESTAMP
+- `cliente_id`: UUID (FK -> usuarios)
+- `estabelecimento_id`: UUID (FK -> estabelecimentos)
+- `servicos`: JSONB // Lista de serviços selecionados (id, nome, preco)
+- `preco_total`: DECIMAL(10,2)
+- `data_hora`: TIMESTAMP
+- `status`: ENUM ('SOLICITADO', 'APROVADO', 'CANCELADO', 'CONCLUIDO', 'ATRASADO')
+- `para_convidado`: BOOLEAN
+- `nome_convidado`: VARCHAR(255)
+- `criado_em`: TIMESTAMP
 
-#### 5. `payments`
+#### 5. `pagamentos`
 - `id`: UUID (PK)
-- `appointment_id`: UUID (FK -> appointments)
-- `amount`: DECIMAL(10,2)
-- `method`: ENUM ('CASH', 'CARD_LOCAL', 'PIX_LOCAL')
-- `status`: ENUM ('PENDING', 'PAID')
-- `paid_at`: TIMESTAMP
+- `agendamento_id`: UUID (FK -> agendamentos)
+- `valor`: DECIMAL(10,2)
+- `metodo`: ENUM ('DINHEIRO', 'CARTAO_LOCAL', 'PIX_LOCAL')
+- `status`: ENUM ('PENDENTE', 'PAGO')
+- `pago_em`: TIMESTAMP
 
 ---
 
 ## 🍃 MongoDB (Logs & Dynamic Configs)
 
 ### Collections
-1. `notification_logs`: Histórico de e-mails e pushs.
-2. `establishment_settings`: Temas, logos e campos customizados.
+1. `logs_notificacoes`: Histórico de e-mails e pushs.
+2. `configuracoes_estabelecimento`: Temas, logos e campos customizados.
