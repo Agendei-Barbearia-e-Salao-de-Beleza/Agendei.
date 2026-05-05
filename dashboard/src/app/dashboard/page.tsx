@@ -38,7 +38,7 @@ export default function DashboardOverview() {
     <div className="space-y-8">
       {/* Welcome Header */}
       <div className="flex flex-col gap-1">
-        <h2 className="text-3xl font-bold tracking-tight text-white">Olá, Matheus Lucindo! 👋</h2>
+        <h2 className="text-3xl font-bold tracking-tight text-title">Olá, Matheus Lucindo! 👋</h2>
         <p className="text-zinc-500">Veja o que está acontecendo no seu negócio hoje.</p>
       </div>
 
@@ -50,7 +50,7 @@ export default function DashboardOverview() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-3xl"
+            className="bg-card border border-subtle p-6 rounded-3xl"
           >
             <div className="flex items-center justify-between mb-4">
               <div className={`p-2.5 rounded-2xl ${stat.bg}`}>
@@ -62,7 +62,7 @@ export default function DashboardOverview() {
             </div>
             <div className="space-y-1">
               <p className="text-zinc-500 text-sm font-medium">{stat.label}</p>
-              <p className="text-2xl font-bold text-white">{stat.value}</p>
+              <p className="text-2xl font-bold text-title">{stat.value}</p>
             </div>
           </motion.div>
         ))}
@@ -73,26 +73,26 @@ export default function DashboardOverview() {
         {/* Main Feed: Today's Appointments */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold text-white">Agenda de Hoje</h3>
+            <h3 className="text-xl font-bold text-title">Agenda de Hoje</h3>
             <button className="text-sm font-bold text-amber-500 hover:underline">Ver tudo</button>
           </div>
           
-          <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl overflow-hidden">
-            <div className="divide-y divide-zinc-800">
+          <div className="bg-card border border-subtle rounded-3xl overflow-hidden">
+            <div className="divide-y border-subtle">
               {todayAppointments.map((app) => (
-                <div key={app.id} className="p-4 flex items-center justify-between hover:bg-zinc-800/30 transition-colors group">
+                <div key={app.id} className="p-4 flex items-center justify-between hover:bg-zinc-500/5 transition-colors group">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center font-bold text-zinc-400 group-hover:bg-amber-500 group-hover:text-zinc-950 transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-500/10 flex items-center justify-center font-bold text-zinc-500 group-hover:bg-amber-500 group-hover:text-zinc-950 transition-colors">
                       {app.avatar}
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-zinc-100">{app.customer}</h4>
+                      <h4 className="text-sm font-bold text-title">{app.customer}</h4>
                       <p className="text-xs text-zinc-500">{app.service}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="text-right">
-                      <div className="flex items-center gap-1.5 text-zinc-300">
+                      <div className="flex items-center gap-1.5 text-zinc-500">
                         <Clock className="w-3.5 h-3.5 text-amber-500" />
                         <span className="text-sm font-bold">{app.time}</span>
                       </div>
@@ -105,7 +105,7 @@ export default function DashboardOverview() {
                         {app.status}
                       </span>
                     </div>
-                    <button className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-600">
+                    <button className="p-2 hover:bg-zinc-500/10 rounded-lg text-zinc-600">
                       <MoreHorizontal className="w-5 h-5" />
                     </button>
                   </div>
@@ -128,8 +128,8 @@ export default function DashboardOverview() {
             </div>
           </div>
 
-          <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-3xl">
-            <h3 className="text-white font-bold mb-4">Ações Rápidas</h3>
+          <div className="bg-card border border-subtle p-6 rounded-3xl">
+            <h3 className="text-title font-bold mb-4">Ações Rápidas</h3>
             <div className="space-y-3">
               <QuickActionButton icon={<Calendar />} label="Novo Agendamento" color="bg-amber-500" />
               <QuickActionButton icon={<Users />} label="Cadastrar Cliente" color="bg-blue-500" />
@@ -138,6 +138,7 @@ export default function DashboardOverview() {
           </div>
         </div>
       </div>
+
     </div>
   );
 }

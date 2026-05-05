@@ -12,7 +12,6 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Inicializa com null para evitar mismatch na hidratação
   const [theme, setTheme] = useState<Theme>("dark");
   const [mounted, setMounted] = useState(false);
 
@@ -30,7 +29,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme(newTheme);
     localStorage.setItem("theme", newTheme);
     
-    // Aplica a classe no HTML para o CSS variáveis funcionar
     if (newTheme === "light") {
       document.documentElement.classList.add("light");
     } else {
@@ -38,14 +36,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Evita renderizar antes de montar para não quebrar a hidratação do Next
-  if (!mounted) {
-    return <div style={{ visibility: "hidden" }}>{children}</div>;
-  }
-
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
+      <div className={mounted ? "" : "invisible"}>
+        {children}
+      </div>
     </ThemeContext.Provider>
   );
 }

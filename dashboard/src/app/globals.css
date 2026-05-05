@@ -4,7 +4,7 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
-/* Variáveis de Tema */
+/* Variáveis de Tema - MODO ESCURO (Padrão) */
 :root {
   --background: #09090b;
   --foreground: #fafafa;
@@ -13,16 +13,19 @@
   --border: #27272a;
   --accent: #f59e0b; /* Amber 500 */
   --muted: #71717a;
+  --sidebar: #09090b;
 }
 
+/* Variáveis de Tema - MODO CLARO (Refinado) */
 :root.light {
-  --background: #ffffff;
-  --foreground: #09090b;
-  --card: #f4f4f5;
-  --card-foreground: #09090b;
-  --border: #e4e4e7;
-  --accent: #d97706; /* Amber 600 */
-  --muted: #71717a;
+  --background: #f8fafc; /* Slate 50 - Fundo Gelado */
+  --foreground: #0f172a; /* Slate 900 - Texto Profundo */
+  --card: #ffffff;      /* Branco Puro para os Cards */
+  --card-foreground: #1e293b;
+  --border: #e2e8f0;    /* Slate 200 - Bordas Suaves */
+  --accent: #d97706;    /* Amber 600 */
+  --muted: #64748b;     /* Slate 500 */
+  --sidebar: #ffffff;
 }
 
 body {
@@ -34,7 +37,7 @@ body {
 
 /* Aplicando as variáveis em componentes globais */
 aside {
-  background-color: var(--background) !important;
+  background-color: var(--sidebar) !important;
   border-color: var(--border) !important;
 }
 
@@ -44,6 +47,12 @@ main {
 
 .bg-card {
   background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05); /* Sombra suave para o modo claro */
+}
+
+:root.light .bg-card {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.04);
 }
 
 .text-title {
@@ -54,8 +63,25 @@ main {
   border-color: var(--border) !important;
 }
 
+/* Forçar cores de botões secundários no modo claro */
+:root.light .bg-zinc-900\/50, 
+:root.light .bg-zinc-900\/30,
+:root.light .bg-zinc-800 {
+  background-color: #f1f5f9 !important; /* Slate 100 */
+  border-color: #e2e8f0 !important;
+}
+
+:root.light .text-zinc-100, 
+:root.light .text-zinc-300 {
+  color: #1e293b !important;
+}
+
+:root.light .text-zinc-500 {
+  color: #64748b !important;
+}
+
 /* Cursor Pointer em tudo que é clicável */
-button, a, select, input[type="submit"] {
+button, a, select, input[type="submit"], input[type="checkbox"], input[type="radio"] {
   cursor: pointer !important;
 }
 
@@ -71,4 +97,8 @@ button, a, select, input[type="submit"] {
 ::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
 }
