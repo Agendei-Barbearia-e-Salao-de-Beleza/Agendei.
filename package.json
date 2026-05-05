@@ -1,6 +1,9 @@
 {
-  "dependencies": {
-    "@supabase/ssr": "^0.10.2",
-    "@supabase/supabase-js": "^2.105.3"
-  }
+  "name": "agendei-root",
+  "private": true,
+  "workspaces": [
+    "dashboard",
+    "backend",
+    "mobile"
+  ]
 }

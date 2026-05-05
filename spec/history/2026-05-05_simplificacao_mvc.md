@@ -18,6 +18,10 @@
 - [x] Criar `StatusController` para monitoramento e keep-alive.
 - [x] Configurar suporte a Cloudinary no Backend para gestão de imagens.
 - [x] Criar `vercel.json` para otimização do Dashboard.
+- [x] Desenvolver tela inicial premium do Dashboard (Login/Landing) com Inter e Framer Motion.
+- [x] Implementar sistema de alertas (Toasts) com Sonner.
+- [x] Adicionar validação de formulários e estados de loading.
+- [x] Criar página de Recuperação de Senha ("Esqueci minha senha").
 
 ## 💡 Decisões de Arquitetura
 1. **MVC Simplificado**: Utilizaremos a estrutura `Controller -> Service -> Repository -> Model`. É um padrão mais conhecido e fácil de ensinar para quem está começando.
