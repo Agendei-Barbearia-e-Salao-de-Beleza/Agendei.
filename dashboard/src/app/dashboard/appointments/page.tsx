@@ -158,8 +158,9 @@ export default function AppointmentsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-card border border-subtle rounded-3xl overflow-hidden shadow-sm">
+      <div className="bg-card border border-subtle rounded-3xl shadow-sm">
         <table className="w-full text-left">
+
           <thead>
             <tr className="border-b border-subtle bg-zinc-500/5">
               <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-widest">Cliente</th>
@@ -392,13 +393,11 @@ function FilterButton({ label, icon, id, activeId, setActiveId }: any) {
                     e.stopPropagation();
                     setActiveId(isOpen ? null : id);
                 }}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                    isOpen ? 'bg-accent text-zinc-950' : 'bg-zinc-500/5 text-zinc-500 hover:bg-zinc-500/10'
-                }`}
+                className="flex items-center gap-2 px-4 py-2.5 bg-zinc-500/5 hover:bg-zinc-500/10 rounded-xl text-sm font-bold text-zinc-500 transition-all"
             >
                 {icon || <Filter className="w-4 h-4" />}
                 {label}
-                <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
             <AnimatePresence>
                 {isOpen && (
@@ -406,9 +405,9 @@ function FilterButton({ label, icon, id, activeId, setActiveId }: any) {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute top-full mt-2 right-0 w-52 bg-card border border-subtle rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] p-2 z-[60] backdrop-blur-xl"
+                        className="absolute top-full mt-2 right-0 w-52 bg-card border border-subtle rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] p-2 z-[100] backdrop-blur-xl"
                     >
-                        <div className="p-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Ordenar por</div>
+                        <div className="p-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest border-b border-subtle mb-1">Ordenar por</div>
                         <DropdownItem icon={<Clock size={14}/>} label="Mais Recentes" onClick={() => setActiveId(null)} />
                         <DropdownItem icon={<Tag size={14}/>} label="Menor Preço" onClick={() => setActiveId(null)} />
                     </motion.div>
@@ -417,6 +416,7 @@ function FilterButton({ label, icon, id, activeId, setActiveId }: any) {
         </div>
     );
 }
+
 
 
 function DropdownItem({ icon, label, color, onClick }: any) {
