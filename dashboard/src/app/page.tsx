@@ -93,7 +93,7 @@ export default function Home() {
         >
           <div className="absolute inset-0 bg-[#fd9602]/5 rounded-3xl blur-2xl" />
           <div className="relative bg-zinc-900/50 backdrop-blur-xl border border-white/5 p-8 rounded-3xl shadow-2xl">
-            <div className="mb-8">
+            <div className="mb-8 text-center">
               <h3 className="text-2xl font-bold text-zinc-100">Painel Administrativo</h3>
               <p className="text-zinc-500 text-sm mt-1">Entre com sua conta para gerenciar seu estabelecimento</p>
             </div>
@@ -155,10 +155,7 @@ export default function Home() {
             <p className="mt-2 text-center text-xs text-zinc-600">
               Precisa de ajuda? Entre em contato com o suporte.
             </p>
-            <div className="mt-6 p-3 bg-[#fd9602]/5 border border-[#fd9602]/10 rounded-xl">
-              <p className="text-[10px] text-[#fd9602]/60 uppercase tracking-widest font-bold text-center mb-1">Conta de Demonstração</p>
-              <p className="text-xs text-zinc-400 text-center">E-mail: <span className="text-zinc-200 font-mono">matheus@agendei.com</span></p>
-            </div>
+
 
           </div>
         </motion.div>

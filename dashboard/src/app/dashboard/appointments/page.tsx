@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Search, Filter, Plus, Calendar as CalendarIcon,
   Clock, ChevronDown, X, Check, MoreHorizontal,
   Trash2, Edit3, User, Sparkles, Tag, PlusCircle,
-  LayoutGrid, List
+  LayoutGrid, List, Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -24,11 +24,10 @@ interface Service {
   id: string;
   nome: string;
   preco: number;
-  duracao_minutos: number;
 }
 
 interface Appointment {
-  id: string | number;
+  id: string;
   customer: string;
   services: Service[];
   date: string;
@@ -37,90 +36,190 @@ interface Appointment {
   status: string;
 }
 
-const mockServices: Service[] = [
-  { id: 'm1', nome: "Corte Degradê", preco: 45, duracao_minutos: 30 },
-  { id: 'm2', nome: "Barba Terapia", preco: 35, duracao_minutos: 25 },
-  { id: 'm3', nome: "Sobrancelha", preco: 15, duracao_minutos: 10 },
-  { id: 'm4', nome: "Corte + Barba", preco: 75, duracao_minutos: 60 },
-  { id: 'm5', nome: "Limpeza de Pele", preco: 50, duracao_minutos: 40 },
-];
-
 export default function AppointmentsPage() {
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
-  const [appointments, setAppointments] = useState<Appointment[]>([
-    { id: 1, customer: "Carlos Alberto", services: [mockServices[0]], date: "2026-05-05", time: "14:00", totalPrice: 45.0, status: "Confirmado" },
-    { id: 2, customer: "Juliana Silva", services: [mockServices[1]], date: "2026-05-05", time: "15:30", totalPrice: 35.0, status: "Confirmado" },
-  ]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [establishmentId, setEstablishmentId] = useState<string | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingApp, setEditingApp] = useState<Appointment | null>(null);
-  const [availableServices, setAvailableServices] = useState<Service[]>(mockServices);
+  const [availableServices, setAvailableServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [serviceSearch, setServiceSearch] = useState("");
   
   const [formData, setFormData] = useState({
     customer: "",
     time: "10:00",
-    date: "2026-05-05"
+    date: new Date().toISOString().split('T')[0]
   });
 
-  const events = appointments.map(app => ({
-    id: String(app.id),
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  async function fetchInitialData() {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: estData } = await supabase
+        .from('estabelecimentos')
+        .select('id')
+        .eq('proprietario_id', user.id)
+        .single();
+
+      if (estData) {
+        setEstablishmentId(estData.id);
+        await Promise.all([
+          fetchAppointments(estData.id),
+          fetchServices(estData.id)
+        ]);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchAppointments(estId: string) {
+    const { data, error } = await supabase
+      .from('agendamentos')
+      .select(`
+        *,
+        usuarios!agendamentos_cliente_id_fkey(nome)
+      `)
+      .eq('estabelecimento_id', estId)
+      .order('data_hora', { ascending: false });
+
+    if (data) {
+      setAppointments(data.map(app => {
+        const dt = new Date(app.data_hora);
+        return {
+          id: app.id,
+          customer: app.usuarios?.nome || "Cliente",
+          services: app.servicos || [],
+          date: dt.toISOString().split('T')[0],
+          time: dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          totalPrice: app.preco_total,
+          status: app.status
+        };
+      }));
+    }
+  }
+
+  async function fetchServices(estId: string) {
+    const { data } = await supabase
+      .from('servicos')
+      .select('id, nome, preco')
+      .eq('estabelecimento_id', estId);
+    
+    if (data) setAvailableServices(data);
+  }
+
+  const events = useMemo(() => appointments.map(app => ({
+    id: app.id,
     title: `${app.customer} - ${app.services.map(s => s.nome).join(", ")}`,
     start: `${app.date}T${app.time}`,
     extendedProps: { ...app }
-  }));
+  })), [appointments]);
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!establishmentId) return;
     if (selectedServices.length === 0) {
       toast.error("Adicione ao menos um serviço.");
       return;
     }
 
-    const newApp: Appointment = {
-      id: editingApp ? editingApp.id : Date.now(),
-      customer: formData.customer,
-      services: selectedServices,
-      date: formData.date,
-      time: formData.time,
-      totalPrice: calculateTotal(),
-      status: "Confirmado"
-    };
+    setLoading(true);
+    try {
+      // Simplificação: Buscamos ou criamos um cliente mock se não existir
+      const { data: userData } = await supabase
+        .from('usuarios')
+        .select('id')
+        .eq('nome', formData.customer)
+        .limit(1);
+      
+      let clientId = userData?.[0]?.id;
+      
+      if (!clientId) {
+        const { data: newUser } = await supabase
+          .from('usuarios')
+          .insert([{ nome: formData.customer, perfil: 'CLIENTE' }])
+          .select()
+          .single();
+        clientId = newUser?.id;
+      }
 
-    if (editingApp) {
-      setAppointments(appointments.map(a => a.id === editingApp.id ? newApp : a));
-      toast.success("Agendamento atualizado!");
-    } else {
-      setAppointments([newApp, ...appointments]);
-      toast.success("Agendamento criado!");
+      const dataHora = `${formData.date}T${formData.time}:00`;
+      const totalPrice = selectedServices.reduce((sum, s) => sum + s.preco, 0);
+
+      const payload = {
+        cliente_id: clientId,
+        estabelecimento_id: establishmentId,
+        servicos: selectedServices,
+        preco_total: totalPrice,
+        data_hora: dataHora,
+        status: editingApp ? editingApp.status : 'APROVADO'
+      };
+
+      if (editingApp) {
+        const { error } = await supabase
+          .from('agendamentos')
+          .update(payload)
+          .eq('id', editingApp.id);
+        if (error) throw error;
+        toast.success("Agendamento atualizado!");
+      } else {
+        const { error } = await supabase
+          .from('agendamentos')
+          .insert([payload]);
+        if (error) throw error;
+        toast.success("Agendamento criado!");
+      }
+
+      await fetchAppointments(establishmentId);
+      closeModal();
+    } catch (error: any) {
+      toast.error("Erro ao salvar: " + error.message);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    closeModal();
+  const handleDelete = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este agendamento?")) return;
+    
+    try {
+      const { error } = await supabase
+        .from('agendamentos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setAppointments(appointments.filter(a => a.id !== id));
+      toast.success("Agendamento excluído.");
+      closeModal();
+    } catch (error: any) {
+      toast.error("Erro ao excluir: " + error.message);
+    }
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingApp(null);
     setSelectedServices([]);
-    setFormData({ customer: "", time: "10:00", date: "2026-05-05" });
+    setFormData({ customer: "", time: "10:00", date: new Date().toISOString().split('T')[0] });
   };
-
-  const calculateTotal = () => selectedServices.reduce((sum, s) => sum + s.preco, 0);
 
   const addServiceToApp = (service: Service) => {
     if (selectedServices.find(s => s.id === service.id)) return;
     setSelectedServices([...selectedServices, service]);
     setServiceSearch("");
-  };
-
-  const removeServiceFromApp = (id: string) => {
-    setSelectedServices(selectedServices.filter(s => s.id !== id));
-  };
-
-  const handleEventClick = (info: any) => {
-    const app = info.event.extendedProps;
-    openEditModal(app);
   };
 
   const openEditModal = (app: Appointment) => {
@@ -178,7 +277,12 @@ export default function AppointmentsPage() {
       </div>
 
       <div>
-        {viewMode === "calendar" ? (
+        {loading && appointments.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+             <Loader2 className="w-10 h-10 text-[#fd9602] animate-spin" />
+             <p className="text-zinc-500 font-medium">Carregando agenda...</p>
+          </div>
+        ) : viewMode === "calendar" ? (
           <div className="bg-card border border-subtle p-6 rounded-2xl shadow-2xl overflow-hidden">
             <FullCalendar
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -190,7 +294,7 @@ export default function AppointmentsPage() {
               }}
               locale={ptBrLocale}
               events={events}
-              eventClick={handleEventClick}
+              eventClick={(info) => openEditModal(info.event.extendedProps as Appointment)}
               height="auto"
               allDaySlot={false}
               slotMinTime="08:00:00"
@@ -253,7 +357,7 @@ export default function AppointmentsPage() {
         onClose={closeModal}
         title={editingApp ? "Editar Agendamento" : "Novo Agendamento"}
       >
-        <form onSubmit={handleCreate} className="space-y-6">
+        <form onSubmit={handleSave} className="space-y-6">
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Cliente</label>
             <div className="relative group">
@@ -272,6 +376,7 @@ export default function AppointmentsPage() {
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Data</label>
               <input
+                required
                 type="date"
                 value={formData.date}
                 onChange={e => setFormData({ ...formData, date: e.target.value })}
@@ -281,6 +386,7 @@ export default function AppointmentsPage() {
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Horário</label>
               <input
+                required
                 type="time"
                 value={formData.time}
                 onChange={e => setFormData({ ...formData, time: e.target.value })}
@@ -323,7 +429,7 @@ export default function AppointmentsPage() {
               {selectedServices.map(s => (
                 <div key={s.id} className="flex items-center gap-2 bg-[#fd9602] text-zinc-950 px-3 py-1.5 rounded-xl text-[10px] font-bold shadow-lg shadow-[#fd9602]/10">
                   {s.nome}
-                  <button onClick={() => removeServiceFromApp(s.id)} type="button"><X size={12} /></button>
+                  <button onClick={() => setSelectedServices(selectedServices.filter(x => x.id !== s.id))} type="button"><X size={12} /></button>
                 </div>
               ))}
             </div>
@@ -331,21 +437,17 @@ export default function AppointmentsPage() {
 
           <div className="flex items-center justify-between p-4 bg-[#fd9602]/5 rounded-2xl border border-[#fd9602]/10">
             <span className="text-zinc-500 font-bold text-sm">Total estimado:</span>
-            <span className="text-2xl font-bold text-[#fd9602]">R$ {calculateTotal().toFixed(2)}</span>
+            <span className="text-2xl font-bold text-[#fd9602]">R$ {selectedServices.reduce((sum, s) => sum + s.preco, 0).toFixed(2)}</span>
           </div>
 
-          <button type="submit" className="btn-primary w-full py-5 text-lg">
-            {editingApp ? "Salvar Alterações" : "Confirmar Agendamento"}
+          <button type="submit" disabled={loading} className="btn-primary w-full py-5 text-lg flex items-center justify-center gap-2">
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (editingApp ? "Salvar Alterações" : "Confirmar Agendamento")}
           </button>
 
           {editingApp && (
             <button
               type="button"
-              onClick={() => {
-                setAppointments(appointments.filter(a => a.id !== editingApp.id));
-                closeModal();
-                toast.success("Agendamento excluído.");
-              }}
+              onClick={() => handleDelete(editingApp.id)}
               className="w-full text-red-500 font-bold text-sm hover:underline"
             >
               Excluir Agendamento

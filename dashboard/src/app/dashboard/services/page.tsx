@@ -1,23 +1,16 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Edit2, Trash2, Clock, X, Sparkles, Tag, Layers } from "lucide-react";
+import { Search, Plus, Edit2, Trash2, Clock, X, Sparkles, Tag, Layers, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "@/components/Modal";
-
-const initialServices = [
-  { id: 1, name: "Corte Degradê", price: "45,00", duration: "40 min", category: "CABELO", description: "Corte moderno com acabamento na máquina e tesoura.", type: "SERVICE" },
-  { id: 2, name: "Barba Terapia", price: "35,00", duration: "30 min", category: "BARBA", description: "Corte de barba com toalha quente e massagem facial.", type: "SERVICE" },
-  { id: 3, name: "Combo Agendei", price: "75,00", duration: "1h 10min", category: "COMBO", description: "O pacote completo: Cabelo + Barba + Sobrancelha.", type: "SERVICE" },
-];
-
-const initialPlans = [
-  { id: 101, name: "Plano Mensal Gold", price: "150,00", duration: "30 dias", category: "PLAN", description: "Cortes ilimitados durante o mês e 1 hidratação.", type: "PLAN" },
-];
+import { supabase } from "@/lib/supabase";
 
 export default function ServicesPage() {
-  const [services, setServices] = useState([...initialServices, ...initialPlans]);
+  const [services, setServices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [establishmentId, setEstablishmentId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<any>(null);
@@ -32,10 +25,59 @@ export default function ServicesPage() {
     type: "SERVICE"
   });
 
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  async function fetchInitialData() {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        return;
+      }
+
+      const { data: estData, error: estError } = await supabase
+        .from('estabelecimentos')
+        .select('id')
+        .eq('proprietario_id', user.id)
+        .single();
+
+      if (estError || !estData) {
+        toast.error("Erro ao localizar seu estabelecimento.");
+        return;
+      }
+
+      setEstablishmentId(estData.id);
+      await fetchServices(estData.id);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchServices(estId: string) {
+    const { data, error } = await supabase
+      .from('servicos')
+      .select('*')
+      .eq('estabelecimento_id', estId)
+      .order('criado_em', { ascending: false });
+
+    if (error) {
+      toast.error("Erro ao carregar serviços.");
+      return;
+    }
+
+    setServices(data || []);
+  }
+
   const filteredServices = useMemo(() => {
     return services.filter(s => {
-      const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesTab = activeTab === "ALL" || s.type === activeTab;
+      const matchesSearch = s.nome.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesTab = activeTab === "ALL" || s.tipo === activeTab;
       return matchesSearch && matchesTab;
     });
   }, [services, searchTerm, activeTab]);
@@ -44,12 +86,12 @@ export default function ServicesPage() {
     if (service) {
       setEditingService(service);
       setFormData({
-        name: service.name,
-        price: service.price,
-        duration: service.duration,
-        category: service.category,
-        description: service.description,
-        type: service.type
+        name: service.nome,
+        price: service.preco.toString().replace('.', ','),
+        duration: service.duracao_minutos.toString(),
+        category: service.categoria || "CABELO",
+        description: service.descricao || "",
+        type: service.tipo || "SERVICE"
       });
     } else {
       setEditingService(null);
@@ -57,7 +99,7 @@ export default function ServicesPage() {
         name: "",
         price: "",
         duration: "",
-        category: "CABELO",
+        category: activeTab === "PLAN" ? "PLAN" : "CABELO",
         description: "",
         type: activeTab === "PLAN" ? "PLAN" : "SERVICE"
       });
@@ -65,25 +107,64 @@ export default function ServicesPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingService) {
-      setServices(services.map(s => s.id === editingService.id ? { ...s, ...formData } : s));
-      toast.success("Item atualizado com sucesso!");
-    } else {
-      const newItem = {
-        id: Date.now(),
-        ...formData,
-      };
-      setServices([newItem, ...services]);
-      toast.success(`${formData.type === "PLAN" ? "Plano" : "Serviço"} criado com sucesso!`);
+    if (!establishmentId) return;
+
+    const payload = {
+      nome: formData.name,
+      preco: parseFloat(formData.price.replace(',', '.')),
+      duracao_minutos: parseInt(formData.duration) || 30,
+      categoria: formData.category,
+      descricao: formData.description,
+      tipo: formData.type,
+      estabelecimento_id: establishmentId
+    };
+
+    setLoading(true);
+    try {
+      if (editingService) {
+        const { error } = await supabase
+          .from('servicos')
+          .update(payload)
+          .eq('id', editingService.id);
+
+        if (error) throw error;
+        toast.success("Item atualizado com sucesso!");
+      } else {
+        const { error } = await supabase
+          .from('servicos')
+          .insert([payload]);
+
+        if (error) throw error;
+        toast.success(`${formData.type === "PLAN" ? "Plano" : "Serviço"} criado com sucesso!`);
+      }
+      
+      await fetchServices(establishmentId);
+      setIsModalOpen(false);
+    } catch (error: any) {
+      toast.error("Erro ao salvar: " + error.message);
+    } finally {
+      setLoading(false);
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id: number) => {
-    setServices(services.filter(s => s.id !== id));
-    toast.success("Item removido.");
+  const handleDelete = async (id: string) => {
+    if (!confirm("Tem certeza que deseja remover este item?")) return;
+    
+    try {
+      const { error } = await supabase
+        .from('servicos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setServices(services.filter(s => s.id !== id));
+      toast.success("Item removido.");
+    } catch (error: any) {
+      toast.error("Erro ao remover: " + error.message);
+    }
   };
 
   return (
@@ -143,65 +224,80 @@ export default function ServicesPage() {
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <AnimatePresence mode="popLayout">
-          {filteredServices.map((item) => (
-            <motion.div
-              key={item.id}
-              layout
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className={`glass-card p-8 rounded-[2rem] hover:border-[#fd9602]/30 transition-all group relative overflow-hidden shadow-sm ${
-                item.type === "PLAN" ? "ring-2 ring-[#fd9602]/20" : ""
-              }`}
-            >
-              <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-all flex gap-2 z-10">
-                <button 
-                  onClick={() => handleOpenModal(item)}
-                  className="p-2.5 bg-zinc-800 dark:bg-zinc-800 hover:bg-[#fd9602]/10 text-zinc-500 hover:text-[#fd9602] rounded-xl transition-all cursor-pointer border border-subtle dark:border-zinc-700"
-                >
-                  <Edit2 size={14} />
-                </button>
-                <button 
-                  onClick={() => handleDelete(item.id)}
-                  className="p-2.5 bg-zinc-800 dark:bg-zinc-800 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded-xl transition-all cursor-pointer border border-subtle dark:border-zinc-700"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
+      {loading && services.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <Loader2 className="w-10 h-10 text-[#fd9602] animate-spin" />
+          <p className="text-zinc-500 font-medium">Carregando catálogo...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <AnimatePresence mode="popLayout">
+            {filteredServices.map((item) => (
+              <motion.div
+                key={item.id}
+                layout
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className={`glass-card p-8 rounded-[2rem] hover:border-[#fd9602]/30 transition-all group relative overflow-hidden shadow-sm ${
+                  item.tipo === "PLAN" ? "ring-2 ring-[#fd9602]/20" : ""
+                }`}
+              >
+                <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-all flex gap-2 z-10">
+                  <button 
+                    onClick={() => handleOpenModal(item)}
+                    className="p-2.5 bg-zinc-800 dark:bg-zinc-800 hover:bg-[#fd9602]/10 text-zinc-500 hover:text-[#fd9602] rounded-xl transition-all cursor-pointer border border-subtle dark:border-zinc-700"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(item.id)}
+                    className="p-2.5 bg-zinc-800 dark:bg-zinc-800 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded-xl transition-all cursor-pointer border border-subtle dark:border-zinc-700"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
 
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-[#fd9602]/10 text-[#fd9602] uppercase tracking-widest border border-[#fd9602]/20">
-                    {item.type === "PLAN" ? <Sparkles size={10} className="mr-1.5" /> : null}
-                    {item.category}
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-[#fd9602]/10 text-[#fd9602] uppercase tracking-widest border border-[#fd9602]/20">
+                      {item.tipo === "PLAN" ? <Sparkles size={10} className="mr-1.5" /> : null}
+                      {item.categoria}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-bold text-title dark:text-white group-hover:text-[#fd9602] transition-colors tracking-tight">
+                      {item.nome}
+                    </h3>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium line-clamp-2 leading-relaxed">
+                      {item.descricao}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-6 border-t border-subtle dark:border-zinc-800/50">
+                     <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
+                        <Clock className="w-5 h-5 text-zinc-600" />
+                        <span className="text-sm font-bold uppercase tracking-tighter">
+                          {item.tipo === "PLAN" ? `${item.duracao_minutos} dias` : `${item.duracao_minutos} min`}
+                        </span>
+                     </div>
+                     <div className="text-2xl font-bold text-title dark:text-white tracking-tighter">
+                        R$ {item.preco.toFixed(2).replace('.', ',')}
+                     </div>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-bold text-title dark:text-white group-hover:text-[#fd9602] transition-colors tracking-tight">
-                    {item.name}
-                  </h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium line-clamp-2 leading-relaxed">
-                    {item.description}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between pt-6 border-t border-subtle dark:border-zinc-800/50">
-                   <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-                      <Clock className="w-5 h-5 text-zinc-600" />
-                      <span className="text-sm font-bold uppercase tracking-tighter">{item.duration}</span>
-                   </div>
-                   <div className="text-2xl font-bold text-title dark:text-white tracking-tighter">
-                      R$ {item.price}
-                   </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          
+          {filteredServices.length === 0 && !loading && (
+            <div className="col-span-full py-20 text-center">
+              <p className="text-zinc-500 font-medium">Nenhum item encontrado.</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Add/Edit Modal */}
       <Modal 
@@ -235,12 +331,15 @@ export default function ServicesPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Duração / Validade</label>
+              <label className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-1">
+                {formData.type === "PLAN" ? "Validade (dias)" : "Duração (min)"}
+              </label>
               <input 
-                type="text" 
+                required
+                type="number" 
                 value={formData.duration}
                 onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                placeholder="30 min / 30 dias"
+                placeholder={formData.type === "PLAN" ? "30" : "30"}
                 className="w-full bg-zinc-100/50 dark:bg-zinc-800/50 border border-subtle dark:border-zinc-800 rounded-2xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20"
               />
             </div>
@@ -274,9 +373,10 @@ export default function ServicesPage() {
 
           <button 
             type="submit"
-            className="w-full btn-primary py-5 text-lg"
+            disabled={loading}
+            className="w-full btn-primary py-5 text-lg flex items-center justify-center gap-2"
           >
-            {editingService ? "Salvar Alterações" : "Cadastrar Agora"}
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (editingService ? "Salvar Alterações" : "Cadastrar Agora")}
           </button>
         </form>
       </Modal>
