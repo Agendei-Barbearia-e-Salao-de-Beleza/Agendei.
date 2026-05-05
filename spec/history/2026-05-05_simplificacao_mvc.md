@@ -25,11 +25,16 @@
 - [x] Criar página de Recuperação de Senha ("Esqueci minha senha").
 - [x] **Resolver conflitos de porta Docker (27017 e 8080) com outros projetos.**
 - [x] **Limpar bloqueios do npm e sincronizar monorepo.**
+- [x] **Implementar arquitetura base para Firebase Cloud Messaging (FCM).**
+- [x] **Criar serviço de notificações push e endpoint de teste.**
+- [x] **Documentar guia de setup do Firebase Admin.**
 
 ## 💡 Decisões de Arquitetura
 1. **MVC Simplificado**: Utilizaremos a estrutura `Controller -> Service -> Repository -> Model`. É um padrão mais conhecido e fácil de ensinar para quem está começando.
 2. **KISS**: Decisão estratégica para garantir a entrega no prazo de 1 mês.
 3. **Isolamento de Ambiente**: Recomendado desativar outros bancos de dados locais (Docker) antes de rodar o Agendei para evitar conflitos de porta.
+4. **Segurança do Firebase**: As chaves privadas (service-account.json) não são versionadas. O sistema agora alerta amigavelmente se a chave estiver faltando em vez de travar o servidor.
+
 
 ## 🚀 Próximos Passos
 1. Implementar o primeiro CRUD (Users/Auth) seguindo o padrão MVC.
