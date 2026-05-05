@@ -6,10 +6,15 @@
 
 # Build outputs
 /backend/target/
+/backend/bin/
+/backend/build/
 /dashboard/.next/
 /dashboard/out/
 /mobile/app/build/
 /mobile/build/
+.gradle/
+build/
+bin/
 
 # Dependencies
 node_modules/
@@ -20,3 +25,8 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Firebase & Supabase secrets
+.env*
+service-account.json
+google-services.json
