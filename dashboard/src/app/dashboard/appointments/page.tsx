@@ -45,11 +45,13 @@ export default function AppointmentsPage() {
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [serviceSearch, setServiceSearch] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState<number | string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     customer: "",
     time: "10:00",
   });
+
 
   // Carrega serviços reais do Supabase e mescla com os de demo
   useEffect(() => {
@@ -138,9 +140,21 @@ export default function AppointmentsPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <FilterButton label="Filtros" />
-          <FilterButton label="Hoje" icon={<CalendarIcon className="w-4 h-4" />} />
+          <FilterButton 
+            label="Filtros" 
+            id="filtros" 
+            activeId={activeFilter} 
+            setActiveId={setActiveFilter} 
+          />
+          <FilterButton 
+            label="Hoje" 
+            id="hoje" 
+            activeId={activeFilter} 
+            setActiveId={setActiveFilter} 
+            icon={<CalendarIcon className="w-4 h-4" />} 
+          />
         </div>
+
       </div>
 
       {/* Table */}
@@ -369,28 +383,41 @@ export default function AppointmentsPage() {
   );
 }
 
-function FilterButton({ label, icon }: any) {
-    const [open, setOpen] = useState(false);
+function FilterButton({ label, icon, id, activeId, setActiveId }: any) {
+    const isOpen = activeId === id;
     return (
         <div className="relative">
             <button 
-                onClick={() => setOpen(!open)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-zinc-500/5 hover:bg-zinc-500/10 rounded-xl text-sm font-bold text-zinc-500"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveId(isOpen ? null : id);
+                }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                    isOpen ? 'bg-accent text-zinc-950' : 'bg-zinc-500/5 text-zinc-500 hover:bg-zinc-500/10'
+                }`}
             >
                 {icon || <Filter className="w-4 h-4" />}
                 {label}
-                <ChevronDown className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
-            {open && (
-                <div className="absolute top-full mt-2 right-0 w-48 bg-card border border-subtle rounded-xl shadow-2xl p-2 z-50">
-                    <div className="p-2 text-xs font-bold text-zinc-400 uppercase tracking-widest">Opções</div>
-                    <button className="w-full text-left p-2 text-sm hover:bg-zinc-500/5 rounded-lg text-title">Mais Recentes</button>
-                    <button className="w-full text-left p-2 text-sm hover:bg-zinc-500/5 rounded-lg text-title">Por Valor</button>
-                </div>
-            )}
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="absolute top-full mt-2 right-0 w-52 bg-card border border-subtle rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] p-2 z-[60] backdrop-blur-xl"
+                    >
+                        <div className="p-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Ordenar por</div>
+                        <DropdownItem icon={<Clock size={14}/>} label="Mais Recentes" onClick={() => setActiveId(null)} />
+                        <DropdownItem icon={<Tag size={14}/>} label="Menor Preço" onClick={() => setActiveId(null)} />
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
+
 
 function DropdownItem({ icon, label, color, onClick }: any) {
     return (
