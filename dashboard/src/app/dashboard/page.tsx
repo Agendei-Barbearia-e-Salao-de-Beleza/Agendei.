@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { 
   Users, Calendar, DollarSign, Clock, 
-  MoreHorizontal, TrendingUp, AlertCircle, ChevronRight
+  MoreHorizontal, TrendingUp, ChevronRight,
+  Scissors, Briefcase, Star
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -13,17 +14,19 @@ import { toast } from "sonner";
 export default function DashboardOverview() {
   const [isEditingMeta, setIsEditingMeta] = useState(false);
 
+  const stats = [
+    { label: "Total de Clientes", value: "1.284", icon: Users, color: "text-blue-500", bg: "bg-blue-500/10", trend: "+12%" },
+    { label: "Serviços/Mês", value: "458", icon: Scissors, color: "text-amber-500", bg: "bg-amber-500/10", trend: "+5%" },
+    { label: "Agendamentos", value: "24", icon: Calendar, color: "text-emerald-500", bg: "bg-emerald-500/10", trend: "Hoje" },
+    { label: "Faturamento", value: "R$ 12.450", icon: DollarSign, color: "text-purple-500", bg: "bg-purple-500/10", trend: "+18%" },
+  ];
+
   const todayAppointments = [
     { id: 1, customer: "Carlos Alberto", service: "Corte Degradê + Barba", time: "14:00", avatar: "CA", status: "CONFIRMADO" },
     { id: 2, customer: "Juliana Silva", service: "Coloração Completa", time: "15:30", avatar: "JS", status: "EM ESPERA" },
     { id: 3, customer: "Roberto Mendes", service: "Corte Masculino", time: "16:15", avatar: "RM", status: "CONCLUÍDO" },
     { id: 4, customer: "Amanda Ferreira", service: "Hidratação Profunda", time: "17:00", avatar: "AF", status: "CONFIRMADO" },
   ];
-
-  const handleQuickAction = (action: string) => {
-    toast.info(`Abrindo: ${action}`);
-    // Aqui no futuro abriremos o modal específico
-  };
 
   return (
     <div className="space-y-10">
@@ -33,7 +36,34 @@ export default function DashboardOverview() {
         <p className="text-zinc-500 font-medium">Veja o que temos para hoje na sua barbearia.</p>
       </div>
 
-      {/* Main Content Grid */}
+      {/* RE-ESTABLISHING TOP STATS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className="bg-card border border-subtle p-6 rounded-3xl group cursor-pointer hover:border-accent/30 transition-all"
+            onClick={() => toast.info(`Detalhes de ${stat.label}`)}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className={`p-2.5 rounded-2xl ${stat.bg}`}>
+                <stat.icon className={`w-5 h-5 ${stat.color}`} />
+              </div>
+              <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-full uppercase tracking-tighter">
+                {stat.trend}
+              </span>
+            </div>
+            <div className="space-y-1">
+              <p className="text-zinc-500 text-xs font-black uppercase tracking-widest">{stat.label}</p>
+              <p className="text-2xl font-black text-title tracking-tight">{stat.value}</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Main Content Grid (From Image) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left: Agenda de Hoje */}
@@ -93,7 +123,7 @@ export default function DashboardOverview() {
           <motion.div 
             whileHover={{ scale: 1.02 }}
             className="bg-accent p-8 rounded-[40px] shadow-2xl shadow-accent/10 cursor-pointer group"
-            onClick={() => setIsEditingMeta(true)}
+            onClick={() => toast.success("Meta Semanal: Faltam R$ 3.360 para o objetivo!")}
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-zinc-950 font-black text-xl">Meta Semanal</h3>
@@ -119,17 +149,17 @@ export default function DashboardOverview() {
               <QuickActionButton 
                 icon={<Calendar />} 
                 label="Novo Agendamento" 
-                onClick={() => handleQuickAction("Novo Agendamento")}
+                onClick={() => toast.info("Abrindo formulário de agendamento...")}
               />
               <QuickActionButton 
                 icon={<Users />} 
                 label="Cadastrar Cliente" 
-                onClick={() => handleQuickAction("Cadastrar Cliente")}
+                onClick={() => toast.info("Abrindo cadastro de cliente...")}
               />
               <QuickActionButton 
                 icon={<DollarSign />} 
                 label="Lançar Despesa" 
-                onClick={() => handleQuickAction("Lançar Despesa")}
+                onClick={() => toast.info("Abrindo controle de caixa...")}
               />
             </div>
           </div>
