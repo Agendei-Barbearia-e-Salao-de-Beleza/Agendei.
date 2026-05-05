@@ -1,9 +1,9 @@
 {
-  "dependencies": {
-    "@supabase/ssr": "^0.10.2",
-    "@supabase/supabase-js": "^2.105.3",
-    "clsx": "^2.1.1",
-    "lucide-react": "^1.14.0",
-    "tailwind-merge": "^3.5.0"
-  }
+  "name": "agendei-root",
+  "private": true,
+  "workspaces": [
+    "dashboard",
+    "backend",
+    "mobile"
+  ]
 }
