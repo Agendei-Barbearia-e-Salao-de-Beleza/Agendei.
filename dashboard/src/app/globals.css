@@ -11,10 +11,9 @@
   --card: #111113;
   --card-foreground: #fafafa;
   --border: #202023;
-  --accent: #f59e0b; /* Amarelo Agendei */
+  --accent: #f59e0b; 
   --muted: #71717a;
   --sidebar: #09090b;
-  --shadow: 0 0 0 0 transparent;
 }
 
 /* Variáveis de Tema - MODO CLARO (Yellow Clean) */
@@ -24,10 +23,9 @@
   --card: #ffffff;
   --card-foreground: #1e293b;
   --border: #e2e8f0;
-  --accent: #f59e0b; /* Amarelo Agendei mantido no claro */
+  --accent: #f59e0b; 
   --muted: #64748b;
   --sidebar: #ffffff;
-  --shadow: 0 10px 25px -3px rgba(245, 158, 11, 0.05), 0 4px 6px -4px rgba(245, 158, 11, 0.05);
 }
 
 body {
@@ -46,7 +44,6 @@ aside {
 .bg-card {
   background-color: var(--card) !important;
   border: 1px solid var(--border) !important;
-  box-shadow: var(--shadow);
 }
 
 .text-title {
@@ -57,28 +54,33 @@ aside {
   border-color: var(--border) !important;
 }
 
-/* Botão Premium Padronizado */
+/* BOTÃO PADRÃO AGENDEI (Igual ao de Serviços) */
 .btn-primary {
-  background: var(--accent) !important;
-  color: #000000 !important;
-  font-weight: 800 !important;
-  border-radius: 16px;
-  box-shadow: 0 10px 20px -5px rgba(245, 158, 11, 0.3);
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  background-color: #f59e0b !important;
+  color: #09090b !important;
+  font-weight: 700 !important;
+  border-radius: 1rem !important; /* rounded-2xl */
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.2) !important;
+  transition: all 0.2s ease !important;
+  border: none !important;
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 15px 30px -5px rgba(245, 158, 11, 0.4);
-  filter: brightness(1.1);
+  background-color: #fbbf24 !important; /* amber-400 */
+  transform: translateY(-1px) !important;
+  box-shadow: 0 20px 25px -5px rgba(245, 158, 11, 0.3) !important;
 }
 
 .btn-primary:active {
-  transform: translateY(0);
+  transform: scale(0.95) !important;
 }
 
 /* Cursor Pointer em tudo que é clicável */
@@ -91,6 +93,7 @@ input, select, textarea {
   background-color: var(--background) !important;
   border: 1px solid var(--border) !important;
   color: var(--foreground) !important;
+  border-radius: 0.75rem !important;
 }
 
 /* Scrollbar */
