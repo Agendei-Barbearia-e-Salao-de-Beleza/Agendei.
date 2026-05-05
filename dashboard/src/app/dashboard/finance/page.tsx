@@ -102,7 +102,7 @@ function FinanceCard({ label, value, icon, color, bg, trend }: any) {
     <div className="bg-card border border-subtle p-8 rounded-2xl space-y-4 hover:border-[#fd9602]/30 transition-all cursor-pointer group shadow-sm">
       <div className="flex items-center justify-between">
         <div className={cn("p-3.5 rounded-xl", bg, color)}>
-          {React.cloneElement(icon as React.ReactElement, { size: 22 })}
+          {React.cloneElement(icon as React.ReactElement<any>, { size: 22 })}
         </div>
         <span className={cn(
           "text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-tighter",
