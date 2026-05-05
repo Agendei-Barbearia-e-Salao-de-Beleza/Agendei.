@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Scissors, User, Mail, Lock, Store, ChevronRight, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -11,7 +12,7 @@ export default function Register() {
     email: "",
     password: "",
     establishment: "",
-    type: "BARBERSHOP"
+    type: "BARBEARIA"
   });
   const [loading, setLoading] = useState(false);
 
@@ -20,9 +21,9 @@ export default function Register() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { name, email, password, establishment } = formData;
+    const { name, email, password, establishment, type } = formData;
 
     if (!name || !email || !password || !establishment) {
       toast.error("Por favor, preencha todos os campos obrigatórios.");
@@ -35,17 +36,40 @@ export default function Register() {
     }
 
     setLoading(true);
-    // Simulação de cadastro
-    setTimeout(() => {
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            nome: name,
+            nome_estabelecimento: establishment,
+            tipo: type
+          }
+        }
+      });
+
+      if (error) {
+        toast.error(error.message || "Ocorreu um erro ao tentar criar a conta.");
+        setLoading(false);
+        return;
+      }
+
+      toast.success("Conta criada com sucesso! Você já pode fazer login.");
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 2000);
+    } catch (err) {
+      toast.error("Ocorreu um erro inesperado.");
       setLoading(false);
-      toast.success("Conta criada com sucesso! Verifique seu e-mail.");
-    }, 1500);
+    }
   };
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-zinc-950 flex flex-col items-center justify-center p-6">
       {/* Background Decorative Elements */}
-      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-amber-500/10 rounded-full blur-[120px]" />
+      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#fd9602]/10 rounded-full blur-[120px]" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-zinc-800/20 rounded-full blur-[120px]" />
 
       <motion.div 
@@ -55,11 +79,11 @@ export default function Register() {
         className="z-10 w-full max-w-xl"
       >
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="bg-amber-500 p-2 rounded-xl">
+          <div className="bg-[#fd9602] p-2 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.4)]">
             <Scissors className="text-zinc-950 w-6 h-6" />
           </div>
           <h1 className="text-2xl font-bold tracking-tighter text-white">
-            Agendei<span className="text-amber-500">.</span>
+            Agendei<span className="text-[#fd9602]">.</span>
           </h1>
         </div>
 
@@ -69,8 +93,8 @@ export default function Register() {
           transition={{ delay: 0.2, duration: 0.8 }}
           className="relative"
         >
-          <div className="absolute inset-0 bg-amber-500/5 rounded-3xl blur-2xl" />
-          <div className="relative bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 p-8 rounded-3xl shadow-2xl">
+          <div className="absolute inset-0 bg-[#fd9602]/5 rounded-3xl blur-2xl" />
+          <div className="relative bg-zinc-900/50 backdrop-blur-xl border border-white/5 p-8 rounded-3xl shadow-2xl">
             <div className="mb-8 text-center">
               <h3 className="text-2xl font-bold text-zinc-100">Criar Nova Conta</h3>
               <p className="text-zinc-500 text-sm mt-1">Comece a gerenciar seu estabelecimento hoje mesmo</p>
@@ -87,7 +111,7 @@ export default function Register() {
                     value={formData.name}
                     onChange={handleInputChange}
                     placeholder="Seu nome"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all placeholder:text-zinc-700 cursor-pointer"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#fd9602]/50 transition-all placeholder:text-zinc-700 cursor-pointer"
                   />
                 </div>
               </div>
@@ -102,7 +126,7 @@ export default function Register() {
                     value={formData.email}
                     onChange={handleInputChange}
                     placeholder="seu@email.com"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all placeholder:text-zinc-700 cursor-pointer"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#fd9602]/50 transition-all placeholder:text-zinc-700 cursor-pointer"
                   />
                 </div>
               </div>
@@ -117,7 +141,7 @@ export default function Register() {
                     value={formData.password}
                     onChange={handleInputChange}
                     placeholder="••••••••"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all placeholder:text-zinc-700 cursor-pointer"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#fd9602]/50 transition-all placeholder:text-zinc-700 cursor-pointer"
                   />
                 </div>
               </div>
@@ -132,7 +156,7 @@ export default function Register() {
                     value={formData.establishment}
                     onChange={handleInputChange}
                     placeholder="Ex: Barbearia do João"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all placeholder:text-zinc-700 cursor-pointer"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#fd9602]/50 transition-all placeholder:text-zinc-700 cursor-pointer"
                   />
                 </div>
               </div>
@@ -143,18 +167,18 @@ export default function Register() {
                   name="type"
                   value={formData.type}
                   onChange={handleInputChange}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all cursor-pointer appearance-none"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#fd9602]/50 transition-all cursor-pointer appearance-none"
                 >
-                  <option value="BARBERSHOP">Barbearia</option>
-                  <option value="SALON">Salão de Beleza</option>
-                  <option value="UNISEX">Unissex</option>
+                  <option value="BARBEARIA">Barbearia</option>
+                  <option value="SALAO">Salão de Beleza</option>
+                  <option value="UNISSEX">Unissex</option>
                 </select>
               </div>
 
               <button 
                 type="submit"
                 disabled={loading}
-                className="md:col-span-2 mt-4 w-full bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold py-4 rounded-xl transition-all shadow-lg shadow-amber-500/10 active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                className="md:col-span-2 mt-4 w-full bg-[#fd9602] hover:bg-[#fd9602]/90 text-zinc-950 font-bold py-4 rounded-xl transition-all shadow-lg shadow-[#fd9602]/20 active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {loading ? "Processando..." : (
                   <>
@@ -165,7 +189,7 @@ export default function Register() {
             </form>
 
             <p className="mt-8 text-center text-xs text-zinc-600">
-              Já tem uma conta? <a href="/" className="text-amber-500 hover:underline cursor-pointer font-medium flex items-center justify-center gap-1 mt-1">
+              Já tem uma conta? <a href="/" className="text-[#fd9602] hover:underline cursor-pointer font-medium flex items-center justify-center gap-1 mt-1">
                 <ArrowLeft className="w-3 h-3" /> Voltar para o Login
               </a>
             </p>

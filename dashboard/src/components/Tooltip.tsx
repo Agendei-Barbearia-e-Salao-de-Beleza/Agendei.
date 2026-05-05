@@ -13,7 +13,7 @@ export function Tooltip({ text, children }: TooltipProps) {
 
   return (
     <div 
-      className="relative flex items-center"
+      className="relative"
       onMouseEnter={() => setShow(true)}
       onMouseLeave={() => setShow(false)}
     >
@@ -24,6 +24,7 @@ export function Tooltip({ text, children }: TooltipProps) {
             initial={{ opacity: 0, y: 5, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 5, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
             className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-[100] px-3 py-1.5 bg-zinc-900 border border-zinc-800 text-white text-[10px] font-bold rounded-lg shadow-2xl whitespace-nowrap pointer-events-none"
           >
             {text}

@@ -12,32 +12,22 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") as Theme;
-    if (savedTheme) {
-      setTheme(savedTheme);
-      document.documentElement.classList.toggle("light", savedTheme === "light");
-    }
+    // Force dark mode globally
+    document.documentElement.classList.remove("light");
+    document.documentElement.classList.add("dark");
+    localStorage.setItem("theme", "dark");
     setMounted(true);
   }, []);
 
   const toggleTheme = () => {
-    const newTheme = theme === "dark" ? "light" : "dark";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    
-    if (newTheme === "light") {
-      document.documentElement.classList.add("light");
-    } else {
-      document.documentElement.classList.remove("light");
-    }
+    // Disabled as per request
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme: "dark", toggleTheme }}>
       <div className={mounted ? "" : "invisible"}>
         {children}
       </div>

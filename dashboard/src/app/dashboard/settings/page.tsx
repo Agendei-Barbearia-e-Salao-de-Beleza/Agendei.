@@ -40,20 +40,20 @@ export default function SettingsPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Nome do Estabelecimento</label>
-                                <input type="text" defaultValue="Agendei. Demo" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-amber-500/50 outline-none transition-all" />
+                                <input type="text" defaultValue="Agendei. Demo" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Telefone Comercial</label>
-                                <input type="text" defaultValue="(11) 99999-8888" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-amber-500/50 outline-none transition-all" />
+                                <input type="text" defaultValue="(11) 99999-8888" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
                             </div>
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Endereço Completo</label>
-                            <input type="text" defaultValue="Rua das Belezas, 123 - São Paulo, SP" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-amber-500/50 outline-none transition-all" />
+                            <input type="text" defaultValue="Rua das Belezas, 123 - São Paulo, SP" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
                         </div>
                         <button 
                             onClick={() => toast.success("Configurações salvas com sucesso!")}
-                            className="bg-amber-500 text-zinc-950 font-bold px-8 py-3 rounded-xl hover:bg-amber-400 transition-all flex items-center gap-2 shadow-lg shadow-amber-500/10 active:scale-95"
+                            className="bg-[#fd9602] text-zinc-950 font-bold px-8 py-3 rounded-xl hover:bg-[#fd9602]/90 transition-all flex items-center gap-2 shadow-lg shadow-[#fd9602]/10 active:scale-95"
                         >
                             <Save size={18} />
                             Salvar Alterações
@@ -90,7 +90,7 @@ function SettingsTab({ icon, label, id, active, onClick }: any) {
             onClick={() => onClick(id)}
             className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all active:scale-95 ${
                 active 
-                    ? "bg-amber-500/10 text-amber-500 shadow-sm border border-amber-500/20" 
+                    ? "bg-[#fd9602]/10 text-[#fd9602] shadow-sm border border-[#fd9602]/20" 
                     : "text-zinc-500 hover:bg-zinc-900/50 hover:text-zinc-300 border border-transparent"
             }`}
         >

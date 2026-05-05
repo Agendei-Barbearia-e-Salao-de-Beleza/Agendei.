@@ -2,131 +2,107 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  Scissors, 
-  Users, 
-  DollarSign, 
-  Settings, 
-  Bell, 
+import { usePathname, useRouter } from "next/navigation";
+import {
+  LayoutDashboard,
+  Calendar,
+  Sparkles,
+  Users,
+  BarChart3,
+  Bell,
+  Settings,
   LogOut,
+  Scissors,
+  ChevronRight,
   Sun,
   Moon
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useTheme } from "./ThemeProvider";
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { supabase } from "@/lib/supabase";
+
+function cn(...inputs: any[]) {
+  return twMerge(clsx(inputs));
+}
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+  { icon: LayoutDashboard, label: "Visão Geral", href: "/dashboard" },
   { icon: Calendar, label: "Agenda", href: "/dashboard/appointments" },
-  { icon: Scissors, label: "Serviços", href: "/dashboard/services" },
+  { icon: Sparkles, label: "Serviços", href: "/dashboard/services" },
   { icon: Users, label: "Clientes", href: "/dashboard/customers" },
-  { icon: DollarSign, label: "Financeiro", href: "/dashboard/finance" },
+  { icon: BarChart3, label: "Financeiro", href: "/dashboard/finance" },
+  { icon: Bell, label: "Notificações", href: "/dashboard/notifications" },
+  { icon: Settings, label: "Configurações", href: "/dashboard/settings" },
 ];
 
-export function Sidebar() {
+export default function Sidebar() {
   const pathname = usePathname();
-  const { theme, toggleTheme } = useTheme();
+  const router = useRouter();
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/");
+  };
   return (
-    <>
-      {/* DESKTOP SIDEBAR (Visible only on lg+) */}
-      <aside className="hidden lg:flex w-72 flex-col bg-card border-r border-subtle h-screen sticky top-0">
-        <div className="p-8">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center shadow-lg shadow-accent/20">
-              <Scissors className="text-zinc-950 w-6 h-6" />
-            </div>
-            <h1 className="text-2xl font-black tracking-tighter text-title italic">Agendei.</h1>
+    <aside className="w-64 h-screen flex flex-col fixed left-0 top-0 z-50 border-r border-subtle transition-all duration-500 ease-in-out bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xl">
+      <div className="p-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div style={{ backgroundColor: '#fd9602' }} className="p-2 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.4)]">
+            <Scissors className="text-zinc-950 w-5 h-5" />
           </div>
-
-          <nav className="space-y-2">
-            {menuItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all group",
-                  pathname === item.href 
-                    ? "bg-accent text-zinc-950 shadow-lg shadow-accent/10" 
-                    : "text-zinc-500 hover:bg-zinc-500/5 hover:text-title"
-                )}
-              >
-                <item.icon className={cn(
-                  "w-5 h-5 transition-colors",
-                  pathname === item.href ? "text-zinc-950" : "text-zinc-500 group-hover:text-accent"
-                )} />
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+          <h1 className="text-xl font-bold tracking-tighter text-zinc-950 dark:text-white">
+            Agendei<span style={{ color: '#fd9602' }}>.</span>
+          </h1>
         </div>
 
-        <div className="mt-auto p-8 space-y-4">
-          <button 
-            onClick={toggleTheme}
-            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-bold text-zinc-500 hover:bg-zinc-500/5 hover:text-title transition-all"
-          >
-            {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            {theme === "dark" ? "Modo Claro" : "Modo Escuro"}
-          </button>
-          
-          <Link
-            href="/dashboard/settings"
-            className={cn(
-              "flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all",
-              pathname === "/dashboard/settings" ? "bg-zinc-500/10 text-title" : "text-zinc-500 hover:bg-zinc-500/5 hover:text-title"
-            )}
-          >
-            <Settings className="w-5 h-5" />
-            Configurações
-          </Link>
-          
-          <div className="pt-4 border-t border-subtle">
-            <div className="flex items-center gap-3 p-2">
-              <div className="w-10 h-10 rounded-xl bg-zinc-500/10 flex items-center justify-center font-bold text-zinc-500">
-                ML
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <p className="text-xs font-black text-title truncate">Matheus Lucindo</p>
-                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Dono</p>
-              </div>
-              <button className="p-2 text-zinc-500 hover:text-red-500 transition-colors">
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </aside>
+      </div>
 
-      {/* MOBILE BOTTOM NAVIGATION (Visible only on sm/md) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-xl border-t border-subtle px-6 py-3 flex items-center justify-between shadow-[0_-10px_30px_rgba(0,0,0,0.1)]">
-        {menuItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex flex-col items-center gap-1 transition-all",
-              pathname === item.href ? "text-accent" : "text-zinc-500"
-            )}
-          >
-            <item.icon className="w-6 h-6" />
-            <span className="text-[10px] font-black uppercase tracking-tighter">{item.label}</span>
-          </Link>
-        ))}
-        <Link
-          href="/dashboard/settings"
-          className={cn(
-            "flex flex-col items-center gap-1 transition-all",
-            pathname === "/dashboard/settings" ? "text-accent" : "text-zinc-500"
-          )}
-        >
-          <Settings className="w-6 h-6" />
-          <span className="text-[10px] font-black uppercase tracking-tighter">Ajustes</span>
-        </Link>
+      <nav className="flex-1 px-4 py-4 space-y-1.5">
+        {menuItems.map((item) => {
+          const isActive = pathname === item.href;
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center justify-between px-3.5 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden",
+                isActive
+                  ? "bg-[#fd9602]/10 text-[#fd9602]"
+                  : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100/50 dark:hover:bg-zinc-900/30"
+              )}
+            >
+              <div className="flex items-center gap-3.5 relative z-10">
+                <Icon className={cn(
+                  "w-5 h-5 transition-all duration-300",
+                  isActive ? "scale-110" : "text-zinc-500 group-hover:scale-110"
+                )} style={isActive ? { color: '#fd9602' } : {}} />
+                <span className="font-semibold text-sm tracking-tight">{item.label}</span>
+              </div>
+              {isActive && (
+                <ChevronRight style={{ color: '#fd9602' }} className="w-4 h-4 relative z-10 animate-in fade-in slide-in-from-left-2 duration-300" />
+              )}
+            </Link>
+          );
+        })}
       </nav>
-    </>
+
+      <div className="p-4 mt-auto border-t border-zinc-100/10 dark:border-zinc-900/50">
+        <div className="flex items-center gap-3 p-3 mb-4 bg-zinc-50/50 dark:bg-zinc-900/20 rounded-xl border border-zinc-100/10 dark:border-zinc-900/50 hover:border-[#fd9602]/30 transition-all duration-300">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-zinc-950 font-bold text-lg shadow-[0_0_15px_rgba(245,158,11,0.3)]" style={{ background: 'linear-gradient(135deg, #fd9602, #fbbf24)' }}>
+            ML
+          </div>
+          <div className="flex flex-col overflow-hidden">
+            <span className="text-sm font-bold text-zinc-900 dark:text-white truncate">Matheus Lucindo</span>
+            <span className="text-[9px] text-zinc-500 truncate uppercase tracking-widest font-bold">Admin / Demo</span>
+          </div>
+        </div>
+
+        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/5 transition-all duration-300 group">
+          <LogOut className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+          <span className="font-bold text-sm tracking-tight">Sair do Painel</span>
+        </button>
+      </div>
+    </aside>
   );
 }

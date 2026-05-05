@@ -68,7 +68,7 @@ export default function NotificationsPage() {
                   value={formData.token}
                   onChange={(e) => setFormData({ ...formData, token: e.target.value })}
                   placeholder="Ex: fLp_3s... (Token gerado pelo App Mobile)"
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-4 py-3 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-4 py-3 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#fd9602]/50"
                 />
               </div>
               <p className="text-[10px] text-zinc-600">Este token identifica unicamente o celular do cliente.</p>
@@ -81,7 +81,7 @@ export default function NotificationsPage() {
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Ex: Agendamento Confirmado! ✂️"
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#fd9602]/50"
               />
             </div>
 
@@ -92,14 +92,14 @@ export default function NotificationsPage() {
                 value={formData.body}
                 onChange={(e) => setFormData({ ...formData, body: e.target.value })}
                 placeholder="Escreva a mensagem que o cliente receberá..."
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 resize-none"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#fd9602]/50 resize-none"
               />
             </div>
 
             <button 
               type="submit"
               disabled={loading}
-              className="w-full bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full bg-[#fd9602] hover:bg-[#fd9602]/90 text-zinc-950 font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Send className="w-5 h-5" />
               {loading ? "Enviando..." : "Enviar Notificação Agora"}
@@ -109,8 +109,8 @@ export default function NotificationsPage() {
 
         {/* Info Column */}
         <div className="space-y-6">
-          <div className="bg-amber-500/5 border border-amber-500/10 p-6 rounded-3xl space-y-4">
-            <div className="flex items-center gap-2 text-amber-500">
+          <div className="bg-[#fd9602]/5 border border-[#fd9602]/10 p-6 rounded-3xl space-y-4">
+            <div className="flex items-center gap-2 text-[#fd9602]">
               <Info className="w-5 h-5" />
               <h3 className="font-bold">Como funciona?</h3>
             </div>
@@ -119,11 +119,11 @@ export default function NotificationsPage() {
             </p>
             <ul className="space-y-2">
               <li className="flex items-start gap-2 text-[11px] text-zinc-500">
-                <CheckCircle2 className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3 h-3 text-[#fd9602] mt-0.5 shrink-0" />
                 Entrega garantida para Android e iOS.
               </li>
               <li className="flex items-start gap-2 text-[11px] text-zinc-500">
-                <CheckCircle2 className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3 h-3 text-[#fd9602] mt-0.5 shrink-0" />
                 Funciona com o app em segundo plano.
               </li>
             </ul>
