@@ -100,7 +100,7 @@ export default function Home() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between ml-1">
                   <label className="text-sm font-medium text-zinc-400">Senha</label>
-                  <a href="/forgot-password" size="sm" className="text-xs text-amber-500 hover:underline cursor-pointer">Esqueceu a senha?</a>
+                  <a href="/forgot-password" className="text-xs text-amber-500 hover:underline cursor-pointer">Esqueceu a senha?</a>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-700" />
