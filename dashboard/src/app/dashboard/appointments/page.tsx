@@ -200,55 +200,78 @@ export default function AppointmentsPage() {
       {/* Multi-Service Modal */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-zinc-950/80 backdrop-blur-md" />
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
             <motion.div 
-                initial={{ opacity: 0, scale: 0.95, y: 20 }} 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setIsModalOpen(false)} 
+              className="absolute inset-0 bg-zinc-950/60 backdrop-blur-md" 
+            />
+            
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.9, y: 30 }} 
                 animate={{ opacity: 1, scale: 1, y: 0 }} 
-                exit={{ opacity: 0, scale: 0.95, y: 20 }} 
-                className="relative w-full max-w-xl bg-card border border-subtle rounded-[32px] p-8 shadow-2xl"
+                exit={{ opacity: 0, scale: 0.9, y: 30 }} 
+                className="relative w-full max-w-lg bg-card border border-subtle rounded-[40px] p-8 sm:p-10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] overflow-hidden"
             >
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-accent/10 rounded-xl">
-                        <CalendarIcon className="text-accent w-5 h-5" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-title">Novo Agendamento</h3>
+              {/* Efeito de brilho no topo do modal */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-1 bg-gradient-to-r from-transparent via-accent to-transparent opacity-50" />
+
+              <div className="flex items-center justify-between mb-10">
+                <div className="space-y-1">
+                    <h3 className="text-3xl font-black text-title tracking-tight">Agendar Horário</h3>
+                    <p className="text-sm text-zinc-500 font-medium">Preencha os detalhes do atendimento.</p>
                 </div>
-                <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-zinc-500/10 rounded-full text-zinc-500"><X /></button>
+                <button 
+                  onClick={() => setIsModalOpen(false)} 
+                  className="p-3 hover:bg-zinc-500/10 rounded-2xl text-zinc-500 transition-colors"
+                >
+                  <X size={20} />
+                </button>
               </div>
 
-              <form onSubmit={handleCreate} className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                    <User size={12} /> Cliente
+              <form onSubmit={handleCreate} className="space-y-8">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">
+                    Cliente
                   </label>
-                  <input 
-                    required 
-                    value={formData.customer} 
-                    onChange={e => setFormData({...formData, customer: e.target.value})}
-                    type="text" 
-                    placeholder="Quem vamos atender?" 
-                    className="w-full px-4 py-3 rounded-2xl outline-none" 
-                  />
+                  <div className="relative group">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600 group-focus-within:text-accent transition-colors" />
+                    <input 
+                      required 
+                      value={formData.customer} 
+                      onChange={e => setFormData({...formData, customer: e.target.value})}
+                      type="text" 
+                      placeholder="Nome do cliente..." 
+                      className="w-full bg-zinc-500/5 border border-subtle rounded-2xl pl-12 pr-4 py-4 text-title outline-none focus:ring-2 focus:ring-accent/20 transition-all font-medium" 
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-3">
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                    <Sparkles size={12} /> Adicionar Serviços
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">
+                    Serviços & Procedimentos
                   </label>
                   
-                  {/* Autocomplete / Search */}
-                  <div className="relative">
+                  <div className="relative group">
+                    <Sparkles className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600 group-focus-within:text-accent transition-colors" />
                     <input 
                         type="text"
                         value={serviceSearch}
                         onChange={e => setServiceSearch(e.target.value)}
-                        placeholder="Pesquisar serviço cadastrado..."
-                        className="w-full px-4 py-3 rounded-2xl outline-none border-dashed border-accent/30"
+                        placeholder="Pesquisar serviço (ex: Corte, Barba...)"
+                        className="w-full bg-zinc-500/5 border border-subtle rounded-2xl pl-12 pr-4 py-4 text-title outline-none focus:ring-2 focus:ring-accent/20 transition-all font-medium"
                     />
-                    {serviceSearch && (
-                        <div className="absolute z-50 w-full mt-2 bg-card border border-subtle rounded-2xl shadow-2xl max-h-48 overflow-y-auto p-2">
+                    
+                    <AnimatePresence>
+                      {serviceSearch && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          className="absolute z-50 w-full mt-3 bg-card border border-subtle rounded-3xl shadow-2xl max-h-56 overflow-y-auto p-3 backdrop-blur-xl"
+                        >
                             {availableServices
                                 .filter(s => s.nome.toLowerCase().includes(serviceSearch.toLowerCase()))
                                 .map(s => (
@@ -256,52 +279,72 @@ export default function AppointmentsPage() {
                                         key={s.id}
                                         type="button"
                                         onClick={() => addServiceToApp(s)}
-                                        className="w-full text-left p-3 hover:bg-accent/5 rounded-xl flex justify-between items-center group"
+                                        className="w-full text-left p-4 hover:bg-accent hover:text-white rounded-2xl flex justify-between items-center transition-all group/item"
                                     >
-                                        <span className="text-sm font-bold group-hover:text-accent">{s.nome}</span>
-                                        <span className="text-xs text-zinc-500">R$ {s.preco}</span>
+                                        <span className="font-bold text-sm">{s.nome}</span>
+                                        <span className="text-xs font-medium opacity-60">R$ {s.preco}</span>
                                     </button>
                                 ))
                             }
-                        </div>
-                    )}
+                            {availableServices.filter(s => s.nome.toLowerCase().includes(serviceSearch.toLowerCase())).length === 0 && (
+                              <div className="p-4 text-center text-sm text-zinc-500 font-medium">Nenhum serviço encontrado.</div>
+                            )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
-                  {/* Selected Services Tags */}
                   <div className="flex flex-wrap gap-2">
                     {selectedServices.map(s => (
-                        <div key={s.id} className="flex items-center gap-2 bg-accent/10 text-accent px-3 py-1.5 rounded-full text-xs font-bold">
-                            <Tag size={12} />
+                        <motion.div 
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          key={s.id} 
+                          className="flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg shadow-accent/20"
+                        >
+                            <Tag size={14} />
                             {s.nome}
-                            <button onClick={() => removeServiceFromApp(s.id)} type="button" className="hover:text-red-500">
+                            <button onClick={() => removeServiceFromApp(s.id)} type="button" className="ml-1 p-0.5 hover:bg-white/20 rounded-md">
                                 <X size={14} />
                             </button>
-                        </div>
+                        </motion.div>
                     ))}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Horário</label>
-                    <input type="time" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} className="w-full px-4 py-3 rounded-2xl outline-none" />
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Horário</label>
+                    <div className="relative group">
+                      <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600 group-focus-within:text-accent transition-colors" />
+                      <input 
+                        type="time" 
+                        value={formData.time} 
+                        onChange={e => setFormData({...formData, time: e.target.value})} 
+                        className="w-full bg-zinc-500/5 border border-subtle rounded-2xl pl-12 pr-4 py-4 text-title outline-none focus:ring-2 focus:ring-accent/20 transition-all font-bold" 
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Total Estimado</label>
-                    <div className="w-full px-4 py-3 rounded-2xl bg-zinc-500/5 text-accent font-bold text-lg flex items-center">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Total</label>
+                    <div className="w-full px-6 py-4 rounded-2xl bg-accent/10 border border-accent/20 text-accent font-black text-xl flex items-center justify-center">
                         R$ {calculateTotal().toFixed(2)}
                     </div>
                   </div>
                 </div>
 
-                <button type="submit" className="w-full bg-accent text-white font-bold py-4 rounded-[20px] shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">
-                  Finalizar Agendamento
+                <button 
+                  type="submit" 
+                  className="w-full bg-accent hover:bg-accent/90 text-white font-black py-5 rounded-[24px] shadow-[0_20px_40px_-10px_rgba(79,70,229,0.3)] light:shadow-[0_20px_40px_-10px_rgba(79,70,229,0.2)] active:scale-[0.98] transition-all text-lg tracking-tight mt-4"
+                >
+                  Confirmar Agendamento
                 </button>
               </form>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
     </div>
   );
 }
