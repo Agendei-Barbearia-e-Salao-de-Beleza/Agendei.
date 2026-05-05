@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   description: "Gestão inteligente para barbearias e salões de beleza.",
 };
 
+import { ThemeProvider } from "@/components/ThemeProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -20,10 +22,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased bg-zinc-950 text-zinc-100`} suppressHydrationWarning>
-        <Toaster theme="dark" richColors position="top-right" />
-        {children}
+      <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning>
+        <ThemeProvider>
+          <Toaster richColors position="top-right" />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
 }
+

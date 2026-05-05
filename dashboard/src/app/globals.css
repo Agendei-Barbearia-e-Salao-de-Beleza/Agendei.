@@ -4,31 +4,71 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
+/* Variáveis de Tema */
 :root {
   --background: #09090b;
   --foreground: #fafafa;
+  --card: #18181b;
+  --card-foreground: #fafafa;
+  --border: #27272a;
+  --accent: #f59e0b; /* Amber 500 */
+  --muted: #71717a;
+}
+
+:root.light {
+  --background: #ffffff;
+  --foreground: #09090b;
+  --card: #f4f4f5;
+  --card-foreground: #09090b;
+  --border: #e4e4e7;
+  --accent: #d97706; /* Amber 600 */
+  --muted: #71717a;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Custom Scrollbar for a premium feel */
+/* Aplicando as variáveis em componentes globais */
+aside {
+  background-color: var(--background) !important;
+  border-color: var(--border) !important;
+}
+
+main {
+  background-color: var(--background);
+}
+
+.bg-card {
+  background-color: var(--card) !important;
+}
+
+.text-title {
+  color: var(--foreground) !important;
+}
+
+.border-subtle {
+  border-color: var(--border) !important;
+}
+
+/* Cursor Pointer em tudo que é clicável */
+button, a, select, input[type="submit"] {
+  cursor: pointer !important;
+}
+
+/* Scrollbar adaptativa */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: var(--background);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: var(--border);
   border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
 }

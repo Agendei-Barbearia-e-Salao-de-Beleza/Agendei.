@@ -18,12 +18,19 @@ export default function Home() {
     }
     
     setLoading(true);
-    // Simulação de login
+    
+    // Simulação de login para Matheus Lucindo
     setTimeout(() => {
       setLoading(false);
-      toast.success("Login realizado com sucesso! Bem-vindo de volta.");
+      if (email === "matheus@agendei.com") {
+        toast.success("Bem-vindo, Matheus Lucindo! Acessando painel de demonstração.");
+        window.location.href = "/dashboard";
+      } else {
+        toast.error("Usuário não encontrado. Use o e-mail: matheus@agendei.com");
+      }
     }, 1500);
   };
+
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-zinc-950 flex flex-col items-center justify-center p-6">
@@ -139,6 +146,11 @@ export default function Home() {
             <p className="mt-2 text-center text-xs text-zinc-600">
               Precisa de ajuda? Entre em contato com o suporte.
             </p>
+            <div className="mt-6 p-3 bg-amber-500/5 border border-amber-500/10 rounded-xl">
+              <p className="text-[10px] text-amber-500/60 uppercase tracking-widest font-bold text-center mb-1">Conta de Demonstração</p>
+              <p className="text-xs text-zinc-400 text-center">E-mail: <span className="text-zinc-200 font-mono">matheus@agendei.com</span></p>
+            </div>
+
           </div>
         </motion.div>
       </motion.div>
