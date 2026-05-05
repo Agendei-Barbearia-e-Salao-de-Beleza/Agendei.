@@ -1,4 +1,4 @@
-package com.agendei.mobile
+package agendei.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,19 +9,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.agendei.mobile.ui.theme.AgendeiTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            AgendeiTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    Greeting("Agendei.")
-                }
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                Greeting("Agendei.")
             }
         }
     }
