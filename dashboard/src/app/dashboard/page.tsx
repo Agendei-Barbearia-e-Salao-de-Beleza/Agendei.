@@ -145,11 +145,12 @@ export default function DashboardOverview() {
 
 function QuickActionButton({ icon, label, color }: { icon: any; label: string; color: string }) {
   return (
-    <button className="w-full flex items-center gap-3 p-3 rounded-2xl bg-zinc-800/50 hover:bg-zinc-800 border border-transparent hover:border-zinc-700 transition-all text-left">
-      <div className={`p-2 rounded-xl ${color} text-zinc-950`}>
+    <button className="w-full flex items-center gap-3 p-3 rounded-2xl bg-zinc-500/5 hover:bg-accent/10 border border-subtle hover:border-accent transition-all text-left group">
+      <div className={`p-2 rounded-xl bg-accent text-zinc-950 shadow-lg shadow-accent/20 group-hover:scale-110 transition-transform`}>
         {React.cloneElement(icon, { size: 16 })}
       </div>
-      <span className="text-sm font-bold text-zinc-300">{label}</span>
+      <span className="text-sm font-bold text-zinc-500 group-hover:text-title">{label}</span>
     </button>
   );
 }
+

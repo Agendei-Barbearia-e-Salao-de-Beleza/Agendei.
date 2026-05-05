@@ -27,13 +27,21 @@ interface Appointment {
   status: string;
 }
 
+const mockServices: Service[] = [
+  { id: 'm1', nome: "Corte Degradê", preco: 45, duracao_minutos: 30 },
+  { id: 'm2', nome: "Barba Terapia", preco: 35, duracao_minutos: 25 },
+  { id: 'm3', nome: "Sobrancelha", preco: 15, duracao_minutos: 10 },
+  { id: 'm4', nome: "Corte + Barba", preco: 75, duracao_minutos: 60 },
+  { id: 'm5', nome: "Limpeza de Pele", preco: 50, duracao_minutos: 40 },
+];
+
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([
-    { id: 1, customer: "Carlos Alberto", services: [{ id: '1', nome: "Corte Degradê", preco: 45, duracao_minutos: 30 }], date: "05 Mai 2026", time: "14:00", totalPrice: 45.0, status: "Confirmado" },
+    { id: 1, customer: "Carlos Alberto", services: [mockServices[0]], date: "05 Mai 2026", time: "14:00", totalPrice: 45.0, status: "Confirmado" },
   ]);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [availableServices, setAvailableServices] = useState<Service[]>([]);
+  const [availableServices, setAvailableServices] = useState<Service[]>(mockServices);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [serviceSearch, setServiceSearch] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState<number | string | null>(null);
@@ -43,14 +51,24 @@ export default function AppointmentsPage() {
     time: "10:00",
   });
 
-  // Carrega serviços reais do Supabase
+  // Carrega serviços reais do Supabase e mescla com os de demo
   useEffect(() => {
     const fetchServices = async () => {
       const { data, error } = await supabase.from('servicos').select('*');
-      if (data) setAvailableServices(data);
+      if (data && data.length > 0) {
+          // Converte campos do banco se necessário
+          const formatted = data.map((s: any) => ({
+              id: s.id,
+              nome: s.nome,
+              preco: s.preco,
+              duracao_minutos: s.duracao_minutos
+          }));
+          setAvailableServices([...formatted, ...mockServices]);
+      }
     };
     fetchServices();
   }, []);
+
 
   const addServiceToApp = (service: Service) => {
     if (selectedServices.find(s => s.id === service.id)) {
@@ -101,11 +119,12 @@ export default function AppointmentsPage() {
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="bg-accent text-white font-bold px-6 py-3 rounded-2xl flex items-center gap-2 hover:opacity-90 shadow-lg shadow-indigo-500/10"
+          className="btn-primary px-6 py-3"
         >
           <Plus className="w-5 h-5" />
           Novo Agendamento
         </button>
+
       </div>
 
       {/* Toolbar with Filter Dropdowns */}
@@ -335,10 +354,11 @@ export default function AppointmentsPage() {
 
                 <button 
                   type="submit" 
-                  className="w-full bg-accent hover:bg-accent/90 text-white font-black py-5 rounded-[24px] shadow-[0_20px_40px_-10px_rgba(79,70,229,0.3)] light:shadow-[0_20px_40px_-10px_rgba(79,70,229,0.2)] active:scale-[0.98] transition-all text-lg tracking-tight mt-4"
+                  className="btn-primary w-full py-5 text-lg mt-4"
                 >
                   Confirmar Agendamento
                 </button>
+
               </form>
             </motion.div>
           </div>
