@@ -54,33 +54,32 @@ aside {
   border-color: var(--border) !important;
 }
 
-/* BOTÃO PADRÃO AGENDEI (Igual ao de Serviços) */
+/* BOTÃO PADRÃO AGENDEI (Flat & Clean conforme solicitado) */
 .btn-primary {
-  background-color: #f59e0b !important;
-  color: #09090b !important;
+  background-color: #ff9900 !important; /* Laranja/Amarelo mais vivo conforme o print */
+  color: #000000 !important;
   font-weight: 700 !important;
-  border-radius: 1rem !important; /* rounded-2xl */
-  padding-left: 1.5rem !important;
-  padding-right: 1.5rem !important;
+  border-radius: 9999px !important; /* rounded-full conforme o print */
+  padding-left: 1.75rem !important;
+  padding-right: 1.75rem !important;
   padding-top: 0.75rem !important;
   padding-bottom: 0.75rem !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 0.5rem !important;
-  box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.2) !important;
+  box-shadow: none !important; /* REMOVIDO BOX SHADOW */
   transition: all 0.2s ease !important;
   border: none !important;
 }
 
 .btn-primary:hover {
-  background-color: #fbbf24 !important; /* amber-400 */
-  transform: translateY(-1px) !important;
-  box-shadow: 0 20px 25px -5px rgba(245, 158, 11, 0.3) !important;
+  filter: brightness(1.05) !important;
+  transform: scale(1.02) !important;
 }
 
 .btn-primary:active {
-  transform: scale(0.95) !important;
+  transform: scale(0.98) !important;
 }
 
 /* Cursor Pointer em tudo que é clicável */
@@ -93,7 +92,7 @@ input, select, textarea {
   background-color: var(--background) !important;
   border: 1px solid var(--border) !important;
   color: var(--foreground) !important;
-  border-radius: 0.75rem !important;
+  border-radius: 1rem !important;
 }
 
 /* Scrollbar */
