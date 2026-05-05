@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { User, Bell, Shield, Palette, Smartphone, Save } from "lucide-react";
+import { User, Bell, Shield, Palette, Smartphone, Save, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
