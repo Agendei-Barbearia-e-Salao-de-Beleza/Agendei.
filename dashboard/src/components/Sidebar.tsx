@@ -4,102 +4,129 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
-    LayoutDashboard, 
-    Calendar, 
-    Users, 
-    BarChart3, 
-    Bell,
-    Settings, 
-    LogOut, 
-    Scissors,
-    ChevronRight,
-    Sun,
-    Moon,
-    Sparkles
+  LayoutDashboard, 
+  Calendar, 
+  Scissors, 
+  Users, 
+  DollarSign, 
+  Settings, 
+  Bell, 
+  LogOut,
+  Sun,
+  Moon
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useTheme } from "./ThemeProvider";
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-function cn(...inputs: any[]) {
-  return twMerge(clsx(inputs));
-}
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Visão Geral", href: "/dashboard" },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
   { icon: Calendar, label: "Agenda", href: "/dashboard/appointments" },
-  { icon: Sparkles, label: "Serviços", href: "/dashboard/services" },
+  { icon: Scissors, label: "Serviços", href: "/dashboard/services" },
   { icon: Users, label: "Clientes", href: "/dashboard/customers" },
-  { icon: BarChart3, label: "Financeiro", href: "/dashboard/finance" },
-  { icon: Bell, label: "Notificações", href: "/dashboard/notifications" },
-  { icon: Settings, label: "Configurações", href: "/dashboard/settings" },
+  { icon: DollarSign, label: "Financeiro", href: "/dashboard/finance" },
 ];
 
-export default function Sidebar() {
+export function Sidebar() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <aside className="w-64 h-screen flex flex-col fixed left-0 top-0 z-50 border-r border-subtle transition-all duration-300">
-      <div className="p-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="bg-amber-500 p-1.5 rounded-lg shadow-lg shadow-amber-500/20">
-            <Scissors className="text-zinc-950 w-5 h-5" />
+    <>
+      {/* DESKTOP SIDEBAR (Visible only on lg+) */}
+      <aside className="hidden lg:flex w-72 flex-col bg-card border-r border-subtle h-screen sticky top-0">
+        <div className="p-8">
+          <div className="flex items-center gap-3 mb-10">
+            <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center shadow-lg shadow-accent/20">
+              <Scissors className="text-zinc-950 w-6 h-6" />
+            </div>
+            <h1 className="text-2xl font-black tracking-tighter text-title italic">Agendei.</h1>
           </div>
-          <h1 className="text-xl font-bold text-title tracking-tighter">
-            Agendei<span className="text-amber-500">.</span>
-          </h1>
-        </div>
-        
-        <button 
-          onClick={toggleTheme}
-          className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 light:bg-zinc-200 light:hover:bg-zinc-300 light:text-zinc-600 transition-all active:scale-90 shadow-sm"
-          title={theme === "dark" ? "Ativar Modo Claro" : "Ativar Modo Escuro"}
-        >
-          {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
-      </div>
 
-      <nav className="flex-1 px-4 py-4 space-y-1">
-        {menuItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 group",
-                isActive 
-                  ? "bg-amber-500/10 text-amber-500 shadow-sm" 
-                  : "text-zinc-500 hover:text-title hover:bg-zinc-900/50 light:hover:bg-zinc-200"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <item.icon className={cn("w-5 h-5", isActive ? "text-amber-500" : "text-zinc-500 group-hover:text-amber-500/70")} />
-                <span className="font-bold text-sm">{item.label}</span>
+          <nav className="space-y-2">
+            {menuItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all group",
+                  pathname === item.href 
+                    ? "bg-accent text-zinc-950 shadow-lg shadow-accent/10" 
+                    : "text-zinc-500 hover:bg-zinc-500/5 hover:text-title"
+                )}
+              >
+                <item.icon className={cn(
+                  "w-5 h-5 transition-colors",
+                  pathname === item.href ? "text-zinc-950" : "text-zinc-500 group-hover:text-accent"
+                )} />
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        <div className="mt-auto p-8 space-y-4">
+          <button 
+            onClick={toggleTheme}
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-bold text-zinc-500 hover:bg-zinc-500/5 hover:text-title transition-all"
+          >
+            {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            {theme === "dark" ? "Modo Claro" : "Modo Escuro"}
+          </button>
+          
+          <Link
+            href="/dashboard/settings"
+            className={cn(
+              "flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all",
+              pathname === "/dashboard/settings" ? "bg-zinc-500/10 text-title" : "text-zinc-500 hover:bg-zinc-500/5 hover:text-title"
+            )}
+          >
+            <Settings className="w-5 h-5" />
+            Configurações
+          </Link>
+          
+          <div className="pt-4 border-t border-subtle">
+            <div className="flex items-center gap-3 p-2">
+              <div className="w-10 h-10 rounded-xl bg-zinc-500/10 flex items-center justify-center font-bold text-zinc-500">
+                ML
               </div>
-              {isActive && <ChevronRight className="w-4 h-4" />}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="p-4 mt-auto border-t border-subtle">
-        <div className="flex items-center gap-3 p-2 mb-4 bg-zinc-900/30 light:bg-zinc-200/50 rounded-xl border border-subtle">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-zinc-950 font-bold text-lg">
-            ML
-          </div>
-          <div className="flex flex-col overflow-hidden">
-            <span className="text-sm font-bold text-title truncate text-white light:text-zinc-950">Matheus Lucindo</span>
-            <span className="text-[10px] text-zinc-500 truncate uppercase tracking-widest font-bold">Admin / Demo</span>
+              <div className="flex-1 overflow-hidden">
+                <p className="text-xs font-black text-title truncate">Matheus Lucindo</p>
+                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Dono</p>
+              </div>
+              <button className="p-2 text-zinc-500 hover:text-red-500 transition-colors">
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
-        
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:text-red-400 hover:bg-red-400/5 transition-all group">
-          <LogOut className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
-          <span className="font-bold text-sm">Sair do Painel</span>
-        </button>
-      </div>
-    </aside>
+      </aside>
+
+      {/* MOBILE BOTTOM NAVIGATION (Visible only on sm/md) */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-xl border-t border-subtle px-6 py-3 flex items-center justify-between shadow-[0_-10px_30px_rgba(0,0,0,0.1)]">
+        {menuItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={cn(
+              "flex flex-col items-center gap-1 transition-all",
+              pathname === item.href ? "text-accent" : "text-zinc-500"
+            )}
+          >
+            <item.icon className="w-6 h-6" />
+            <span className="text-[10px] font-black uppercase tracking-tighter">{item.label}</span>
+          </Link>
+        ))}
+        <Link
+          href="/dashboard/settings"
+          className={cn(
+            "flex flex-col items-center gap-1 transition-all",
+            pathname === "/dashboard/settings" ? "text-accent" : "text-zinc-500"
+          )}
+        >
+          <Settings className="w-6 h-6" />
+          <span className="text-[10px] font-black uppercase tracking-tighter">Ajustes</span>
+        </Link>
+      </nav>
+    </>
   );
 }

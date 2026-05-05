@@ -171,8 +171,9 @@ export default function AppointmentsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-card border border-subtle rounded-3xl shadow-sm">
-        <table className="w-full text-left">
+      <div className="bg-card border border-subtle rounded-3xl shadow-sm overflow-x-auto">
+        <table className="w-full text-left min-w-[700px] lg:min-w-full">
+
 
           <thead>
             <tr className="border-b border-subtle bg-zinc-500/5">

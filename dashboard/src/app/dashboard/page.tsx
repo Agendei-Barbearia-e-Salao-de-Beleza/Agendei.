@@ -33,8 +33,8 @@ export default function DashboardOverview() {
         <p className="text-zinc-500 font-medium">Veja o que está acontecendo no seu negócio hoje.</p>
       </div>
 
-      {/* Top Stats Grid - Exactly like Production Image */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Top Stats Grid - Responsive columns */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
           <Tooltip key={stat.label} text={`Ver evolução de ${stat.label}`}>
             <motion.div
@@ -43,6 +43,7 @@ export default function DashboardOverview() {
               transition={{ delay: i * 0.1 }}
               className="bg-card border border-subtle p-6 rounded-3xl w-full cursor-pointer hover:border-accent/30 transition-all"
             >
+
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-2.5 rounded-2xl ${stat.bg}`}>
                   <stat.icon className={`w-5 h-5 ${stat.color}`} />
