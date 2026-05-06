@@ -62,6 +62,29 @@ O PostgreSQL será utilizado para dados que exigem integridade referencial e tra
 - `status`: ENUM ('PENDENTE', 'PAGO')
 - `pago_em`: TIMESTAMP
 
+#### 6. `indisponibilidades` (Pausas/Folgas)
+- `id`: UUID (PK)
+- `estabelecimento_id`: UUID (FK -> estabelecimentos)
+- `data`: DATE
+- `hora_inicio`: TIME (Opcional)
+- `hora_fim`: TIME (Opcional)
+- `motivo`: TEXT
+- `criado_em`: TIMESTAMP
+
+#### 7. `despesas`
+- `id`: UUID (PK)
+- `estabelecimento_id`: UUID (FK -> estabelecimentos)
+- `descricao`: TEXT
+- `valor`: DECIMAL(10,2)
+- `categoria`: VARCHAR(50) (Ex: Aluguel, Suprimentos)
+- `data`: DATE
+- `criado_em`: TIMESTAMP
+
+#### 8. `metas`
+- `estabelecimento_id`: UUID (PK, FK -> estabelecimentos)
+- `valor_meta`: DECIMAL(10,2)
+- `atualizado_em`: TIMESTAMP
+
 ---
 
 ## 🍃 MongoDB (Logs & Dynamic Configs)

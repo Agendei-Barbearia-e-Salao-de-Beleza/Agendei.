@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { DollarSign, ArrowUpRight, ArrowDownRight, CreditCard, Wallet, TrendingUp, Calendar, BarChart3, Loader2 } from "lucide-react";
+import { DollarSign, ArrowUpRight, ArrowDownRight, CreditCard, Wallet, TrendingUp, Calendar, BarChart3, Loader2, Edit2, Trash2, MoreVertical, X, Check } from "lucide-react";
+import { Modal } from "@/components/Modal";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 
@@ -11,6 +13,14 @@ export default function FinancePage() {
   const [totals, setTotals] = useState({ balance: 0, income: 0, expense: 0 });
   const [transactions, setTransactions] = useState<any[]>([]);
   const [chartData, setChartData] = useState<number[]>(new Array(12).fill(0));
+  const [establishmentId, setEstablishmentId] = useState<string | null>(null);
+  
+  // Actions State
+  const [editingTransaction, setEditingTransaction] = useState<any>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
   useEffect(() => {
@@ -30,6 +40,7 @@ export default function FinancePage() {
         .single();
 
       if (estData) {
+        setEstablishmentId(estData.id);
         await Promise.all([
           fetchTotals(estData.id),
           fetchTransactions(estData.id),
@@ -83,8 +94,8 @@ export default function FinancePage() {
   async function fetchTransactions(estId: string) {
     // Buscar agendamentos e despesas recentes
     const [incRes, expRes] = await Promise.all([
-      supabase.from('agendamentos').select('id, preco_total, data_hora, usuarios!agendamentos_cliente_id_fkey(nome)').eq('estabelecimento_id', estId).order('data_hora', { ascending: false }).limit(5),
-      supabase.from('despesas').select('id, valor, descricao, data').eq('estabelecimento_id', estId).order('data', { ascending: false }).limit(5)
+      supabase.from('agendamentos').select('id, preco_total, data_hora, status, usuarios!agendamentos_cliente_id_fkey(nome)').eq('estabelecimento_id', estId).order('data_hora', { ascending: false }).limit(10),
+      supabase.from('despesas').select('id, valor, descricao, data, categoria').eq('estabelecimento_id', estId).order('data', { ascending: false }).limit(10)
     ]);
 
     const combined = [
@@ -99,10 +110,11 @@ export default function FinancePage() {
       ...(expRes.data?.map(e => ({
         id: e.id,
         title: e.descricao,
-        category: "Despesa",
+        category: e.categoria || "Despesa",
         date: new Date(e.data).toLocaleDateString('pt-BR'),
         value: Number(e.valor),
-        type: "expense"
+        type: "expense",
+        rawDate: e.data
       })) || [])
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -124,6 +136,61 @@ export default function FinancePage() {
       setChartData(monthlyValues);
     }
   }
+
+  const handleEdit = (transaction: any) => {
+    setEditingTransaction({
+      ...transaction,
+      value: transaction.value.toString().replace('.', ',')
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!establishmentId || !editingTransaction) return;
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('despesas')
+        .update({
+          descricao: editingTransaction.title,
+          valor: parseFloat(editingTransaction.value.replace(',', '.')),
+          categoria: editingTransaction.category
+        })
+        .eq('id', editingTransaction.id);
+
+      if (error) throw error;
+      toast.success("Transação atualizada!");
+      setShowEditModal(false);
+      fetchFinanceData();
+    } catch (error: any) {
+      toast.error("Erro ao atualizar: " + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!establishmentId) return;
+
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('despesas')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success("Transação excluída!");
+      setDeleteConfirmId(null);
+      fetchFinanceData();
+    } catch (error: any) {
+      toast.error("Erro ao excluir: " + error.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -206,11 +273,17 @@ export default function FinancePage() {
                    <th className="px-8 py-5">Categoria</th>
                    <th className="px-8 py-5">Data</th>
                    <th className="px-8 py-5 text-right">Valor</th>
+                   <th className="px-8 py-5 text-right">Ações</th>
                 </tr>
              </thead>
              <tbody className="divide-y divide-subtle dark:divide-zinc-800">
                 {transactions.map((t) => (
-                  <TransactionRow key={t.id} title={t.title} category={t.category} date={t.date} value={`R$ ${t.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} type={t.type} />
+                  <TransactionRow 
+                    key={t.id} 
+                    transaction={t}
+                    onEdit={() => handleEdit(t)}
+                    onDelete={() => setDeleteConfirmId(t.id)}
+                  />
                 ))}
                 {transactions.length === 0 && (
                   <tr>
@@ -221,6 +294,64 @@ export default function FinancePage() {
           </table>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Editar Despesa">
+        <form onSubmit={handleUpdate} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Descrição</label>
+            <input 
+              required 
+              value={editingTransaction?.title || ""} 
+              onChange={e => setEditingTransaction({...editingTransaction, title: e.target.value})} 
+              className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl p-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold" 
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Valor (R$)</label>
+              <input 
+                required 
+                value={editingTransaction?.value || ""} 
+                onChange={e => setEditingTransaction({...editingTransaction, value: e.target.value})} 
+                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl p-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold" 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Categoria</label>
+              <select 
+                value={editingTransaction?.category || ""} 
+                onChange={e => setEditingTransaction({...editingTransaction, category: e.target.value})}
+                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl p-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold appearance-none cursor-pointer"
+              >
+                <option value="Suprimentos">Suprimentos</option>
+                <option value="Aluguel">Aluguel</option>
+                <option value="Energia/Água">Energia/Água</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Equipamentos">Equipamentos</option>
+                <option value="Serviço">Serviço</option>
+                <option value="Outros">Outros</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" disabled={isSaving} className="btn-primary w-full py-5 text-lg font-black flex items-center justify-center gap-2">
+            {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : "Salvar Alterações"}
+          </button>
+        </form>
+      </Modal>
+
+      {/* Delete Confirmation */}
+      <Modal isOpen={!!deleteConfirmId} onClose={() => setDeleteConfirmId(null)} title="Excluir Transação">
+        <div className="space-y-6">
+          <p className="text-zinc-500 font-medium">Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.</p>
+          <div className="flex gap-3">
+            <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all">Cancelar</button>
+            <button onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)} disabled={isDeleting} className="flex-1 py-4 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-600 transition-all flex items-center justify-center gap-2">
+              {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sim, Excluir"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -247,7 +378,9 @@ function FinanceCard({ label, value, icon, color, bg, trend }: any) {
   );
 }
 
-function TransactionRow({ title, category, date, value, type }: any) {
+function TransactionRow({ transaction, onEdit, onDelete }: any) {
+  const { title, category, date, value, type } = transaction;
+  
   return (
     <tr className="hover:bg-zinc-500/5 transition-colors group">
        <td className="px-8 py-6">
@@ -262,7 +395,10 @@ function TransactionRow({ title, category, date, value, type }: any) {
           </div>
        </td>
        <td className="px-8 py-6">
-          <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg border border-subtle dark:border-zinc-700">
+          <span className={cn(
+            "text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border",
+            type === "income" ? "text-blue-500 bg-blue-500/10 border-blue-500/20" : "text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 border-subtle dark:border-zinc-700"
+          )}>
              {category}
           </span>
        </td>
@@ -271,7 +407,29 @@ function TransactionRow({ title, category, date, value, type }: any) {
           "px-8 py-6 text-right font-bold text-base",
           type === "income" ? "text-emerald-500" : "text-red-500"
        )}>
-          {type === "income" ? "+" : "-"} {value}
+          {type === "income" ? "+" : "-"} R$ {value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+       </td>
+       <td className="px-8 py-6 text-right">
+          {type === "expense" ? (
+            <div className="flex justify-end gap-2">
+              <button 
+                onClick={onEdit}
+                className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-[#fd9602] hover:bg-[#fd9602]/10 rounded-xl transition-all"
+              >
+                <Edit2 size={16} />
+              </button>
+              <button 
+                onClick={onDelete}
+                className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex justify-end pr-3">
+               <Check className="text-emerald-500/20 w-5 h-5" />
+            </div>
+          )}
        </td>
     </tr>
   );

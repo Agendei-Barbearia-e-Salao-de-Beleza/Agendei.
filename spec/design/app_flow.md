@@ -108,3 +108,22 @@ stateDiagram-v2
 *   **Ação**: Backend detecta via Job agendado.
 *   **Canal**: Push Notification (FCM).
 *   **Conteúdo**: "Sentimos sua falta! Que tal agendar seu próximo corte?".
+
+---
+
+## 6. Fluxo Administrativo (Dashboard)
+
+### 6.1 Gestão de Fluxo de Caixa
+```mermaid
+graph TD
+    A[Dashboard Financeiro] --> B{Tipo de Transação}
+    B -->|Entrada| C[Visualizar Apenas]
+    B -->|Saída/Despesa| D[Lançar/Editar/Excluir]
+    D --> E[Selecionar Categoria]
+    E --> F[Salvar no Supabase]
+```
+
+### 6.2 Controle de Disponibilidade (Pausa)
+- **Ação**: Admin seleciona dias no calendário.
+- **Visual**: Ícone de café animado indica status "Pausado" na Home.
+- **Impacto**: Impede novos agendamentos de clientes para as datas selecionadas.
