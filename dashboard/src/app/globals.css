@@ -26,7 +26,7 @@
   --border: #e4e4e7;
   --accent: #fd9602; 
   --muted: #64748b;
-  --sidebar: rgba(9, 9, 11, 0.95); /* Inverted Dark Sidebar */
+  --sidebar: #09090b; /* 100% opaque dark sidebar for light theme */
 
   /* Inversão Global Tailwind (Para transformar bg-zinc-950 em bg-white) */
   --color-zinc-950: #f4f4f5; 
