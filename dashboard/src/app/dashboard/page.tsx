@@ -14,6 +14,7 @@ import Link from "next/link";
 import { Tooltip } from "@/components/Tooltip";
 import { Modal } from "@/components/Modal";
 import { DayPicker } from "react-day-picker";
+import { CustomDatePicker, CustomTimePicker } from "@/components/Pickers";
 import "react-day-picker/dist/style.css";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -113,7 +114,7 @@ export default function DashboardOverview() {
   // Expenses Logic
   const [showExpensesModal, setShowExpensesModal] = useState(false);
   const [expenseLoading, setExpenseLoading] = useState(false);
-  const [expenseData, setExpenseData] = useState({ description: "", value: "", category: "Outros" });
+  const [expenseData, setExpenseData] = useState({ description: "", value: "", category: "Outros", date: new Date().toISOString().split('T')[0] });
 
   // Goals Logic
   const [showGoalsModal, setShowGoalsModal] = useState(false);
@@ -376,12 +377,13 @@ export default function DashboardOverview() {
           estabelecimento_id: establishmentId,
           descricao: expenseData.description,
           valor: parseFloat(expenseData.value.replace(',', '.')),
-          categoria: expenseData.category
+          categoria: expenseData.category,
+          data: expenseData.date
         }]);
       if (error) throw error;
       toast.success("Despesa registrada no financeiro!");
       setShowExpensesModal(false);
-      setExpenseData({ description: "", value: "", category: "Outros" });
+      setExpenseData({ description: "", value: "", category: "Outros", date: new Date().toISOString().split('T')[0] });
       fetchStats(establishmentId);
     } catch (error: any) {
       toast.error("Erro ao lançar despesa: " + error.message);
@@ -722,11 +724,17 @@ export default function DashboardOverview() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Data</label>
-              <input required type="date" value={appFormData.date} onChange={e => setAppFormData({...appFormData, date: e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl p-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold" />
+              <CustomDatePicker 
+                date={appFormData.date} 
+                onChange={(d) => setAppFormData({ ...appFormData, date: d })} 
+              />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Horário</label>
-              <input required type="time" value={appFormData.time} onChange={e => setAppFormData({...appFormData, time: e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl p-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold" />
+              <CustomTimePicker 
+                time={appFormData.time} 
+                onChange={(t) => setAppFormData({ ...appFormData, time: t })} 
+              />
             </div>
           </div>
           <div className="space-y-4">
@@ -832,6 +840,13 @@ export default function DashboardOverview() {
               <option value="Equipamentos">Equipamentos</option>
               <option value="Outros">Outros</option>
             </select>
+          </div>
+          <div className="space-y-3">
+            <label className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Data do Pagamento</label>
+            <CustomDatePicker 
+              date={expenseData.date} 
+              onChange={(d) => setExpenseData({ ...expenseData, date: d })} 
+            />
           </div>
           <button type="submit" disabled={expenseLoading} className="w-full btn-primary py-6 text-lg font-black flex items-center justify-center gap-3">
             {expenseLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Registrar Saída"}

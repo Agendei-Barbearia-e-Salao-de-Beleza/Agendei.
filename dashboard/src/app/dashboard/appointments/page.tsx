@@ -19,6 +19,8 @@ import ptBrLocale from "@fullcalendar/core/locales/pt-br";
 
 import { cn } from "@/lib/utils";
 import { Modal } from "@/components/Modal";
+import { CustomDatePicker, CustomTimePicker } from "@/components/Pickers";
+import "react-day-picker/dist/style.css";
 
 interface Service {
   id: string;
@@ -466,22 +468,16 @@ export default function AppointmentsPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Data</label>
-              <input
-                required
-                type="date"
-                value={formData.date}
-                onChange={e => setFormData({ ...formData, date: e.target.value })}
-                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl p-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold"
+              <CustomDatePicker 
+                date={formData.date} 
+                onChange={(d) => setFormData({ ...formData, date: d })} 
               />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Horário</label>
-              <input
-                required
-                type="time"
-                value={formData.time}
-                onChange={e => setFormData({ ...formData, time: e.target.value })}
-                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl p-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold"
+              <CustomTimePicker 
+                time={formData.time} 
+                onChange={(t) => setFormData({ ...formData, time: t })} 
               />
             </div>
           </div>
