@@ -219,6 +219,14 @@ export default function AppointmentsPage() {
     if (!appToDelete) return;
     
     try {
+      // First, delete associated payments to satisfy FK constraints
+      const { error: payError } = await supabase
+        .from('pagamentos')
+        .delete()
+        .eq('agendamento_id', appToDelete);
+      
+      if (payError) throw payError;
+
       const { error } = await supabase
         .from('agendamentos')
         .delete()
@@ -230,6 +238,9 @@ export default function AppointmentsPage() {
       toast.success("Agendamento excluído.");
       setIsConfirmOpen(false);
       closeModal();
+      
+      // Refresh totals if on dashboard or if we have a way to notify parent
+      // Since this is a separate page, we just refresh local state.
     } catch (error: any) {
       toast.error("Erro ao excluir: " + error.message);
     }
