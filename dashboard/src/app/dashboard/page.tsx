@@ -357,7 +357,7 @@ export default function DashboardOverview() {
     toast.success("Tudo pronto! Vamos começar.");
   };
 
-  const handlePauseSubmit = async (e: React.FormEvent) => {
+  const handlePauseSubmit = async (e: any) => {
     e.preventDefault();
     if (!establishmentId || selectedDays.length === 0) {
       toast.error("Selecione ao menos um dia no calendário.");

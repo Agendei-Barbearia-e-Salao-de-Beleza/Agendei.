@@ -11,7 +11,7 @@ interface PauseModalProps {
   setSelectedDays: (days: Date[]) => void;
   pauseReason: string;
   setPauseReason: (reason: string) => void;
-  handlePauseSubmit: () => void;
+  handlePauseSubmit: (e: any) => void | Promise<void>;
   pauseLoading: boolean;
   allPauses: any[];
   removePause: (id: string) => void;
