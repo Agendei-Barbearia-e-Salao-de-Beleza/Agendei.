@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, Calendar, DollarSign, Clock,
   MoreHorizontal, TrendingUp, ChevronRight,
-  Eye, Coffee, Ban, Tag, Plus, Loader2, CheckCircle2
+  Eye, Coffee, Ban, Tag, Plus, Loader2, CheckCircle2,
+  CalendarDays, Trash2, ArrowUpRight, ArrowDownRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -39,6 +40,7 @@ export default function DashboardOverview() {
   const [pauseLoading, setPauseLoading] = useState(false);
   const [selectedDays, setSelectedDays] = useState<Date[]>([]);
   const [pauseReason, setPauseReason] = useState("");
+  const [allPauses, setAllPauses] = useState<any[]>([]);
 
   // Expenses Logic
   const [showExpensesModal, setShowExpensesModal] = useState(false);
@@ -74,7 +76,7 @@ export default function DashboardOverview() {
         await Promise.all([
           fetchStats(estData.id),
           fetchTodayAppointments(estData.id),
-          checkTodayPause(estData.id),
+          fetchPauses(estData.id),
           fetchGoal(estData.id)
         ]);
       }
@@ -148,16 +150,18 @@ export default function DashboardOverview() {
     }
   }
 
-  async function checkTodayPause(estId: string) {
-    const today = new Date().toISOString().split('T')[0];
+  async function fetchPauses(estId: string) {
     const { data } = await supabase
       .from('indisponibilidades')
       .select('*')
       .eq('estabelecimento_id', estId)
-      .eq('data', today);
+      .gte('data', new Date().toISOString().split('T')[0])
+      .order('data', { ascending: true });
 
-    if (data && data.length > 0) {
-      setIsPaused(true);
+    if (data) {
+      setAllPauses(data);
+      const todayStr = new Date().toISOString().split('T')[0];
+      setIsPaused(data.some((p: any) => p.data === todayStr));
     }
   }
 
@@ -193,13 +197,9 @@ export default function DashboardOverview() {
         .insert(records);
 
       if (error) throw error;
-      toast.success("Pausa(s) registrada(s)!");
+      toast.success("Folga registrada com sucesso! ☕");
       setShowPauseModal(false);
-      
-      const todayStr = new Date().toISOString().split('T')[0];
-      if (selectedDays.some(d => d.toISOString().split('T')[0] === todayStr)) {
-        setIsPaused(true);
-      }
+      await fetchPauses(establishmentId);
       setSelectedDays([]);
       setPauseReason("");
     } catch (error: any) {
@@ -222,11 +222,12 @@ export default function DashboardOverview() {
           valor: parseFloat(expenseData.value.replace(',', '.'))
         }]);
       if (error) throw error;
-      toast.success("Despesa lançada!");
+      toast.success("Despesa registrada no financeiro!");
       setShowExpensesModal(false);
       setExpenseData({ description: "", value: "" });
+      fetchStats(establishmentId);
     } catch (error: any) {
-      toast.error("Erro: " + error.message);
+      toast.error("Erro ao lançar despesa: " + error.message);
     } finally {
       setExpenseLoading(false);
     }
@@ -254,12 +255,28 @@ export default function DashboardOverview() {
     }
   };
 
+  const removePause = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('indisponibilidades')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      setAllPauses(allPauses.filter(p => p.id !== id));
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (allPauses.find(p => p.id === id)?.data === todayStr) setIsPaused(false);
+      toast.success("Pausa removida.");
+    } catch (error) {
+      toast.error("Erro ao remover pausa.");
+    }
+  };
+
   return (
     <div className="space-y-10">
       {/* Welcome Header */}
       <div className="flex flex-col gap-1">
         <h2 className="text-3xl font-bold tracking-tight text-title dark:text-white">Olá, {userName}! 👋</h2>
-        <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm">Veja o que está acontecendo no seu negócio hoje.</p>
+        <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm">Gerencie seu negócio com precisão e facilidade.</p>
       </div>
 
       {/* Top Stats Grid */}
@@ -384,7 +401,26 @@ export default function DashboardOverview() {
             <h3 className="text-title dark:text-white font-bold text-lg">Ações Rápidas</h3>
             <div className="space-y-3">
               <QuickActionButton icon={<Calendar />} label="Novo Agendamento" tooltip="Marcar horário para cliente" href="/dashboard/appointments" />
-              <QuickActionButton icon={isPaused ? <Coffee className="text-emerald-500" /> : <Ban />} label={isPaused ? "Pausa Ativa" : "Marcar Pausa"} tooltip="Definir período sem trabalho" onClick={() => setShowPauseModal(true)} statusIndicator={isPaused} />
+              
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={isPaused ? "folga" : "pausa"}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <QuickActionButton 
+                    icon={isPaused ? <Coffee className="text-emerald-500" /> : <Ban />} 
+                    label={isPaused ? "Folga Ativa" : "Marcar Pausa"} 
+                    tooltip={isPaused ? "Você está em folga hoje" : "Definir período sem trabalho"} 
+                    onClick={() => setShowPauseModal(true)} 
+                    statusIndicator={isPaused} 
+                    className={isPaused ? "border-emerald-500/30 bg-emerald-500/5" : ""}
+                  />
+                </motion.div>
+              </AnimatePresence>
+
               <QuickActionButton icon={<DollarSign />} label="Lançar Despesa" tooltip="Registrar saída de caixa" onClick={() => setShowExpensesModal(true)} />
             </div>
           </div>
@@ -392,127 +428,144 @@ export default function DashboardOverview() {
       </div>
 
       {/* Modals */}
-      <Modal isOpen={showPauseModal} onClose={() => setShowPauseModal(false)} title="Registrar Pausa">
-        <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar">
-          <div className="flex flex-col items-center">
-            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4 self-start ml-1">Selecione os dias</label>
-            <div className="bg-zinc-100 dark:bg-zinc-800/50 p-4 rounded-2xl border border-subtle dark:border-zinc-800 shadow-inner">
-              <DayPicker
+      <Modal isOpen={showPauseModal} onClose={() => setShowPauseModal(false)} title="Planejar Folga">
+        <div className="space-y-8 max-h-[85vh] overflow-y-auto pr-2 custom-scrollbar p-1">
+          <div className="bg-zinc-100 dark:bg-zinc-900/50 p-6 rounded-3xl border border-subtle dark:border-zinc-800 flex flex-col items-center">
+             <DayPicker
                 mode="multiple"
                 selected={selectedDays}
                 onSelect={(days) => setSelectedDays(days || [])}
                 locale={ptBR}
-                className="dark:text-white"
+                className="rdp-custom"
                 modifiersStyles={{
-                  selected: { backgroundColor: '#fd9602', color: '#000', fontWeight: 'bold' }
+                  selected: { 
+                    backgroundColor: '#fd9602', 
+                    color: '#000', 
+                    fontWeight: '900',
+                    borderRadius: '12px',
+                    boxShadow: '0 0 15px rgba(245, 158, 11, 0.4)'
+                  },
+                  today: {
+                    color: '#fd9602',
+                    border: '2px solid #fd9602'
+                  }
                 }}
               />
-            </div>
           </div>
           
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Motivo (Opcional)</label>
-            <textarea 
+          <div className="space-y-4">
+            <label className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Motivo da Folga</label>
+            <input 
               value={pauseReason} 
               onChange={e => setPauseReason(e.target.value)} 
-              placeholder="Ex: Reforma, Folga, Feriado..." 
-              className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-xl px-4 py-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 resize-none" 
-              rows={3} 
+              placeholder="Ex: Reforma, Feriado..." 
+              className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-700 rounded-2xl px-6 py-5 dark:text-white outline-none focus:ring-4 focus:ring-[#fd9602]/10 transition-all font-bold placeholder:text-zinc-600"
             />
           </div>
 
-          <div className="p-4 bg-[#fd9602]/5 rounded-xl border border-[#fd9602]/10">
-            <p className="text-xs text-zinc-500 font-medium">
-              {selectedDays.length === 0 
-                ? "Nenhum dia selecionado." 
-                : `${selectedDays.length} dia(s) selecionado(s) para pausa.`}
-            </p>
+          <div className="space-y-4">
+            <h4 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Próximas Folgas</h4>
+            <div className="space-y-2">
+              {allPauses.length > 0 ? allPauses.slice(0, 3).map(pause => (
+                <div key={pause.id} className="flex items-center justify-between p-4 bg-zinc-100 dark:bg-zinc-900/40 rounded-2xl border border-subtle dark:border-zinc-800 group hover:border-[#fd9602]/30 transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-[#fd9602]/10 flex items-center justify-center">
+                      <Coffee className="w-5 h-5 text-[#fd9602]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-title dark:text-white">{new Date(pause.data + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</p>
+                      <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{pause.motivo || "Folga"}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => removePause(pause.id)} className="p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded-xl transition-all opacity-0 group-hover:opacity-100">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              )) : (
+                <p className="text-xs text-zinc-500 font-medium italic p-4 text-center border border-dashed border-subtle rounded-2xl">Nenhuma folga planejada.</p>
+              )}
+            </div>
           </div>
 
           <button 
             onClick={handlePauseSubmit} 
             disabled={pauseLoading} 
-            className="w-full btn-primary py-5 text-lg flex items-center justify-center gap-2"
+            className="w-full btn-primary py-6 text-lg font-black flex items-center justify-center gap-3 shadow-[0_20px_40px_-10px_rgba(253,150,2,0.3)]"
           >
-            {pauseLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirmar Pausa"}
+            {pauseLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Agendar Folga ☕"}
           </button>
         </div>
       </Modal>
 
       <Modal isOpen={showExpensesModal} onClose={() => setShowExpensesModal(false)} title="Lançar Despesa">
-        <form className="space-y-6" onSubmit={handleExpenseSubmit}>
-           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Descrição</label>
-            <input required type="text" value={expenseData.description} onChange={e => setExpenseData({...expenseData, description: e.target.value})} placeholder="Ex: Aluguel..." className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-xl px-4 py-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
+        <form className="space-y-8" onSubmit={handleExpenseSubmit}>
+           <div className="space-y-3">
+            <label className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">O que você pagou?</label>
+            <input required type="text" value={expenseData.description} onChange={e => setExpenseData({...expenseData, description: e.target.value})} placeholder="Ex: Aluguel, Produtos de limpeza..." className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-700 rounded-2xl px-6 py-5 dark:text-white outline-none focus:ring-4 focus:ring-[#fd9602]/10 transition-all font-bold placeholder:text-zinc-600" />
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Valor (R$)</label>
-            <input required type="text" value={expenseData.value} onChange={e => setExpenseData({...expenseData, value: e.target.value})} placeholder="0,00" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-xl px-4 py-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
+          <div className="space-y-3">
+            <label className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Valor (R$)</label>
+            <div className="relative">
+              <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 text-[#fd9602]" size={20} />
+              <input required type="text" value={expenseData.value} onChange={e => setExpenseData({...expenseData, value: e.target.value})} placeholder="0,00" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-700 rounded-2xl pl-14 pr-6 py-5 dark:text-white outline-none focus:ring-4 focus:ring-[#fd9602]/10 transition-all font-black text-2xl placeholder:text-zinc-600" />
+            </div>
           </div>
-          <button type="submit" disabled={expenseLoading} className="w-full btn-primary py-5 text-lg flex items-center justify-center gap-2">
-            {expenseLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Lançar Agora"}
+          <button type="submit" disabled={expenseLoading} className="w-full btn-primary py-6 text-lg font-black flex items-center justify-center gap-3 shadow-[0_20px_40px_-10px_rgba(253,150,2,0.3)]">
+            {expenseLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Registrar Saída"}
           </button>
         </form>
       </Modal>
 
-      <Modal isOpen={showGoalsModal} onClose={() => setShowGoalsModal(false)} title="Meta Semanal">
-        <form className="space-y-6" onSubmit={handleGoalSubmit}>
-           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Valor da Meta (R$)</label>
-            <input required type="text" value={goalInput} onChange={e => setGoalInput(e.target.value)} placeholder="Ex: 12000" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-xl px-4 py-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
+      <Modal isOpen={showGoalsModal} onClose={() => setShowGoalsModal(false)} title="Meta de Faturamento">
+        <form className="space-y-8" onSubmit={handleGoalSubmit}>
+           <div className="space-y-4 text-center">
+              <div className="w-20 h-20 bg-[#fd9602]/10 rounded-3xl flex items-center justify-center mx-auto mb-2">
+                <TrendingUp className="w-10 h-10 text-[#fd9602]" />
+              </div>
+              <p className="text-zinc-500 text-sm font-medium px-4">Defina o quanto você quer faturar esta semana. Vamos te ajudar a acompanhar o progresso.</p>
+           </div>
+           <div className="space-y-3">
+            <label className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Valor da Meta Semanal</label>
+            <div className="relative">
+              <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 text-[#fd9602]" size={24} />
+              <input required type="text" value={goalInput} onChange={e => setGoalInput(e.target.value)} placeholder="Ex: 15.000" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-700 rounded-2xl pl-14 pr-6 py-6 dark:text-white outline-none focus:ring-4 focus:ring-[#fd9602]/10 transition-all font-black text-3xl placeholder:text-zinc-600" />
+            </div>
           </div>
-          <button type="submit" disabled={goalLoading} className="w-full btn-primary py-5 text-lg flex items-center justify-center gap-2">
-            {goalLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Salvar Meta"}
+          <button type="submit" disabled={goalLoading} className="w-full btn-primary py-6 text-lg font-black flex items-center justify-center gap-3">
+            {goalLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Salvar Nova Meta"}
           </button>
         </form>
-      </Modal>
-
-      <Modal isOpen={showDetailsModal} onClose={() => setShowDetailsModal(false)} title="Detalhes do Agendamento">
-        {selectedApp && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-4 p-4 bg-zinc-100/50 dark:bg-zinc-800/30 rounded-2xl border border-subtle dark:border-zinc-800">
-              <div className="w-12 h-12 rounded-xl bg-[#fd9602] flex items-center justify-center font-bold text-zinc-950 text-xl">{selectedApp.avatar}</div>
-              <div>
-                <h4 className="font-bold text-title dark:text-white">{selectedApp.customer}</h4>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">{selectedApp.service}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl border border-subtle dark:border-zinc-800 space-y-1">
-                <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Horário</span>
-                <p className="text-sm font-bold dark:text-white">{selectedApp.time}</p>
-              </div>
-              <div className="p-4 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl border border-subtle dark:border-zinc-800 space-y-1">
-                <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Status</span>
-                <p className="text-sm font-bold text-[#fd9602]">{selectedApp.status}</p>
-              </div>
-            </div>
-            <button className="w-full btn-primary py-4" onClick={() => setShowDetailsModal(false)}>Fechar</button>
-          </div>
-        )}
       </Modal>
     </div>
   );
 }
 
-function QuickActionButton({ icon, label, tooltip, href, onClick, statusIndicator }: any) {
+function QuickActionButton({ icon, label, tooltip, href, onClick, statusIndicator, className }: any) {
   const content = (
     <motion.div 
       whileHover={{ x: 10, backgroundColor: "rgba(245, 158, 11, 0.08)", borderColor: "rgba(245, 158, 11, 0.3)", scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className="w-full flex items-center justify-between p-5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 transition-colors group cursor-pointer relative"
+      className={cn(
+        "w-full flex items-center justify-between p-5 rounded-2xl bg-zinc-100 dark:bg-zinc-800/50 border border-subtle dark:border-zinc-800 transition-all group cursor-pointer relative overflow-hidden",
+        className
+      )}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 relative z-10">
         <div className="text-zinc-400 dark:text-zinc-500 group-hover:text-[#fd9602] transition-colors">
           {React.cloneElement(icon, { size: 18 })}
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-950 dark:group-hover:text-white transition-colors">{label}</span>
-          {statusIndicator && <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />}
+          {statusIndicator && (
+            <div className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </div>
+          )}
         </div>
       </div>
-      <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 group-hover:text-[#fd9602] transition-all group-hover:translate-x-1" />
+      <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 group-hover:text-[#fd9602] transition-all group-hover:translate-x-1 relative z-10" />
     </motion.div>
   );
 
