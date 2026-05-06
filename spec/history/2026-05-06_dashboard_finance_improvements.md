@@ -10,6 +10,9 @@
 
 #### Dashboard Administrativo
 - **Correção do Botão "Ver Detalhes"**: Implementação de menu dropdown nos itens da agenda de hoje. O botão agora abre corretamente o modal de detalhes do agendamento.
+- **Correção de Clipping no Dropdown**: Remoção do `overflow-hidden` do container da agenda, garantindo que o menu "Ver Detalhes" apareça "para fora" da tabela e não seja cortado.
+- **Hover Premium nas Ações Rápidas**: Refinamento do efeito de hover nos botões de ação rápida, com adição de sombra projetada (glow) e movimento suave para uma experiência mais interativa.
+- **Ícones de Ações Rápidas**: Ícones coloridos sem fundo sólido, mantendo o visual limpo solicitado.
 - **Novo Ícone de Pausa**: Substituição do ícone de check por um ícone de café (`Coffee`) com animação de fumaça (partículas ascendentes) para indicar estabelecimento pausado.
 - **Interatividade nos Cards**: Adição de tooltips e efeitos de hover nos cards de estatísticas e spans de porcentagem (trends).
 

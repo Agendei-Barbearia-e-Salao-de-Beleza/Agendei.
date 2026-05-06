@@ -48,6 +48,10 @@ Para facilitar o desenvolvimento em grupo, usaremos o padrão MVC tradicional do
 1.  **KISS (Keep It Simple, Stupid)**: Não complique o código desnecessariamente.
 2.  **Nomes em Inglês**: Classes e variáveis devem ser em inglês.
 3.  **DRY (Don't Repeat Yourself)**: Evite código duplicado.
+4.  **Padrões de Git**:
+    *   **Branches**: Use prefixos claros como `feat/` (novas funcionalidades), `fix/` (correções de bugs), `style/` (estilização), `docs/` (documentação) e `chore/` (tarefas de manutenção).
+    *   **Commits**: Use o padrão de Commits Semânticos (ex: `fix: corrige cancelamento de agendamento`).
+    *   **Pull Requests**: Utilize o template de PR localizado em `.github/pull_request_template.md`.
 
 ---
 
