@@ -7,7 +7,7 @@ import {
   MoreHorizontal, TrendingUp, ChevronRight,
   Eye, Coffee, Ban, Tag, Plus, Loader2, CheckCircle2,
   CalendarDays, Trash2, ArrowUpRight, ArrowDownRight,
-  Sparkles, Rocket, PartyPopper, ChevronLeft
+  Sparkles, Rocket, PartyPopper, ChevronLeft, CheckCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -217,7 +217,7 @@ export default function DashboardOverview() {
         .insert(records);
 
       if (error) throw error;
-      toast.success("Folga registrada com sucesso! ☕");
+      // Removed success toast as requested
       setShowPauseModal(false);
       await fetchPauses(establishmentId);
       setSelectedDays([]);
@@ -320,13 +320,11 @@ export default function DashboardOverview() {
 
   return (
     <div className="space-y-10">
-      {/* Welcome Header */}
       <div className="flex flex-col gap-1">
         <h2 className="text-3xl font-bold tracking-tight text-title dark:text-white">Olá, {userName}! 👋</h2>
         <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm">Gerencie seu negócio com precisão e facilidade.</p>
       </div>
 
-      {/* Top Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
           <Tooltip key={stat.label} text={`Ir para ${stat.label}`}>
@@ -458,12 +456,12 @@ export default function DashboardOverview() {
                   transition={{ duration: 0.2 }}
                 >
                   <QuickActionButton 
-                    icon={isPaused ? <Coffee className="text-emerald-500" /> : <Ban />} 
-                    label={isPaused ? "Folga Ativa" : "Marcar Pausa"} 
-                    tooltip={isPaused ? "Você está em folga hoje" : "Definir período sem trabalho"} 
+                    icon={isPaused ? <CheckCircle className="text-emerald-500" /> : <Ban />} 
+                    label={isPaused ? "Pausa Ativada" : "Marcar Pausa"} 
+                    tooltip={isPaused ? "Pausa ativa para hoje" : "Definir período sem trabalho"} 
                     onClick={() => setShowPauseModal(true)} 
                     statusIndicator={isPaused} 
-                    className={isPaused ? "border-emerald-500/30 bg-emerald-500/5" : ""}
+                    className={isPaused ? "border-emerald-500/30 bg-emerald-500/5 shadow-[0_0_20px_rgba(16,185,129,0.1)]" : ""}
                   />
                 </motion.div>
               </AnimatePresence>
@@ -617,7 +615,7 @@ export default function DashboardOverview() {
             </div>
           </div>
           <button type="submit" disabled={expenseLoading} className="w-full btn-primary py-6 text-lg font-black flex items-center justify-center gap-3 shadow-[0_20px_40px_-10px_rgba(253,150,2,0.3)]">
-            {expenseLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Registrar Saída"}
+            {expenseLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Registrar Saída"}
           </button>
         </form>
       </Modal>
@@ -642,6 +640,31 @@ export default function DashboardOverview() {
           </button>
         </form>
       </Modal>
+
+      <Modal isOpen={showDetailsModal} onClose={() => setShowDetailsModal(false)} title="Detalhes do Agendamento">
+        {selectedApp && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 p-4 bg-zinc-100/50 dark:bg-zinc-800/30 rounded-2xl border border-subtle dark:border-zinc-800">
+              <div className="w-12 h-12 rounded-xl bg-[#fd9602] flex items-center justify-center font-bold text-zinc-950 text-xl">{selectedApp.avatar}</div>
+              <div>
+                <h4 className="font-bold text-title dark:text-white">{selectedApp.customer}</h4>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">{selectedApp.service}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl border border-subtle dark:border-zinc-800 space-y-1">
+                <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Horário</span>
+                <p className="text-sm font-bold dark:text-white">{selectedApp.time}</p>
+              </div>
+              <div className="p-4 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl border border-subtle dark:border-zinc-800 space-y-1">
+                <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Status</span>
+                <p className="text-sm font-bold text-[#fd9602]">{selectedApp.status}</p>
+              </div>
+            </div>
+            <button className="w-full btn-primary py-4" onClick={() => setShowDetailsModal(false)}>Fechar</button>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
@@ -658,20 +681,31 @@ function QuickActionButton({ icon, label, tooltip, href, onClick, statusIndicato
       )}
     >
       <div className="flex items-center gap-4 relative z-10">
-        <div className="text-zinc-400 dark:text-zinc-500 group-hover:text-[#fd9602] transition-colors">
+        <div className={cn(
+          "transition-colors",
+          statusIndicator ? "text-emerald-500" : "text-zinc-400 dark:text-zinc-500 group-hover:text-[#fd9602]"
+        )}>
           {React.cloneElement(icon, { size: 18 })}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-950 dark:group-hover:text-white transition-colors">{label}</span>
+          <span className={cn(
+            "text-sm font-bold transition-colors",
+            statusIndicator ? "text-emerald-500" : "text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-950 dark:group-hover:text-white"
+          )}>
+            {label}
+          </span>
           {statusIndicator && (
-            <div className="relative flex h-2 w-2">
+            <div className="relative flex h-2 w-2 ml-1">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </div>
           )}
         </div>
       </div>
-      <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 group-hover:text-[#fd9602] transition-all group-hover:translate-x-1 relative z-10" />
+      <ChevronRight className={cn(
+        "w-4 h-4 transition-all group-hover:translate-x-1 relative z-10",
+        statusIndicator ? "text-emerald-500" : "text-zinc-300 dark:text-zinc-700 group-hover:text-[#fd9602]"
+      )} />
     </motion.div>
   );
 

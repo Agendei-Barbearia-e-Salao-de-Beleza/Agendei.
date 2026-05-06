@@ -5,7 +5,7 @@ import {
   Search, Filter, Plus, Calendar as CalendarIcon,
   Clock, ChevronDown, X, Check, MoreHorizontal,
   Trash2, Edit3, User, Sparkles, Tag, PlusCircle,
-  LayoutGrid, List, Loader2
+  LayoutGrid, List, Loader2, AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -43,6 +43,8 @@ export default function AppointmentsPage() {
   const [establishmentId, setEstablishmentId] = useState<string | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [appToDelete, setAppToDelete] = useState<string | null>(null);
   const [editingApp, setEditingApp] = useState<Appointment | null>(null);
   const [availableServices, setAvailableServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
@@ -148,7 +150,6 @@ export default function AppointmentsPage() {
       if (userData && userData.length > 0) {
         clientId = userData[0].id;
       } else {
-        // Se não existir, criamos. Geramos um e-mail fake único se necessário para evitar erros de NOT NULL
         const fakeEmail = `${formData.customer.toLowerCase().replace(/\s+/g, '.')}.${Math.random().toString(36).substring(7)}@agendei.auto`;
         
         const { data: newUser, error: userError } = await supabase
@@ -156,7 +157,7 @@ export default function AppointmentsPage() {
           .insert([{ 
             nome: formData.customer, 
             perfil: 'CLIENTE',
-            email: fakeEmail // Prevenindo erro de NOT NULL no banco
+            email: fakeEmail
           }])
           .select()
           .single();
@@ -207,19 +208,25 @@ export default function AppointmentsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este agendamento?")) return;
+  const confirmDelete = (id: string) => {
+    setAppToDelete(id);
+    setIsConfirmOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!appToDelete) return;
     
     try {
       const { error } = await supabase
         .from('agendamentos')
         .delete()
-        .eq('id', id);
+        .eq('id', appToDelete);
 
       if (error) throw error;
       
-      setAppointments(appointments.filter(a => a.id !== id));
+      setAppointments(appointments.filter(a => a.id !== appToDelete));
       toast.success("Agendamento excluído.");
+      setIsConfirmOpen(false);
       closeModal();
     } catch (error: any) {
       toast.error("Erro ao excluir: " + error.message);
@@ -252,6 +259,31 @@ export default function AppointmentsPage() {
 
   return (
     <div className="space-y-8">
+      {/* Custom styles for FullCalendar header */}
+      <style>{`
+        .fc-col-header-cell {
+          background-color: #fd9602 !important;
+          color: #000 !important;
+          border-color: rgba(0,0,0,0.1) !important;
+          padding: 10px 0 !important;
+          font-weight: 900 !important;
+          text-transform: uppercase !important;
+          font-size: 11px !important;
+          letter-spacing: 0.1em !important;
+        }
+        .fc-theme-standard td, .fc-theme-standard th {
+          border-color: rgba(255,255,255,0.05) !important;
+        }
+        .fc-col-header-cell-cushion {
+          color: #000 !important;
+          text-decoration: none !important;
+        }
+        .dark .fc-col-header-cell {
+          background-color: #fd9602 !important;
+          color: #000 !important;
+        }
+      `}</style>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
           <h2 className="text-3xl font-bold text-title tracking-tight dark:text-white">Agenda</h2>
@@ -463,13 +495,44 @@ export default function AppointmentsPage() {
           {editingApp && (
             <button
               type="button"
-              onClick={() => handleDelete(editingApp.id)}
+              onClick={() => confirmDelete(editingApp.id)}
               className="w-full text-red-500 font-bold text-sm hover:underline"
             >
               Excluir Agendamento
             </button>
           )}
         </form>
+      </Modal>
+
+      {/* Custom Confirmation Modal */}
+      <Modal
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        title="Confirmar Exclusão"
+      >
+        <div className="space-y-6 text-center">
+          <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto">
+            <AlertTriangle className="text-red-500 w-10 h-10" />
+          </div>
+          <div className="space-y-2">
+            <h4 className="text-xl font-bold text-white">Tem certeza?</h4>
+            <p className="text-zinc-500 text-sm">Esta ação não pode ser desfeita. O agendamento será removido permanentemente.</p>
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={() => setIsConfirmOpen(false)}
+              className="flex-1 py-4 px-6 rounded-2xl bg-zinc-800 text-zinc-400 font-bold hover:bg-zinc-700 transition-all"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleDelete}
+              className="flex-1 py-4 px-6 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
+            >
+              Sim, Excluir
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
