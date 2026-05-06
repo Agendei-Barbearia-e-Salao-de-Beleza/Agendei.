@@ -33,6 +33,10 @@ CREATE TABLE IF NOT EXISTS public.estabelecimentos (
     logo_url TEXT,
     endereco TEXT,
     telefone_comercial VARCHAR(20),
+    instagram_url TEXT,
+    facebook_url TEXT,
+    whatsapp_url TEXT,
+    tiktok_url TEXT,
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
