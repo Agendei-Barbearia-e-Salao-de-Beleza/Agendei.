@@ -120,6 +120,24 @@ export default function DashboardOverview() {
     }
   }
 
+  async function handleCancelAppointment(appId: string) {
+    if (!establishmentId) return;
+
+    try {
+      const { error } = await supabase
+        .from('agendamentos')
+        .update({ status: 'CANCELADO' })
+        .eq('id', appId);
+
+      if (error) throw error;
+      toast.success("Agendamento cancelado!");
+      fetchTodayAppointments(establishmentId);
+      setOpenMenuId(null);
+    } catch (error: any) {
+      toast.error("Erro ao cancelar: " + error.message);
+    }
+  }
+
   async function fetchStats(estId: string) {
     const { count: clientCount } = await supabase
       .from('clientes_estabelecimentos')
@@ -502,7 +520,7 @@ export default function DashboardOverview() {
                                 Ver Detalhes
                               </button>
                               <button 
-                                onClick={() => setOpenMenuId(null)}
+                                onClick={() => handleCancelAppointment(app.id)}
                                 className="w-full flex items-center gap-4 px-6 py-4 text-sm font-bold text-zinc-400 hover:text-red-400 hover:bg-red-500/5 transition-all group"
                               >
                                 <div className="p-2 rounded-xl bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all">
