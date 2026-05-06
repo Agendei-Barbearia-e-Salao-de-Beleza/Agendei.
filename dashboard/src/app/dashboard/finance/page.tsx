@@ -10,7 +10,10 @@ import { supabase } from "@/lib/supabase";
 
 export default function FinancePage() {
   const [loading, setLoading] = useState(true);
-  const [totals, setTotals] = useState({ balance: 0, income: 0, expense: 0 });
+  const [totals, setTotals] = useState({ 
+    balance: 0, income: 0, expense: 0, 
+    balanceTrend: '0%', incomeTrend: '0%', expenseTrend: '0%' 
+  });
   const [transactions, setTransactions] = useState<any[]>([]);
   const [chartData, setChartData] = useState<number[]>(new Array(12).fill(0));
   const [establishmentId, setEstablishmentId] = useState<string | null>(null);
@@ -59,7 +62,13 @@ export default function FinancePage() {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    // Entradas Reais (Pagamentos confirmados no mês)
+    const startOfLastMonth = new Date(startOfMonth);
+    startOfLastMonth.setMonth(startOfLastMonth.getMonth() - 1);
+
+    const endOfLastMonth = new Date(startOfMonth);
+    endOfLastMonth.setMilliseconds(-1);
+
+    // Current Month Entradas Reais
     const { data: incomeData } = await supabase
       .from('agendamentos')
       .select('pagamentos!inner(valor)')
@@ -72,7 +81,7 @@ export default function FinancePage() {
       return acc + pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0);
     }, 0) || 0;
 
-    // Saídas (Despesas no mês)
+    // Current Month Saídas
     const { data: expenseData } = await supabase
       .from('despesas')
       .select('valor')
@@ -80,6 +89,30 @@ export default function FinancePage() {
       .gte('data', startOfMonth.toISOString().split('T')[0]);
 
     const expense = expenseData?.reduce((acc, curr) => acc + Number(curr.valor), 0) || 0;
+
+    // Last Month Entradas Reais
+    const { data: lastIncomeData } = await supabase
+      .from('agendamentos')
+      .select('pagamentos!inner(valor)')
+      .eq('estabelecimento_id', estId)
+      .eq('pagamentos.status', 'PAGO')
+      .gte('pagamentos.pago_em', startOfLastMonth.toISOString())
+      .lte('pagamentos.pago_em', endOfLastMonth.toISOString());
+
+    const lastIncome = lastIncomeData?.reduce((acc, curr: any) => {
+      const pays = Array.isArray(curr.pagamentos) ? curr.pagamentos : [curr.pagamentos];
+      return acc + pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0);
+    }, 0) || 0;
+
+    // Last Month Saídas
+    const { data: lastExpenseData } = await supabase
+      .from('despesas')
+      .select('valor')
+      .eq('estabelecimento_id', estId)
+      .gte('data', startOfLastMonth.toISOString().split('T')[0])
+      .lte('data', endOfLastMonth.toISOString().split('T')[0]);
+
+    const lastExpense = lastExpenseData?.reduce((acc, curr) => acc + Number(curr.valor), 0) || 0;
 
     // Saldo Total (Geral)
     const { data: allIncome } = await supabase
@@ -100,10 +133,19 @@ export default function FinancePage() {
 
     const totalExp = allExpense?.reduce((acc, curr) => acc + Number(curr.valor), 0) || 0;
 
+    const calcTrend = (current: number, previous: number) => {
+      if (previous === 0) return current > 0 ? "+100%" : "0%";
+      const change = ((current - previous) / previous) * 100;
+      return `${change > 0 ? '+' : ''}${change.toFixed(0)}%`;
+    };
+
     setTotals({
       balance: totalInc - totalExp,
       income,
-      expense
+      expense,
+      balanceTrend: calcTrend(totalInc - totalExp, (totalInc - income) - (totalExp - expense)), // Trend of overall balance growth
+      incomeTrend: calcTrend(income, lastIncome),
+      expenseTrend: calcTrend(expense, lastExpense)
     });
   }
 
@@ -253,9 +295,9 @@ export default function FinancePage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <FinanceCard label="Saldo Total" value={`R$ ${totals.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={<Wallet />} color="text-[#fd9602]" bg="bg-[#fd9602]/10" trend="+100%" />
-        <FinanceCard label="Entradas (Mês)" value={`R$ ${totals.income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={<ArrowUpRight />} color="text-emerald-500" bg="bg-emerald-500/10" trend="+100%" />
-        <FinanceCard label="Saídas (Mês)" value={`R$ ${totals.expense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={<ArrowDownRight />} color="text-red-500" bg="bg-red-500/10" trend="-0%" />
+        <FinanceCard label="Saldo Total" value={`R$ ${totals.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={<Wallet />} color="text-[#fd9602]" bg="bg-[#fd9602]/10" trend={totals.balanceTrend} />
+        <FinanceCard label="Entradas (Mês)" value={`R$ ${totals.income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={<ArrowUpRight />} color="text-emerald-500" bg="bg-emerald-500/10" trend={totals.incomeTrend} />
+        <FinanceCard label="Saídas (Mês)" value={`R$ ${totals.expense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={<ArrowDownRight />} color="text-red-500" bg="bg-red-500/10" trend={totals.expenseTrend} />
       </div>
 
       {/* Chart Card */}
