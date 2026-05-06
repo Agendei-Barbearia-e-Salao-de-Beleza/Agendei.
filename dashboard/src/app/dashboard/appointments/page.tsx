@@ -136,7 +136,6 @@ export default function AppointmentsPage() {
 
     setLoading(true);
     try {
-      // 1. Buscar ou Criar o Cliente
       let clientId = null;
       
       const { data: userData } = await supabase
@@ -149,16 +148,22 @@ export default function AppointmentsPage() {
       if (userData && userData.length > 0) {
         clientId = userData[0].id;
       } else {
+        // Se não existir, criamos. Geramos um e-mail fake único se necessário para evitar erros de NOT NULL
+        const fakeEmail = `${formData.customer.toLowerCase().replace(/\s+/g, '.')}.${Math.random().toString(36).substring(7)}@agendei.auto`;
+        
         const { data: newUser, error: userError } = await supabase
           .from('usuarios')
-          .insert([{ nome: formData.customer, perfil: 'CLIENTE' }])
+          .insert([{ 
+            nome: formData.customer, 
+            perfil: 'CLIENTE',
+            email: fakeEmail // Prevenindo erro de NOT NULL no banco
+          }])
           .select()
           .single();
         
         if (userError) throw userError;
         clientId = newUser.id;
 
-        // Criar vínculo com estabelecimento se for novo
         await supabase
           .from('clientes_estabelecimentos')
           .insert([{ cliente_id: clientId, estabelecimento_id: establishmentId }]);
@@ -247,7 +252,6 @@ export default function AppointmentsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
           <h2 className="text-3xl font-bold text-title tracking-tight dark:text-white">Agenda</h2>
