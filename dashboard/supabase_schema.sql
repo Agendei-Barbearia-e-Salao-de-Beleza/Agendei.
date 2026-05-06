@@ -1,4 +1,4 @@
--- Esquema Completo Agendei (Produção)
+-- Esquema Completo Agendei (Produção) - v2 com Metas e Despesas
 
 -- Extensões
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -18,7 +18,7 @@ END $$;
 CREATE TABLE IF NOT EXISTS public.usuarios (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nome VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) UNIQUE,
     telefone VARCHAR(20),
     perfil public.perfil_usuario NOT NULL DEFAULT 'CLIENTE',
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -82,6 +82,21 @@ CREATE TABLE IF NOT EXISTS public.clientes_estabelecimentos (
     PRIMARY KEY (cliente_id, estabelecimento_id)
 );
 
+CREATE TABLE IF NOT EXISTS public.despesas (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    estabelecimento_id UUID REFERENCES public.estabelecimentos(id) ON DELETE CASCADE,
+    descricao TEXT NOT NULL,
+    valor DECIMAL(10,2) NOT NULL,
+    data DATE DEFAULT CURRENT_DATE,
+    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.metas (
+    estabelecimento_id UUID PRIMARY KEY REFERENCES public.estabelecimentos(id) ON DELETE CASCADE,
+    valor_meta DECIMAL(10,2) NOT NULL,
+    atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- RLS (Row Level Security)
 ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.estabelecimentos ENABLE ROW LEVEL SECURITY;
@@ -90,6 +105,8 @@ ALTER TABLE public.agendamentos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pagamentos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.indisponibilidades ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.clientes_estabelecimentos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.despesas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.metas ENABLE ROW LEVEL SECURITY;
 
 -- Políticas
 DROP POLICY IF EXISTS "Ver próprio perfil" ON public.usuarios;
@@ -100,12 +117,9 @@ CREATE POLICY "Admins veem seus clientes" ON public.usuarios FOR SELECT USING (
     EXISTS (SELECT 1 FROM public.clientes_estabelecimentos ce JOIN public.estabelecimentos e ON ce.estabelecimento_id = e.id WHERE ce.cliente_id = usuarios.id AND e.proprietario_id = auth.uid())
 );
 
-DROP POLICY IF EXISTS "Admins gerenciam seus clientes" ON public.usuarios;
-CREATE POLICY "Admins gerenciam seus clientes" ON public.usuarios FOR ALL USING (
-    perfil = 'CLIENTE' AND (
-        EXISTS (SELECT 1 FROM public.clientes_estabelecimentos ce JOIN public.estabelecimentos e ON ce.estabelecimento_id = e.id WHERE ce.cliente_id = usuarios.id AND e.proprietario_id = auth.uid())
-        OR NOT EXISTS (SELECT 1 FROM public.clientes_estabelecimentos ce WHERE ce.cliente_id = usuarios.id) -- Permite criar novo cliente sem vínculo ainda
-    )
+DROP POLICY IF EXISTS "Admins gerenciam clientes" ON public.usuarios;
+CREATE POLICY "Admins gerenciam clientes" ON public.usuarios FOR ALL USING (
+    perfil = 'CLIENTE'
 );
 
 DROP POLICY IF EXISTS "Admins gerenciam próprio estabelecimento" ON public.estabelecimentos;
@@ -136,7 +150,17 @@ CREATE POLICY "Admins gerenciam vínculos de clientes" ON public.clientes_estabe
   EXISTS (SELECT 1 FROM public.estabelecimentos e WHERE e.id = estabelecimento_id AND e.proprietario_id = auth.uid())
 );
 
--- Gatilho de Novo Usuário (Aprimorado)
+DROP POLICY IF EXISTS "Admins gerenciam suas despesas" ON public.despesas;
+CREATE POLICY "Admins gerenciam suas despesas" ON public.despesas FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.estabelecimentos e WHERE e.id = estabelecimento_id AND e.proprietario_id = auth.uid())
+);
+
+DROP POLICY IF EXISTS "Admins gerenciam suas metas" ON public.metas;
+CREATE POLICY "Admins gerenciam suas metas" ON public.metas FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.estabelecimentos e WHERE e.id = estabelecimento_id AND e.proprietario_id = auth.uid())
+);
+
+-- Gatilho de Novo Usuário
 CREATE OR REPLACE FUNCTION public.handle_novo_usuario()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -144,23 +168,19 @@ DECLARE
   v_c1_id UUID := gen_random_uuid();
   v_c2_id UUID := gen_random_uuid();
 BEGIN
-  -- 1. Cria o perfil de ADMIN na tabela usuarios
   INSERT INTO public.usuarios (id, nome, email, perfil)
   VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'nome', 'Administrador'), NEW.email, 'ADMIN')
   ON CONFLICT (email) DO UPDATE SET id = EXCLUDED.id;
 
-  -- 2. Cria o Estabelecimento
   INSERT INTO public.estabelecimentos (id, proprietario_id, nome, tipo)
   VALUES (v_est_id, NEW.id, COALESCE(NEW.raw_user_meta_data->>'nome_estabelecimento', 'Meu Estabelecimento'), COALESCE((NEW.raw_user_meta_data->>'tipo')::public.tipo_estabelecimento, 'BARBEARIA'));
 
-  -- 3. Cria Clientes Mocks
   INSERT INTO public.usuarios (id, nome, email, telefone, perfil)
   VALUES 
     (v_c1_id, 'Carlos Alberto', 'c1.' || v_est_id || '@agendei.mock', '(11) 98765-4321', 'CLIENTE'),
     (v_c2_id, 'Juliana Silva', 'c2.' || v_est_id || '@agendei.mock', '(11) 91234-5678', 'CLIENTE')
   ON CONFLICT DO NOTHING;
 
-  -- 4. Vincula Clientes ao Estabelecimento
   INSERT INTO public.clientes_estabelecimentos (cliente_id, estabelecimento_id)
   VALUES (v_c1_id, v_est_id), (v_c2_id, v_est_id);
 

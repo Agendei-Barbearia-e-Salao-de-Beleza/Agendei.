@@ -39,9 +39,16 @@ export default function DashboardOverview() {
   const [pauseLoading, setPauseLoading] = useState(false);
   const [pauseData, setPauseData] = useState({ date: new Date().toISOString().split('T')[0], reason: "" });
 
+  // Expenses Logic
   const [showExpensesModal, setShowExpensesModal] = useState(false);
+  const [expenseLoading, setExpenseLoading] = useState(false);
+  const [expenseData, setExpenseData] = useState({ description: "", value: "" });
+
+  // Goals Logic
   const [showGoalsModal, setShowGoalsModal] = useState(false);
+  const [goalLoading, setGoalLoading] = useState(false);
   const [weeklyGoal, setWeeklyGoal] = useState({ current: 0, target: 12000 });
+  const [goalInput, setGoalInput] = useState("");
 
   useEffect(() => {
     fetchDashboardData();
@@ -66,7 +73,8 @@ export default function DashboardOverview() {
         await Promise.all([
           fetchStats(estData.id),
           fetchTodayAppointments(estData.id),
-          checkTodayPause(estData.id)
+          checkTodayPause(estData.id),
+          fetchGoal(estData.id)
         ]);
       }
     } catch (error) {
@@ -152,31 +160,80 @@ export default function DashboardOverview() {
     }
   }
 
+  async function fetchGoal(estId: string) {
+    const { data } = await supabase
+      .from('metas')
+      .select('valor_meta')
+      .eq('estabelecimento_id', estId)
+      .single();
+    
+    if (data) {
+      setWeeklyGoal(prev => ({ ...prev, target: Number(data.valor_meta) }));
+      setGoalInput(data.valor_meta.toString());
+    }
+  }
+
   const handlePauseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!establishmentId) return;
-
     setPauseLoading(true);
     try {
       const { error } = await supabase
         .from('indisponibilidades')
-        .insert([{
-          estabelecimento_id: establishmentId,
-          data: pauseData.date,
-          motivo: pauseData.reason
-        }]);
-
+        .insert([{ estabelecimento_id: establishmentId, data: pauseData.date, motivo: pauseData.reason }]);
       if (error) throw error;
-
-      toast.success("Pausa registrada com sucesso!");
+      toast.success("Pausa registrada!");
       setShowPauseModal(false);
-      if (pauseData.date === new Date().toISOString().split('T')[0]) {
-        setIsPaused(true);
-      }
+      if (pauseData.date === new Date().toISOString().split('T')[0]) setIsPaused(true);
     } catch (error: any) {
-      toast.error("Erro ao registrar pausa: " + error.message);
+      toast.error("Erro: " + error.message);
     } finally {
       setPauseLoading(false);
+    }
+  };
+
+  const handleExpenseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!establishmentId) return;
+    setExpenseLoading(true);
+    try {
+      const { error } = await supabase
+        .from('despesas')
+        .insert([{
+          estabelecimento_id: establishmentId,
+          descricao: expenseData.description,
+          valor: parseFloat(expenseData.value.replace(',', '.'))
+        }]);
+      if (error) throw error;
+      toast.success("Despesa lançada!");
+      setShowExpensesModal(false);
+      setExpenseData({ description: "", value: "" });
+    } catch (error: any) {
+      toast.error("Erro: " + error.message);
+    } finally {
+      setExpenseLoading(false);
+    }
+  };
+
+  const handleGoalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!establishmentId) return;
+    setGoalLoading(true);
+    try {
+      const { error } = await supabase
+        .from('metas')
+        .upsert([{
+          estabelecimento_id: establishmentId,
+          valor_meta: parseFloat(goalInput.replace(',', '.'))
+        }]);
+      if (error) throw error;
+      toast.success("Meta atualizada!");
+      setWeeklyGoal(prev => ({ ...prev, target: parseFloat(goalInput) }));
+      setShowGoalsModal(false);
+    } catch (error: any) {
+      toast.error("Erro: " + error.message);
+    } finally {
+      setGoalLoading(false);
     }
   };
 
@@ -258,7 +315,6 @@ export default function DashboardOverview() {
                         {app.status}
                       </span>
                     </div>
-                    
                     <div className="relative">
                       <button onClick={() => setOpenMenuId(openMenuId === app.id ? null : app.id)} className="p-2.5 hover:bg-zinc-800 dark:hover:bg-zinc-700 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-title dark:hover:text-white transition-all">
                         <MoreHorizontal className="w-5 h-5" />
@@ -276,7 +332,7 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* Right: Sidebar */}
+        {/* Right Sidebar */}
         <div className="space-y-6">
           <Tooltip text="Clique para gerenciar suas metas">
             <motion.div 
@@ -299,10 +355,10 @@ export default function DashboardOverview() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
                     <span>Progresso</span>
-                    <span className="text-[#fd9602] font-bold">R$ {weeklyGoal.current.toLocaleString()} / {weeklyGoal.target / 1000}k</span>
+                    <span className="text-[#fd9602] font-bold">R$ {weeklyGoal.current.toLocaleString()} / {(weeklyGoal.target / 1000).toFixed(1)}k</span>
                   </div>
                   <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-2.5 rounded-full overflow-hidden">
-                    <div style={{ width: `${Math.min(100, (weeklyGoal.current / weeklyGoal.target) * 100)}%` }} className="bg-accent h-full shadow-[0_0_20px_rgba(245, 158, 11, 0.4)]" />
+                    <div style={{ width: `${Math.min(100, (weeklyGoal.current / weeklyGoal.target) * 100)}%` }} className="bg-accent h-full shadow-[0_0_20px_rgba(245, 158, 11, 0.4)] transition-all duration-1000" />
                   </div>
                 </div>
               </div>
@@ -324,12 +380,12 @@ export default function DashboardOverview() {
       <Modal isOpen={showPauseModal} onClose={() => setShowPauseModal(false)} title="Registrar Pausa">
         <form onSubmit={handlePauseSubmit} className="space-y-6">
            <div className="space-y-2">
-            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Data da Pausa</label>
-            <input required type="date" value={pauseData.date} onChange={e => setPauseData({...pauseData, date: e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 rounded-xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
+            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Data</label>
+            <input required type="date" value={pauseData.date} onChange={e => setPauseData({...pauseData, date: e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-xl px-4 py-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Motivo (Opcional)</label>
-            <textarea value={pauseData.reason} onChange={e => setPauseData({...pauseData, reason: e.target.value})} placeholder="Ex: Manutenção, Feriado..." className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 rounded-xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 resize-none" rows={3} />
+            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Motivo</label>
+            <textarea value={pauseData.reason} onChange={e => setPauseData({...pauseData, reason: e.target.value})} placeholder="Ex: Manutenção..." className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-xl px-4 py-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 resize-none" rows={3} />
           </div>
           <button type="submit" disabled={pauseLoading} className="w-full btn-primary py-5 text-lg flex items-center justify-center gap-2">
             {pauseLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirmar Pausa"}
@@ -338,26 +394,30 @@ export default function DashboardOverview() {
       </Modal>
 
       <Modal isOpen={showExpensesModal} onClose={() => setShowExpensesModal(false)} title="Lançar Despesa">
-        <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); toast.success("Despesa registrada!"); setShowExpensesModal(false); }}>
+        <form className="space-y-6" onSubmit={handleExpenseSubmit}>
            <div className="space-y-2">
             <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Descrição</label>
-            <input required type="text" placeholder="Ex: Aluguel, Produtos..." className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 rounded-xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
+            <input required type="text" value={expenseData.description} onChange={e => setExpenseData({...expenseData, description: e.target.value})} placeholder="Ex: Aluguel..." className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-xl px-4 py-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
           </div>
           <div className="space-y-2">
             <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Valor (R$)</label>
-            <input required type="text" placeholder="0,00" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 rounded-xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
+            <input required type="text" value={expenseData.value} onChange={e => setExpenseData({...expenseData, value: e.target.value})} placeholder="0,00" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-xl px-4 py-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
           </div>
-          <button type="submit" className="w-full btn-primary py-5 text-lg">Lançar Agora</button>
+          <button type="submit" disabled={expenseLoading} className="w-full btn-primary py-5 text-lg flex items-center justify-center gap-2">
+            {expenseLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Lançar Agora"}
+          </button>
         </form>
       </Modal>
 
       <Modal isOpen={showGoalsModal} onClose={() => setShowGoalsModal(false)} title="Meta Semanal">
-        <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); toast.success("Meta atualizada!"); setShowGoalsModal(false); }}>
+        <form className="space-y-6" onSubmit={handleGoalSubmit}>
            <div className="space-y-2">
             <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Valor da Meta (R$)</label>
-            <input required type="text" placeholder="Ex: 12000" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 rounded-xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
+            <input required type="text" value={goalInput} onChange={e => setGoalInput(e.target.value)} placeholder="Ex: 12000" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-xl px-4 py-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
           </div>
-          <button type="submit" className="w-full btn-primary py-5 text-lg">Salvar Meta</button>
+          <button type="submit" disabled={goalLoading} className="w-full btn-primary py-5 text-lg flex items-center justify-center gap-2">
+            {goalLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Salvar Meta"}
+          </button>
         </form>
       </Modal>
 
@@ -374,7 +434,7 @@ export default function DashboardOverview() {
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl border border-subtle dark:border-zinc-800 space-y-1">
                 <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Horário</span>
-                <p className="text-sm font-bold text-title dark:text-white">{selectedApp.time}</p>
+                <p className="text-sm font-bold dark:text-white">{selectedApp.time}</p>
               </div>
               <div className="p-4 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl border border-subtle dark:border-zinc-800 space-y-1">
                 <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Status</span>

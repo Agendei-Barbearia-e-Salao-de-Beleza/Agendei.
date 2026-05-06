@@ -85,7 +85,7 @@ export default function AppointmentsPage() {
   }
 
   async function fetchAppointments(estId: string) {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('agendamentos')
       .select(`
         *,
@@ -136,23 +136,35 @@ export default function AppointmentsPage() {
 
     setLoading(true);
     try {
-      // Simplificação: Buscamos ou criamos um cliente mock se não existir
+      // 1. Buscar ou Criar o Cliente
+      let clientId = null;
+      
       const { data: userData } = await supabase
         .from('usuarios')
         .select('id')
         .eq('nome', formData.customer)
+        .eq('perfil', 'CLIENTE')
         .limit(1);
       
-      let clientId = userData?.[0]?.id;
-      
-      if (!clientId) {
-        const { data: newUser } = await supabase
+      if (userData && userData.length > 0) {
+        clientId = userData[0].id;
+      } else {
+        const { data: newUser, error: userError } = await supabase
           .from('usuarios')
           .insert([{ nome: formData.customer, perfil: 'CLIENTE' }])
           .select()
           .single();
-        clientId = newUser?.id;
+        
+        if (userError) throw userError;
+        clientId = newUser.id;
+
+        // Criar vínculo com estabelecimento se for novo
+        await supabase
+          .from('clientes_estabelecimentos')
+          .insert([{ cliente_id: clientId, estabelecimento_id: establishmentId }]);
       }
+
+      if (!clientId) throw new Error("Falha ao identificar ou criar cliente.");
 
       const dataHora = `${formData.date}T${formData.time}:00`;
       const totalPrice = selectedServices.reduce((sum, s) => sum + s.preco, 0);
@@ -238,7 +250,7 @@ export default function AppointmentsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-bold text-title tracking-tight">Agenda</h2>
+          <h2 className="text-3xl font-bold text-title tracking-tight dark:text-white">Agenda</h2>
           <p className="text-zinc-500 font-medium text-sm">Gerencie seus horários e agendamentos.</p>
         </div>
         
@@ -248,7 +260,7 @@ export default function AppointmentsPage() {
               onClick={() => setViewMode("list")}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all",
-                viewMode === "list" ? "bg-[#fd9602] text-zinc-950 shadow-lg shadow-[#fd9602]/10" : "text-zinc-500 hover:text-title"
+                viewMode === "list" ? "bg-[#fd9602] text-zinc-950 shadow-lg" : "text-zinc-500 hover:text-title"
               )}
             >
               <List className="w-4 h-4" />
@@ -258,7 +270,7 @@ export default function AppointmentsPage() {
               onClick={() => setViewMode("calendar")}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all",
-                viewMode === "calendar" ? "bg-[#fd9602] text-zinc-950 shadow-lg shadow-[#fd9602]/10" : "text-zinc-500 hover:text-title"
+                viewMode === "calendar" ? "bg-[#fd9602] text-zinc-950 shadow-lg" : "text-zinc-500 hover:text-title"
               )}
             >
               <CalendarIcon className="w-4 h-4" />
@@ -318,7 +330,7 @@ export default function AppointmentsPage() {
                 {appointments.map((app) => (
                   <tr key={app.id} className="hover:bg-zinc-500/5 group transition-colors">
                     <td className="px-8 py-6">
-                      <span className="text-sm font-bold text-title">{app.customer}</span>
+                      <span className="text-sm font-bold text-title dark:text-white">{app.customer}</span>
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex flex-wrap gap-2">
@@ -330,7 +342,7 @@ export default function AppointmentsPage() {
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                      <div className="flex items-center gap-2 text-title font-bold text-sm">
+                      <div className="flex items-center gap-2 text-title dark:text-white font-bold text-sm">
                         <Clock size={14} className="text-[#fd9602]" />
                         {app.time}
                       </div>
@@ -367,7 +379,7 @@ export default function AppointmentsPage() {
                 value={formData.customer}
                 onChange={e => setFormData({ ...formData, customer: e.target.value })}
                 type="text"
-                className="w-full bg-zinc-800 border border-subtle rounded-2xl pl-12 pr-4 py-4 text-title outline-none focus:ring-2 focus:ring-[#fd9602]/20"
+                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl pl-12 pr-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20"
               />
             </div>
           </div>
@@ -380,7 +392,7 @@ export default function AppointmentsPage() {
                 type="date"
                 value={formData.date}
                 onChange={e => setFormData({ ...formData, date: e.target.value })}
-                className="w-full bg-zinc-800 border border-subtle rounded-2xl p-4 text-title outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold"
+                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl p-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold"
               />
             </div>
             <div className="space-y-2">
@@ -390,7 +402,7 @@ export default function AppointmentsPage() {
                 type="time"
                 value={formData.time}
                 onChange={e => setFormData({ ...formData, time: e.target.value })}
-                className="w-full bg-zinc-800 border border-subtle rounded-2xl p-4 text-title outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold"
+                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl p-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold"
               />
             </div>
           </div>
@@ -404,10 +416,10 @@ export default function AppointmentsPage() {
                 value={serviceSearch}
                 onChange={e => setServiceSearch(e.target.value)}
                 placeholder="Adicionar serviço..."
-                className="w-full bg-zinc-800 border border-subtle rounded-2xl pl-12 pr-4 py-4 text-title outline-none focus:ring-2 focus:ring-[#fd9602]/20"
+                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl pl-12 pr-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20"
               />
               {serviceSearch && (
-                <div className="absolute z-50 w-full mt-2 bg-zinc-900 border border-subtle rounded-2xl shadow-2xl max-h-48 overflow-y-auto p-2 backdrop-blur-xl">
+                <div className="absolute z-50 w-full mt-2 bg-zinc-100 dark:bg-zinc-900 border border-subtle rounded-2xl shadow-2xl max-h-48 overflow-y-auto p-2 backdrop-blur-xl">
                   {availableServices
                     .filter(s => s.nome.toLowerCase().includes(serviceSearch.toLowerCase()))
                     .map(s => (
