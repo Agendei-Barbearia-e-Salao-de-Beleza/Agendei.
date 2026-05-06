@@ -483,10 +483,10 @@ export default function DashboardOverview() {
                           <>
                             <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)} />
                             <motion.div 
-                              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                              initial={{ opacity: 0, scale: 0.9, y: -20 }}
                               animate={{ opacity: 1, scale: 1, y: 0 }}
-                              exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                              className="absolute right-0 mt-2 w-48 bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl z-50 py-2 overflow-hidden"
+                              exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                              className="absolute right-0 mt-3 w-56 bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 py-3 overflow-hidden"
                             >
                               <button 
                                 onClick={() => {
@@ -494,15 +494,21 @@ export default function DashboardOverview() {
                                   setShowDetailsModal(true);
                                   setOpenMenuId(null);
                                 }}
-                                className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-zinc-400 hover:text-white hover:bg-white/5 transition-all"
+                                className="w-full flex items-center gap-4 px-6 py-4 text-sm font-bold text-zinc-400 hover:text-white hover:bg-white/5 transition-all group"
                               >
-                                <Eye size={16} className="text-[#fd9602]" /> Ver Detalhes
+                                <div className="p-2 rounded-xl bg-[#fd9602]/10 text-[#fd9602] group-hover:bg-[#fd9602] group-hover:text-zinc-950 transition-all">
+                                  <Eye size={18} />
+                                </div>
+                                Ver Detalhes
                               </button>
                               <button 
                                 onClick={() => setOpenMenuId(null)}
-                                className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-zinc-400 hover:text-red-400 hover:bg-red-500/5 transition-all"
+                                className="w-full flex items-center gap-4 px-6 py-4 text-sm font-bold text-zinc-400 hover:text-red-400 hover:bg-red-500/5 transition-all group"
                               >
-                                <Trash2 size={16} /> Cancelar Agendamento
+                                <div className="p-2 rounded-xl bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all">
+                                  <Trash2 size={18} />
+                                </div>
+                                Cancelar Agendamento
                               </button>
                             </motion.div>
                           </>
@@ -556,7 +562,7 @@ export default function DashboardOverview() {
           <div className="glass-card p-8 rounded-2xl space-y-6 shadow-lg border border-white/5 bg-zinc-900/50">
             <h3 className="text-title dark:text-white font-black text-lg uppercase tracking-tight">Ações Rápidas</h3>
             <div className="space-y-3">
-              <QuickActionButton icon={<Calendar />} label="Marcar Consulta" color="bg-[#fd9602]" onClick={() => setShowAppointmentModal(true)} />
+              <QuickActionButton icon={<Calendar className="text-[#fd9602]" />} label="Marcar Consulta" color="text-[#fd9602]" onClick={() => setShowAppointmentModal(true)} />
               
               <AnimatePresence mode="wait">
                 <motion.div
@@ -566,47 +572,16 @@ export default function DashboardOverview() {
                   exit={{ opacity: 0, scale: 0.95 }}
                 >
                   <QuickActionButton 
-                    icon={isPaused ? (
-                      <div className="relative">
-                        <Coffee />
-                        <motion.div 
-                          animate={{ 
-                            y: [-2, -8], 
-                            opacity: [0, 1, 0],
-                            x: [0, 2, -2, 0]
-                          }}
-                          transition={{ 
-                            duration: 2, 
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                          }}
-                          className="absolute -top-3 left-1 w-1 h-2 bg-zinc-400/40 rounded-full blur-[1px]"
-                        />
-                        <motion.div 
-                          animate={{ 
-                            y: [-2, -10], 
-                            opacity: [0, 0.8, 0],
-                            x: [2, -1, 1, 2]
-                          }}
-                          transition={{ 
-                            duration: 2.5, 
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                            delay: 0.5
-                          }}
-                          className="absolute -top-4 left-3 w-1 h-2 bg-zinc-400/30 rounded-full blur-[1px]"
-                        />
-                      </div>
-                    ) : <Ban />} 
+                    icon={isPaused ? <Coffee className="text-emerald-500" /> : <Ban className="text-blue-500" />} 
                     label={isPaused ? "Pausa Ativada" : "Marcar Pausa"} 
-                    color={isPaused ? "bg-emerald-500" : "bg-blue-500"}
+                    color={isPaused ? "text-emerald-500" : "text-blue-500"}
                     onClick={() => setShowPauseModal(true)} 
                     statusIndicator={isPaused} 
                   />
                 </motion.div>
               </AnimatePresence>
 
-              <QuickActionButton icon={<DollarSign />} label="Lançar Despesa" color="bg-red-500" onClick={() => setShowExpensesModal(true)} />
+              <QuickActionButton icon={<DollarSign className="text-red-500" />} label="Lançar Despesa" color="text-red-500" onClick={() => setShowExpensesModal(true)} />
             </div>
           </div>
         </div>
@@ -828,8 +803,8 @@ function QuickActionButton({ icon, label, onClick, color, statusIndicator }: any
       className="w-full flex items-center justify-between p-4 rounded-2xl bg-zinc-800/50 hover:bg-zinc-800 border border-transparent hover:border-white/10 transition-all text-left group"
     >
       <div className="flex items-center gap-4">
-        <div className={cn("p-2 rounded-xl text-zinc-950 flex items-center justify-center", color)}>
-          {React.cloneElement(icon, { size: 18 })}
+        <div className={cn("p-2 rounded-xl flex items-center justify-center", color)}>
+          {React.cloneElement(icon, { size: 22 })}
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-zinc-300 group-hover:text-white transition-colors">{label}</span>
