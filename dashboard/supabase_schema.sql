@@ -160,13 +160,11 @@ CREATE POLICY "Admins gerenciam suas metas" ON public.metas FOR ALL USING (
     EXISTS (SELECT 1 FROM public.estabelecimentos e WHERE e.id = estabelecimento_id AND e.proprietario_id = auth.uid())
 );
 
--- Gatilho de Novo Usuário
+-- Gatilho de Novo Usuário (Limpo para Produção)
 CREATE OR REPLACE FUNCTION public.handle_novo_usuario()
 RETURNS TRIGGER AS $$
 DECLARE
   v_est_id UUID := gen_random_uuid();
-  v_c1_id UUID := gen_random_uuid();
-  v_c2_id UUID := gen_random_uuid();
 BEGIN
   INSERT INTO public.usuarios (id, nome, email, perfil)
   VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'nome', 'Administrador'), NEW.email, 'ADMIN')
@@ -174,15 +172,6 @@ BEGIN
 
   INSERT INTO public.estabelecimentos (id, proprietario_id, nome, tipo)
   VALUES (v_est_id, NEW.id, COALESCE(NEW.raw_user_meta_data->>'nome_estabelecimento', 'Meu Estabelecimento'), COALESCE((NEW.raw_user_meta_data->>'tipo')::public.tipo_estabelecimento, 'BARBEARIA'));
-
-  INSERT INTO public.usuarios (id, nome, email, telefone, perfil)
-  VALUES 
-    (v_c1_id, 'Carlos Alberto', 'c1.' || v_est_id || '@agendei.mock', '(11) 98765-4321', 'CLIENTE'),
-    (v_c2_id, 'Juliana Silva', 'c2.' || v_est_id || '@agendei.mock', '(11) 91234-5678', 'CLIENTE')
-  ON CONFLICT DO NOTHING;
-
-  INSERT INTO public.clientes_estabelecimentos (cliente_id, estabelecimento_id)
-  VALUES (v_c1_id, v_est_id), (v_c2_id, v_est_id);
 
   RETURN NEW;
 END;

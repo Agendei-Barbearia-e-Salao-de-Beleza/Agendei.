@@ -99,7 +99,7 @@ export default function AppointmentsPage() {
         const dt = new Date(app.data_hora);
         return {
           id: app.id,
-          customer: app.usuarios?.nome || "Cliente",
+          customer: (app.usuarios as any)?.nome || "Cliente",
           services: app.servicos || [],
           date: dt.toISOString().split('T')[0],
           time: dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),

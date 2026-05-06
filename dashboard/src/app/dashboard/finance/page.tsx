@@ -90,7 +90,7 @@ export default function FinancePage() {
     const combined = [
       ...(incRes.data?.map(i => ({
         id: i.id,
-        title: `Agendamento: ${i.usuarios?.nome || "Cliente"}`,
+        title: `Agendamento: ${(i.usuarios as any)?.nome || "Cliente"}`,
         category: "Serviço",
         date: new Date(i.data_hora).toLocaleDateString('pt-BR'),
         value: Number(i.preco_total),

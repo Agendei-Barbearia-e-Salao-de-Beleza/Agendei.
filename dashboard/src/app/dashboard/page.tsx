@@ -6,7 +6,8 @@ import {
   Users, Calendar, DollarSign, Clock,
   MoreHorizontal, TrendingUp, ChevronRight,
   Eye, Coffee, Ban, Tag, Plus, Loader2, CheckCircle2,
-  CalendarDays, Trash2, ArrowUpRight, ArrowDownRight
+  CalendarDays, Trash2, ArrowUpRight, ArrowDownRight,
+  Sparkles, Rocket, PartyPopper, ChevronLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -30,10 +31,10 @@ export default function DashboardOverview() {
   const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
   const [userName, setUserName] = useState("");
   
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [selectedApp, setSelectedApp] = useState<any>(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  
+  // Onboarding Logic
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+
   // Pause Logic
   const [isPaused, setIsPaused] = useState(false);
   const [showPauseModal, setShowPauseModal] = useState(false);
@@ -55,7 +56,15 @@ export default function DashboardOverview() {
 
   useEffect(() => {
     fetchDashboardData();
+    checkOnboarding();
   }, []);
+
+  function checkOnboarding() {
+    const completed = localStorage.getItem('agendei_onboarding_completed');
+    if (!completed) {
+      setTimeout(() => setShowOnboarding(true), 1500);
+    }
+  }
 
   async function fetchDashboardData() {
     try {
@@ -141,10 +150,10 @@ export default function DashboardOverview() {
     if (data) {
       setTodayAppointments(data.map(app => ({
         id: app.id,
-        customer: app.usuarios?.nome || "Cliente",
+        customer: (app.usuarios as any)?.nome || "Cliente",
         service: Array.isArray(app.servicos) ? app.servicos.map((s: any) => s.nome).join(", ") : "Serviço",
         time: new Date(app.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        avatar: (app.usuarios?.nome || "C").substring(0, 2).toUpperCase(),
+        avatar: ((app.usuarios as any)?.nome || "C").substring(0, 2).toUpperCase(),
         status: app.status
       })));
     }
@@ -177,6 +186,12 @@ export default function DashboardOverview() {
       setGoalInput(data.valor_meta.toString());
     }
   }
+
+  const finishOnboarding = () => {
+    localStorage.setItem('agendei_onboarding_completed', 'true');
+    setShowOnboarding(false);
+    toast.success("Tudo pronto! Vamos começar.");
+  };
 
   const handlePauseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -271,6 +286,33 @@ export default function DashboardOverview() {
     }
   };
 
+  const onboardingSteps = [
+    {
+      title: "Seja bem-vindo ao Agendei!",
+      description: "Preparamos um sistema limpo e pronto para você começar a crescer. Vamos te mostrar o básico em 1 minuto.",
+      icon: <Rocket className="w-12 h-12 text-[#fd9602]" />,
+      color: "from-[#fd9602]/20"
+    },
+    {
+      title: "Sua Agenda Inteligente",
+      description: "Aqui no topo você acompanha seus compromissos do dia. Tudo sincronizado em tempo real com o banco de dados.",
+      icon: <CalendarDays className="w-12 h-12 text-blue-500" />,
+      color: "from-blue-500/20"
+    },
+    {
+      title: "Controle Financeiro",
+      description: "Lance suas despesas e acompanhe suas metas semanais. Nosso sistema calcula seu lucro automaticamente.",
+      icon: <DollarSign className="w-12 h-12 text-emerald-500" />,
+      color: "from-emerald-500/20"
+    },
+    {
+      title: "Pronto para decolar?",
+      description: "Agora é com você. Comece cadastrando seus serviços e clientes para liberar todo o poder do Agendei.",
+      icon: <PartyPopper className="w-12 h-12 text-purple-500" />,
+      color: "from-purple-500/20"
+    }
+  ];
+
   return (
     <div className="space-y-10">
       {/* Welcome Header */}
@@ -358,7 +400,7 @@ export default function DashboardOverview() {
               ))
             ) : (
               <div className="flex flex-col items-center justify-center p-20 gap-2">
-                <Calendar className="w-10 h-10 text-zinc-800" />
+                <Calendar className="w-10 h-10 text-zinc-800/50" />
                 <p className="text-zinc-500 text-sm font-medium">Nenhum agendamento para hoje.</p>
               </div>
             )}
@@ -427,7 +469,66 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* Modals */}
+      {/* Onboarding Modal */}
+      <AnimatePresence>
+        {showOnboarding && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-zinc-950 border border-white/10 w-full max-w-lg rounded-[32px] overflow-hidden shadow-[0_0_100px_rgba(253,150,2,0.15)]"
+            >
+              <div className={cn("h-40 bg-gradient-to-b flex items-center justify-center transition-all duration-500", onboardingSteps[onboardingStep].color)}>
+                 <motion.div
+                  key={onboardingStep}
+                  initial={{ rotate: -10, scale: 0.8, opacity: 0 }}
+                  animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", damping: 12 }}
+                 >
+                    {onboardingSteps[onboardingStep].icon}
+                 </motion.div>
+              </div>
+              
+              <div className="p-10 space-y-6 text-center">
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-black text-white tracking-tight leading-tight">
+                    {onboardingSteps[onboardingStep].title}
+                  </h3>
+                  <p className="text-zinc-400 font-medium text-base">
+                    {onboardingSteps[onboardingStep].description}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-center gap-2">
+                  {onboardingSteps.map((_, i) => (
+                    <div key={i} className={cn("h-1.5 transition-all duration-300 rounded-full", onboardingStep === i ? "w-8 bg-[#fd9602]" : "w-1.5 bg-zinc-800")} />
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-3 pt-4">
+                  {onboardingStep > 0 && (
+                    <button 
+                      onClick={() => setOnboardingStep(s => s - 1)}
+                      className="flex-1 py-4 px-6 rounded-2xl border border-white/5 bg-white/5 text-zinc-400 font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                    >
+                      <ChevronLeft size={18} /> Voltar
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => onboardingStep === onboardingSteps.length - 1 ? finishOnboarding() : setOnboardingStep(s => s + 1)}
+                    className="flex-[2] py-4 px-6 rounded-2xl bg-[#fd9602] text-zinc-950 font-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_20px_rgba(253,150,2,0.2)] flex items-center justify-center gap-2"
+                  >
+                    {onboardingStep === onboardingSteps.length - 1 ? "Começar Agora" : "Continuar"} <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Other Modals */}
       <Modal isOpen={showPauseModal} onClose={() => setShowPauseModal(false)} title="Planejar Folga">
         <div className="space-y-8 max-h-[85vh] overflow-y-auto pr-2 custom-scrollbar p-1">
           <div className="bg-zinc-100 dark:bg-zinc-900/50 p-6 rounded-3xl border border-subtle dark:border-zinc-800 flex flex-col items-center">
@@ -511,7 +612,7 @@ export default function DashboardOverview() {
             </div>
           </div>
           <button type="submit" disabled={expenseLoading} className="w-full btn-primary py-6 text-lg font-black flex items-center justify-center gap-3 shadow-[0_20px_40px_-10px_rgba(253,150,2,0.3)]">
-            {expenseLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Registrar Saída"}
+            {expenseLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Registrar Saída"}
           </button>
         </form>
       </Modal>
