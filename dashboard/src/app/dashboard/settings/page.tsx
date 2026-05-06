@@ -4,9 +4,129 @@ import React, { useState } from "react";
 import { User, Bell, Shield, Palette, Smartphone, Save, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { useTheme } from "next-themes";
+import { supabase } from "@/lib/supabase";
+import { Loader2 } from "lucide-react";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("perfil");
+  const { theme, setTheme } = useTheme();
+
+  // Estados de Perfil
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profile, setProfile] = useState({
+    id: "",
+    proprietario_id: "",
+    nome: "",
+    telefone_comercial: "",
+    endereco: "",
+    logo_url: "",
+    avatar_url: "",
+    instagram_url: "",
+    facebook_url: "",
+    whatsapp_url: "",
+    tiktok_url: ""
+  });
+
+  // Estados de Segurança
+  const [secLoading, setSecLoading] = useState(false);
+  const [secEmail, setSecEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Fetch inicial
+  React.useEffect(() => {
+    async function loadData() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      setSecEmail(user.email || "");
+
+      const { data: estData } = await supabase
+        .from('estabelecimentos')
+        .select('*')
+        .eq('proprietario_id', user.id)
+        .single();
+        
+      const { data: userData } = await supabase
+        .from('usuarios')
+        .select('avatar_url')
+        .eq('id', user.id)
+        .single();
+
+      if (estData) {
+        setProfile({
+          id: estData.id,
+          proprietario_id: user.id,
+          nome: estData.nome || "",
+          telefone_comercial: estData.telefone_comercial || "",
+          endereco: estData.endereco || "",
+          logo_url: estData.logo_url || "",
+          avatar_url: userData?.avatar_url || "",
+          instagram_url: estData.instagram_url || "",
+          facebook_url: estData.facebook_url || "",
+          whatsapp_url: estData.whatsapp_url || "",
+          tiktok_url: estData.tiktok_url || ""
+        });
+      }
+      setLoadingProfile(false);
+    }
+    loadData();
+  }, []);
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      if (profile.id) {
+        await supabase.from('estabelecimentos').update({
+          nome: profile.nome,
+          telefone_comercial: profile.telefone_comercial,
+          endereco: profile.endereco,
+          logo_url: profile.logo_url,
+          instagram_url: profile.instagram_url,
+          facebook_url: profile.facebook_url,
+          whatsapp_url: profile.whatsapp_url,
+          tiktok_url: profile.tiktok_url
+        }).eq('id', profile.id);
+      }
+      if (profile.proprietario_id) {
+        await supabase.from('usuarios').update({
+          avatar_url: profile.avatar_url
+        }).eq('id', profile.proprietario_id);
+      }
+      toast.success("Perfil salvo com sucesso!");
+    } catch (error) {
+      toast.error("Erro ao salvar perfil.");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleUpdateSecurity = async () => {
+    if (newPassword && newPassword !== confirmPassword) {
+      toast.error("As senhas não coincidem!");
+      return;
+    }
+    
+    setSecLoading(true);
+    try {
+      const updates: any = {};
+      if (secEmail) updates.email = secEmail;
+      if (newPassword) updates.password = newPassword;
+      
+      const { error } = await supabase.auth.updateUser(updates);
+      if (error) throw error;
+      
+      toast.success("Segurança atualizada com sucesso! Se mudou o e-mail, verifique sua caixa de entrada.");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao atualizar segurança.");
+    } finally {
+      setSecLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -34,42 +154,78 @@ export default function SettingsPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="space-y-6"
+                        className="space-y-8"
                     >
-                        <h3 className="text-xl font-bold text-white light:text-zinc-950">Informações Gerais</h3>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Logo do Estabelecimento (URL)</label>
-                                <input type="text" placeholder="https://..." className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Avatar do Proprietário (URL)</label>
-                                <input type="text" placeholder="https://..." className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
-                            </div>
-                        </div>
+                        {loadingProfile ? (
+                            <div className="flex justify-center p-10"><Loader2 className="w-8 h-8 animate-spin text-[#fd9602]" /></div>
+                        ) : (
+                            <>
+                                <div className="space-y-6">
+                                    <h3 className="text-xl font-bold text-white light:text-zinc-950">Informações Gerais</h3>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Logo do Estabelecimento (URL)</label>
+                                            <input value={profile.logo_url} onChange={e => setProfile({...profile, logo_url: e.target.value})} type="text" placeholder="https://..." className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Avatar do Proprietário (URL)</label>
+                                            <input value={profile.avatar_url} onChange={e => setProfile({...profile, avatar_url: e.target.value})} type="text" placeholder="https://..." className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                        </div>
+                                    </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Nome do Estabelecimento</label>
-                                <input type="text" defaultValue="Agendei. Demo" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Telefone Comercial</label>
-                                <input type="text" defaultValue="(11) 99999-8888" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Endereço Completo</label>
-                            <input type="text" defaultValue="Rua das Belezas, 123 - São Paulo, SP" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
-                        </div>
-                        <button 
-                            onClick={() => toast.success("Configurações salvas com sucesso!")}
-                            className="bg-[#fd9602] text-zinc-950 font-bold px-8 py-3 rounded-xl hover:bg-[#fd9602]/90 transition-all flex items-center gap-2 shadow-lg shadow-[#fd9602]/10 active:scale-95"
-                        >
-                            <Save size={18} />
-                            Salvar Alterações
-                        </button>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Nome do Estabelecimento</label>
+                                            <input value={profile.nome} onChange={e => setProfile({...profile, nome: e.target.value})} type="text" placeholder="Nome do Local" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Telefone Comercial</label>
+                                            <input value={profile.telefone_comercial} onChange={e => setProfile({...profile, telefone_comercial: e.target.value})} type="text" placeholder="(11) 99999-8888" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Endereço Completo</label>
+                                        <input value={profile.endereco} onChange={e => setProfile({...profile, endereco: e.target.value})} type="text" placeholder="Rua das Belezas, 123" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6 pt-6 border-t border-zinc-800 light:border-zinc-200">
+                                    <h3 className="text-xl font-bold text-white light:text-zinc-950">Redes Sociais</h3>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Instagram (URL)</label>
+                                            <input value={profile.instagram_url} onChange={e => setProfile({...profile, instagram_url: e.target.value})} type="text" placeholder="https://instagram.com/..." className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Facebook (URL)</label>
+                                            <input value={profile.facebook_url} onChange={e => setProfile({...profile, facebook_url: e.target.value})} type="text" placeholder="https://facebook.com/..." className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">WhatsApp (Link/Número)</label>
+                                            <input value={profile.whatsapp_url} onChange={e => setProfile({...profile, whatsapp_url: e.target.value})} type="text" placeholder="https://wa.me/..." className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">TikTok (URL)</label>
+                                            <input value={profile.tiktok_url} onChange={e => setProfile({...profile, tiktok_url: e.target.value})} type="text" placeholder="https://tiktok.com/@..." className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button 
+                                    onClick={handleSaveProfile}
+                                    disabled={savingProfile}
+                                    className="bg-[#fd9602] text-zinc-950 font-bold px-8 py-3 rounded-xl hover:bg-[#fd9602]/90 transition-all flex items-center gap-2 shadow-lg shadow-[#fd9602]/10 active:scale-95 disabled:opacity-50"
+                                >
+                                    {savingProfile ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={18} />}
+                                    {savingProfile ? "Salvando..." : "Salvar Alterações"}
+                                </button>
+                            </>
+                        )}
                     </motion.div>
                 )}
 
@@ -138,25 +294,30 @@ export default function SettingsPage() {
                         className="space-y-6"
                     >
                         <h3 className="text-xl font-bold text-white light:text-zinc-950">Segurança</h3>
-                        <p className="text-zinc-500 text-sm">Proteja sua conta e seus dados financeiros.</p>
+                        <p className="text-zinc-500 text-sm">Proteja sua conta e atualize seus dados de acesso.</p>
                         
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Senha Atual</label>
-                                <input type="password" placeholder="••••••••" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">E-mail de Login</label>
+                                <input value={secEmail} onChange={e => setSecEmail(e.target.value)} type="email" placeholder="seu@email.com" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Nova Senha</label>
-                                    <input type="password" placeholder="••••••••" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                    <input value={newPassword} onChange={e => setNewPassword(e.target.value)} type="password" placeholder="••••••••" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Confirmar Senha</label>
-                                    <input type="password" placeholder="••••••••" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                    <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Confirmar Nova Senha</label>
+                                    <input value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} type="password" placeholder="••••••••" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
                                 </div>
                             </div>
-                            <button className="bg-zinc-800 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-zinc-700 transition-all text-sm mt-2">
-                                Atualizar Senha
+                            <button 
+                                onClick={handleUpdateSecurity}
+                                disabled={secLoading}
+                                className="bg-zinc-800 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-zinc-700 transition-all text-sm mt-2 disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {secLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                                {secLoading ? "Atualizando..." : "Atualizar Acesso"}
                             </button>
                         </div>
 
@@ -166,7 +327,7 @@ export default function SettingsPage() {
                                     <p className="font-bold text-white light:text-zinc-950 text-sm flex items-center gap-2">Autenticação em 2 Fatores <span className="bg-emerald-500/20 text-emerald-500 text-[9px] px-2 py-0.5 rounded-full">Recomendado</span></p>
                                     <p className="text-xs text-zinc-500">Adicione uma camada extra de segurança.</p>
                                 </div>
-                                <button className="text-[#fd9602] font-bold text-sm bg-[#fd9602]/10 px-4 py-2 rounded-xl">Ativar</button>
+                                <button className="text-[#fd9602] font-bold text-sm bg-[#fd9602]/10 px-4 py-2 rounded-xl hover:bg-[#fd9602]/20 transition-all">Ativar</button>
                             </div>
                         </div>
                     </motion.div>
@@ -186,21 +347,21 @@ export default function SettingsPage() {
                         <div className="space-y-4">
                             <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Tema do Sistema</label>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="p-4 rounded-2xl border-2 border-[#fd9602] bg-zinc-950 flex flex-col items-center gap-3 cursor-pointer">
+                                <div onClick={() => setTheme('dark')} className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-3 cursor-pointer ${theme === 'dark' ? 'border-[#fd9602] bg-zinc-950' : 'border-zinc-800 bg-zinc-950 opacity-50'}`}>
                                     <div className="w-full h-12 bg-zinc-900 rounded-lg flex gap-2 p-2">
                                         <div className="w-3 h-full bg-zinc-800 rounded"></div>
                                         <div className="flex-1 bg-zinc-800 rounded"></div>
                                     </div>
                                     <span className="text-xs font-bold text-white">Escuro</span>
                                 </div>
-                                <div className="p-4 rounded-2xl border-2 border-zinc-800 bg-white flex flex-col items-center gap-3 cursor-pointer opacity-50">
+                                <div onClick={() => setTheme('light')} className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-3 cursor-pointer ${theme === 'light' ? 'border-[#fd9602] bg-white' : 'border-zinc-800 bg-white opacity-50'}`}>
                                     <div className="w-full h-12 bg-zinc-100 rounded-lg flex gap-2 p-2">
                                         <div className="w-3 h-full bg-zinc-200 rounded"></div>
                                         <div className="flex-1 bg-zinc-200 rounded"></div>
                                     </div>
                                     <span className="text-xs font-bold text-zinc-950">Claro</span>
                                 </div>
-                                <div className="p-4 rounded-2xl border-2 border-zinc-800 bg-gradient-to-r from-zinc-950 to-white flex flex-col items-center gap-3 cursor-pointer opacity-50">
+                                <div onClick={() => setTheme('system')} className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-3 cursor-pointer ${theme === 'system' ? 'border-[#fd9602] bg-gradient-to-r from-zinc-950 to-white' : 'border-zinc-800 bg-gradient-to-r from-zinc-950 to-white opacity-50'}`}>
                                      <div className="w-full h-12 flex rounded-lg overflow-hidden border border-zinc-500/20">
                                         <div className="flex-1 bg-zinc-900 p-2"><div className="w-full h-full bg-zinc-800 rounded"></div></div>
                                         <div className="flex-1 bg-zinc-100 p-2"><div className="w-full h-full bg-zinc-200 rounded"></div></div>
