@@ -37,7 +37,8 @@ export default function DashboardOverview() {
   const [isPaused, setIsPaused] = useState(false);
   const [showPauseModal, setShowPauseModal] = useState(false);
   const [pauseLoading, setPauseLoading] = useState(false);
-  const [pauseData, setPauseData] = useState({ date: new Date().toISOString().split('T')[0], reason: "" });
+  const [selectedDays, setSelectedDays] = useState<Date[]>([]);
+  const [pauseReason, setPauseReason] = useState("");
 
   // Expenses Logic
   const [showExpensesModal, setShowExpensesModal] = useState(false);
@@ -175,16 +176,32 @@ export default function DashboardOverview() {
 
   const handlePauseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!establishmentId) return;
+    if (!establishmentId || selectedDays.length === 0) {
+      toast.error("Selecione ao menos um dia no calendário.");
+      return;
+    }
     setPauseLoading(true);
     try {
+      const records = selectedDays.map(day => ({
+        estabelecimento_id: establishmentId,
+        data: day.toISOString().split('T')[0],
+        motivo: pauseReason
+      }));
+
       const { error } = await supabase
         .from('indisponibilidades')
-        .insert([{ estabelecimento_id: establishmentId, data: pauseData.date, motivo: pauseData.reason }]);
+        .insert(records);
+
       if (error) throw error;
-      toast.success("Pausa registrada!");
+      toast.success("Pausa(s) registrada(s)!");
       setShowPauseModal(false);
-      if (pauseData.date === new Date().toISOString().split('T')[0]) setIsPaused(true);
+      
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (selectedDays.some(d => d.toISOString().split('T')[0] === todayStr)) {
+        setIsPaused(true);
+      }
+      setSelectedDays([]);
+      setPauseReason("");
     } catch (error: any) {
       toast.error("Erro: " + error.message);
     } finally {
@@ -273,7 +290,6 @@ export default function DashboardOverview() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left: Agenda de Hoje */}
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-xl font-bold text-title dark:text-white tracking-tight">Agenda de Hoje</h3>
@@ -332,7 +348,6 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* Right Sidebar */}
         <div className="space-y-6">
           <Tooltip text="Clique para gerenciar suas metas">
             <motion.div 
@@ -378,29 +393,60 @@ export default function DashboardOverview() {
 
       {/* Modals */}
       <Modal isOpen={showPauseModal} onClose={() => setShowPauseModal(false)} title="Registrar Pausa">
-        <form onSubmit={handlePauseSubmit} className="space-y-6">
-           <div className="space-y-2">
-            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Data</label>
-            <input required type="date" value={pauseData.date} onChange={e => setPauseData({...pauseData, date: e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-xl px-4 py-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
+        <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar">
+          <div className="flex flex-col items-center">
+            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4 self-start ml-1">Selecione os dias</label>
+            <div className="bg-zinc-100 dark:bg-zinc-800/50 p-4 rounded-2xl border border-subtle dark:border-zinc-800 shadow-inner">
+              <DayPicker
+                mode="multiple"
+                selected={selectedDays}
+                onSelect={(days) => setSelectedDays(days || [])}
+                locale={ptBR}
+                className="dark:text-white"
+                modifiersStyles={{
+                  selected: { backgroundColor: '#fd9602', color: '#000', fontWeight: 'bold' }
+                }}
+              />
+            </div>
           </div>
+          
           <div className="space-y-2">
-            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Motivo</label>
-            <textarea value={pauseData.reason} onChange={e => setPauseData({...pauseData, reason: e.target.value})} placeholder="Ex: Manutenção..." className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-xl px-4 py-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 resize-none" rows={3} />
+            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Motivo (Opcional)</label>
+            <textarea 
+              value={pauseReason} 
+              onChange={e => setPauseReason(e.target.value)} 
+              placeholder="Ex: Reforma, Folga, Feriado..." 
+              className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-xl px-4 py-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 resize-none" 
+              rows={3} 
+            />
           </div>
-          <button type="submit" disabled={pauseLoading} className="w-full btn-primary py-5 text-lg flex items-center justify-center gap-2">
+
+          <div className="p-4 bg-[#fd9602]/5 rounded-xl border border-[#fd9602]/10">
+            <p className="text-xs text-zinc-500 font-medium">
+              {selectedDays.length === 0 
+                ? "Nenhum dia selecionado." 
+                : `${selectedDays.length} dia(s) selecionado(s) para pausa.`}
+            </p>
+          </div>
+
+          <button 
+            onClick={handlePauseSubmit} 
+            disabled={pauseLoading} 
+            className="w-full btn-primary py-5 text-lg flex items-center justify-center gap-2"
+          >
             {pauseLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirmar Pausa"}
           </button>
-        </form>
+        </div>
       </Modal>
 
       <Modal isOpen={showExpensesModal} onClose={() => setShowExpensesModal(false)} title="Lançar Despesa">
         <form className="space-y-6" onSubmit={handleExpenseSubmit}>
            <div className="space-y-2">
-            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Descrição</label>
+            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Descrição</label>
             <input required type="text" value={expenseData.description} onChange={e => setExpenseData({...expenseData, description: e.target.value})} placeholder="Ex: Aluguel..." className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-xl px-4 py-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Valor (R$)</label>
+            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Valor (R$)</label>
             <input required type="text" value={expenseData.value} onChange={e => setExpenseData({...expenseData, value: e.target.value})} placeholder="0,00" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-xl px-4 py-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
           </div>
           <button type="submit" disabled={expenseLoading} className="w-full btn-primary py-5 text-lg flex items-center justify-center gap-2">
@@ -412,7 +458,7 @@ export default function DashboardOverview() {
       <Modal isOpen={showGoalsModal} onClose={() => setShowGoalsModal(false)} title="Meta Semanal">
         <form className="space-y-6" onSubmit={handleGoalSubmit}>
            <div className="space-y-2">
-            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Valor da Meta (R$)</label>
+            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Valor da Meta (R$)</label>
             <input required type="text" value={goalInput} onChange={e => setGoalInput(e.target.value)} placeholder="Ex: 12000" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-xl px-4 py-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
           </div>
           <button type="submit" disabled={goalLoading} className="w-full btn-primary py-5 text-lg flex items-center justify-center gap-2">
