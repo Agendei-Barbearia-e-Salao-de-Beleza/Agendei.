@@ -44,13 +44,13 @@ export default function Sidebar() {
     router.push("/");
   };
   return (
-    <aside className="w-64 h-screen flex flex-col fixed left-0 top-0 z-50 border-r border-subtle transition-all duration-500 ease-in-out bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xl">
+    <aside className="force-dark w-64 h-screen flex flex-col fixed left-0 top-0 z-50 border-r border-subtle transition-all duration-500 ease-in-out bg-zinc-950/70 backdrop-blur-xl">
       <div className="p-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div style={{ backgroundColor: '#fd9602' }} className="p-2 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.4)]">
             <Scissors className="text-zinc-950 w-5 h-5" />
           </div>
-          <h1 className="text-xl font-bold tracking-tighter text-zinc-950 dark:text-white">
+          <h1 className="text-xl font-bold tracking-tighter text-white">
             Agendei<span style={{ color: '#fd9602' }}>.</span>
           </h1>
         </div>

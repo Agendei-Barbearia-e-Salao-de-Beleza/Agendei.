@@ -347,26 +347,26 @@ export default function SettingsPage() {
                         <div className="space-y-4">
                             <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Tema do Sistema</label>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div onClick={() => setTheme('dark')} className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-3 cursor-pointer ${theme === 'dark' ? 'border-[#fd9602] bg-zinc-950' : 'border-zinc-800 bg-zinc-950 opacity-50'}`}>
-                                    <div className="w-full h-12 bg-zinc-900 rounded-lg flex gap-2 p-2">
-                                        <div className="w-3 h-full bg-zinc-800 rounded"></div>
-                                        <div className="flex-1 bg-zinc-800 rounded"></div>
+                                <div onClick={() => setTheme('dark')} className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-3 cursor-pointer ${theme === 'dark' ? 'border-[#fd9602] bg-[#09090b]' : 'border-[#27272a] bg-[#09090b] opacity-50'}`}>
+                                    <div className="w-full h-12 bg-[#18181b] rounded-lg flex gap-2 p-2">
+                                        <div className="w-3 h-full bg-[#27272a] rounded"></div>
+                                        <div className="flex-1 bg-[#27272a] rounded"></div>
                                     </div>
-                                    <span className="text-xs font-bold text-white">Escuro</span>
+                                    <span className="text-xs font-bold text-[#ffffff]">Escuro</span>
                                 </div>
-                                <div onClick={() => setTheme('light')} className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-3 cursor-pointer ${theme === 'light' ? 'border-[#fd9602] bg-white' : 'border-zinc-800 bg-white opacity-50'}`}>
-                                    <div className="w-full h-12 bg-zinc-100 rounded-lg flex gap-2 p-2">
-                                        <div className="w-3 h-full bg-zinc-200 rounded"></div>
-                                        <div className="flex-1 bg-zinc-200 rounded"></div>
+                                <div onClick={() => setTheme('light')} className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-3 cursor-pointer ${theme === 'light' ? 'border-[#fd9602] bg-[#ffffff]' : 'border-[#e4e4e7] bg-[#ffffff] opacity-50'}`}>
+                                    <div className="w-full h-12 bg-[#f4f4f5] rounded-lg flex gap-2 p-2">
+                                        <div className="w-3 h-full bg-[#e4e4e7] rounded"></div>
+                                        <div className="flex-1 bg-[#e4e4e7] rounded"></div>
                                     </div>
-                                    <span className="text-xs font-bold text-zinc-950">Claro</span>
+                                    <span className="text-xs font-bold text-[#09090b]">Claro</span>
                                 </div>
-                                <div onClick={() => setTheme('system')} className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-3 cursor-pointer ${theme === 'system' ? 'border-[#fd9602] bg-gradient-to-r from-zinc-950 to-white' : 'border-zinc-800 bg-gradient-to-r from-zinc-950 to-white opacity-50'}`}>
-                                     <div className="w-full h-12 flex rounded-lg overflow-hidden border border-zinc-500/20">
-                                        <div className="flex-1 bg-zinc-900 p-2"><div className="w-full h-full bg-zinc-800 rounded"></div></div>
-                                        <div className="flex-1 bg-zinc-100 p-2"><div className="w-full h-full bg-zinc-200 rounded"></div></div>
+                                <div onClick={() => setTheme('system')} className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-3 cursor-pointer ${theme === 'system' ? 'border-[#fd9602] bg-gradient-to-r from-[#09090b] to-[#ffffff]' : 'border-[#71717a] bg-gradient-to-r from-[#09090b] to-[#ffffff] opacity-50'}`}>
+                                     <div className="w-full h-12 flex rounded-lg overflow-hidden border border-[#52525b]/20">
+                                        <div className="flex-1 bg-[#09090b] p-2"><div className="w-full h-full bg-[#27272a] rounded"></div></div>
+                                        <div className="flex-1 bg-[#f4f4f5] p-2"><div className="w-full h-full bg-[#e4e4e7] rounded"></div></div>
                                     </div>
-                                    <span className="text-xs font-bold text-zinc-500">Sistema</span>
+                                    <span className="text-xs font-bold text-[#71717a]">Sistema</span>
                                 </div>
                             </div>
                         </div>
