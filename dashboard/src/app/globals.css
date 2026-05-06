@@ -27,6 +27,33 @@
   --accent: #fd9602; 
   --muted: #64748b;
   --sidebar: rgba(9, 9, 11, 0.95); /* Inverted Dark Sidebar */
+
+  /* Inversão Global Tailwind (Para transformar bg-zinc-950 em bg-white) */
+  --color-zinc-950: #f4f4f5; 
+  --color-zinc-900: #ffffff; 
+  --color-zinc-800: #e4e4e7; 
+  --color-zinc-700: #d4d4d8; 
+  --color-zinc-600: #71717a; 
+  --color-zinc-500: #52525b; 
+  --color-zinc-400: #3f3f46; 
+  --color-zinc-300: #27272a; 
+  --color-zinc-200: #18181b; 
+  --color-zinc-100: #09090b; 
+  --color-zinc-50:  #000000; 
+  
+  --color-white: #09090b; 
+  --color-black: #ffffff;
+}
+
+/* Proteção para garantir que textos sobre o Amarelo Vibrante continuem escuros no tema claro */
+:root.light .bg-\[\#fd9602\] {
+  color: #000000 !important;
+}
+:root.light .bg-\[\#fd9602\] * {
+  color: #000000 !important;
+}
+:root.light .text-\[\#fd9602\] {
+  color: #fd9602 !important;
 }
 
 body {
