@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -43,6 +43,24 @@ export default function Sidebar() {
     await supabase.auth.signOut();
     router.push("/");
   };
+
+  const [estabInfo, setEstabInfo] = useState({ nome: 'Carregando...', logo_url: '' });
+
+  useEffect(() => {
+    const fetchEstabInfo = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase.from('estabelecimentos').select('nome, logo_url').eq('proprietario_id', user.id).single();
+        if (data) {
+          setEstabInfo(data);
+        }
+      }
+    };
+    
+    fetchEstabInfo();
+    window.addEventListener('profileUpdated', fetchEstabInfo);
+    return () => window.removeEventListener('profileUpdated', fetchEstabInfo);
+  }, []);
   return (
     <aside className="force-dark w-64 h-screen flex flex-col fixed left-0 top-0 z-50 border-r border-subtle transition-all duration-500 ease-in-out bg-zinc-950/70 backdrop-blur-xl">
       <div className="p-6 flex items-center justify-between">
@@ -89,11 +107,15 @@ export default function Sidebar() {
 
       <div className="p-4 mt-auto border-t border-zinc-100/10 dark:border-zinc-900/50">
         <div className="flex items-center gap-3 p-3 mb-4 bg-zinc-50/50 dark:bg-zinc-900/20 rounded-xl border border-zinc-100/10 dark:border-zinc-900/50 hover:border-[#fd9602]/30 transition-all duration-300">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-zinc-950 font-bold text-lg shadow-[0_0_15px_rgba(245,158,11,0.3)]" style={{ background: 'linear-gradient(135deg, #fd9602, #fbbf24)' }}>
-            ML
-          </div>
+          {estabInfo.logo_url ? (
+            <img src={estabInfo.logo_url} alt="Logo" className="w-10 h-10 rounded-lg object-cover shadow-[0_0_15px_rgba(245,158,11,0.3)]" />
+          ) : (
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center text-zinc-950 font-bold text-lg shadow-[0_0_15px_rgba(245,158,11,0.3)]" style={{ background: 'linear-gradient(135deg, #fd9602, #fbbf24)' }}>
+              {estabInfo.nome !== 'Carregando...' ? estabInfo.nome.substring(0, 2).toUpperCase() : 'ML'}
+            </div>
+          )}
           <div className="flex flex-col overflow-hidden">
-            <span className="text-sm font-bold text-zinc-900 dark:text-white truncate">Matheus Lucindo</span>
+            <span className="text-sm font-bold text-white truncate">{estabInfo.nome}</span>
             <span className="text-[9px] text-zinc-500 truncate uppercase tracking-widest font-bold">Admin / Demo</span>
           </div>
         </div>

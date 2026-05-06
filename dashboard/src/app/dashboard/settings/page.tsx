@@ -96,6 +96,7 @@ export default function SettingsPage() {
         }).eq('id', profile.proprietario_id);
       }
       toast.success("Perfil salvo com sucesso!");
+      window.dispatchEvent(new Event('profileUpdated'));
     } catch (error) {
       toast.error("Erro ao salvar perfil.");
     } finally {
