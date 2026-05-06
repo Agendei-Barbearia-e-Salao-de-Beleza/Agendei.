@@ -744,14 +744,25 @@ export default function DashboardOverview() {
               <input type="text" value={serviceSearch} onChange={e => setServiceSearch(e.target.value)} placeholder="Pesquisar serviço..." className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl pl-12 pr-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold" />
               {serviceSearch && (
                 <div className="absolute z-50 w-full mt-2 bg-zinc-100 dark:bg-zinc-900 border border-subtle rounded-2xl shadow-2xl max-h-48 overflow-y-auto p-2">
-                  {availableServices.filter(s => s.nome.toLowerCase().includes(serviceSearch.toLowerCase())).map(s => (
-                    <button key={s.id} type="button" onClick={() => {
-                      if (!selectedServices.find(x => x.id === s.id)) setSelectedServices([...selectedServices, s]);
-                      setServiceSearch("");
-                    }} className="w-full text-left p-3 hover:bg-[#fd9602] hover:text-zinc-950 rounded-xl flex justify-between items-center font-bold text-sm">
-                      {s.nome} <span>R$ {s.preco}</span>
-                    </button>
-                  ))}
+                  {(() => {
+                    const filtered = availableServices.filter(s => s.nome.toLowerCase().includes(serviceSearch.toLowerCase()));
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="p-8 text-center space-y-2">
+                          <p className="text-zinc-500 font-bold text-sm">Não encontrado</p>
+                          <p className="text-[10px] text-zinc-600 uppercase tracking-widest">Tente outro nome</p>
+                        </div>
+                      );
+                    }
+                    return filtered.map(s => (
+                      <button key={s.id} type="button" onClick={() => {
+                        if (!selectedServices.find(x => x.id === s.id)) setSelectedServices([...selectedServices, s]);
+                        setServiceSearch("");
+                      }} className="w-full text-left p-3 hover:bg-[#fd9602] hover:text-zinc-950 rounded-xl flex justify-between items-center font-bold text-sm">
+                        {s.nome} <span>R$ {s.preco}</span>
+                      </button>
+                    ));
+                  })()}
                 </div>
               )}
             </div>

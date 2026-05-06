@@ -495,9 +495,17 @@ export default function AppointmentsPage() {
               />
               {serviceSearch && (
                 <div className="absolute z-50 w-full mt-2 bg-zinc-100 dark:bg-zinc-900 border border-subtle rounded-2xl shadow-2xl max-h-48 overflow-y-auto p-2 backdrop-blur-xl">
-                  {availableServices
-                    .filter(s => s.nome.toLowerCase().includes(serviceSearch.toLowerCase()))
-                    .map(s => (
+                  {(() => {
+                    const filtered = availableServices.filter(s => s.nome.toLowerCase().includes(serviceSearch.toLowerCase()));
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="p-8 text-center space-y-2">
+                          <p className="text-zinc-500 font-bold text-sm">Não encontrado</p>
+                          <p className="text-[10px] text-zinc-600 uppercase tracking-widest">Tente outro nome</p>
+                        </div>
+                      );
+                    }
+                    return filtered.map(s => (
                       <button
                         key={s.id}
                         type="button"
@@ -506,8 +514,8 @@ export default function AppointmentsPage() {
                       >
                         {s.nome} <span>R$ {s.preco}</span>
                       </button>
-                    ))
-                  }
+                    ));
+                  })()}
                 </div>
               )}
             </div>
