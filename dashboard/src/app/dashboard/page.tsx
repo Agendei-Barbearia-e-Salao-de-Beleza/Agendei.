@@ -440,14 +440,14 @@ export default function DashboardOverview() {
             </Link>
           </div>
 
-          <div className="glass-card rounded-2xl overflow-hidden divide-y divide-white/5 dark:divide-zinc-800 shadow-xl min-h-[200px]">
+          <div className="glass-card rounded-2xl divide-y divide-white/5 dark:divide-zinc-800 shadow-xl min-h-[200px]">
             {loading ? (
               <div className="flex items-center justify-center p-20">
                 <Loader2 className="w-8 h-8 text-[#fd9602] animate-spin" />
               </div>
             ) : todayAppointments.length > 0 ? (
               todayAppointments.map((app) => (
-                <div key={app.id} className="p-5 flex items-center justify-between group hover:bg-zinc-500/5 dark:hover:bg-white/5 transition-colors">
+                <div key={app.id} className="p-5 flex items-center justify-between group hover:bg-zinc-500/5 dark:hover:bg-white/5 transition-colors first:rounded-t-2xl last:rounded-b-2xl">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl bg-zinc-800/50 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 flex items-center justify-center font-bold text-zinc-500 group-hover:bg-[#fd9602] group-hover:text-zinc-950 transition-all">
                       {app.avatar}
@@ -797,7 +797,12 @@ export default function DashboardOverview() {
 function QuickActionButton({ icon, label, onClick, color, statusIndicator }: any) {
   return (
     <motion.button 
-      whileHover={{ scale: 1.02, x: 10 }}
+      whileHover={{ 
+        scale: 1.01, 
+        x: 6,
+        backgroundColor: "rgba(255, 255, 255, 0.04)",
+        boxShadow: "0 20px 40px -15px rgba(0,0,0,0.5)"
+      }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className="w-full flex items-center justify-between p-4 rounded-2xl bg-zinc-800/50 hover:bg-zinc-800 border border-transparent hover:border-white/10 transition-all text-left group"
