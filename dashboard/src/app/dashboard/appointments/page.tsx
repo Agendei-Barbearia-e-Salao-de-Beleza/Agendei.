@@ -265,7 +265,7 @@ export default function AppointmentsPage() {
           background-color: #fd9602 !important;
           color: #000 !important;
           border-color: rgba(0,0,0,0.1) !important;
-          padding: 10px 0 !important;
+          padding: 12px 0 !important;
           font-weight: 900 !important;
           text-transform: uppercase !important;
           font-size: 11px !important;
@@ -277,6 +277,49 @@ export default function AppointmentsPage() {
         .fc-col-header-cell-cushion {
           color: #000 !important;
           text-decoration: none !important;
+        }
+        .fc-event {
+          background-color: rgba(253, 150, 2, 0.15) !important;
+          border: 1px solid #fd9602 !important;
+          border-left: 4px solid #fd9602 !important;
+          color: #fff !important;
+          border-radius: 12px !important;
+          padding: 6px 10px !important;
+          font-size: 11px !important;
+          font-weight: 800 !important;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+          transition: all 0.2s ease !important;
+          cursor: pointer !important;
+        }
+        .fc-event:hover {
+          background-color: rgba(253, 150, 2, 0.3) !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 6px 20px rgba(253, 150, 2, 0.2) !important;
+        }
+        .fc-now-indicator-line {
+          border-color: #fd9602 !important;
+          border-width: 2px !important;
+        }
+        .fc-now-indicator-arrow {
+          border-color: #fd9602 !important;
+          background-color: #fd9602 !important;
+        }
+        .fc-timegrid-slot {
+          height: 3.5em !important;
+        }
+        .fc-timegrid-axis-cushion {
+          font-size: 11px !important;
+          font-weight: bold !important;
+          color: #666 !important;
+          text-transform: uppercase !important;
+        }
+        .fc-v-event .fc-event-main {
+          color: #fff !important;
+        }
+        .fc-timegrid-event .fc-event-time {
+          font-weight: 900 !important;
+          color: #fd9602 !important;
+          margin-bottom: 2px !important;
         }
         .dark .fc-col-header-cell {
           background-color: #fd9602 !important;

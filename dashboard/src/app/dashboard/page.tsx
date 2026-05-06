@@ -25,6 +25,50 @@ interface Service {
   preco: number;
 }
 
+const calendarStyles = `
+  .rdp-custom {
+    --rdp-accent-color: #fd9602;
+    --rdp-background-color: #fd9602;
+    margin: 0;
+  }
+  .rdp-nav_button {
+    color: #fd9602 !important;
+    background: rgba(253, 150, 2, 0.1) !important;
+    border-radius: 12px !important;
+  }
+  .rdp-nav_button:hover {
+    background: #fd9602 !important;
+    color: #000 !important;
+  }
+  .rdp-head_cell {
+    color: #666 !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    padding-bottom: 15px !important;
+  }
+  .rdp-day {
+    font-weight: 600 !important;
+    border-radius: 12px !important;
+    transition: all 0.2s ease !important;
+  }
+  .rdp-day:hover:not(.rdp-day_selected) {
+    background: rgba(253, 150, 2, 0.1) !important;
+    color: #fd9602 !important;
+  }
+  .rdp-day_selected {
+    background: #fd9602 !important;
+    color: #000 !important;
+    font-weight: 900 !important;
+    box-shadow: 0 8px 20px rgba(253, 150, 2, 0.3) !important;
+  }
+  .rdp-day_today:not(.rdp-day_selected) {
+    color: #fd9602 !important;
+    font-weight: 900 !important;
+    border: 2px solid rgba(253, 150, 2, 0.3) !important;
+  }
+`;
+
 export default function DashboardOverview() {
   const [loading, setLoading] = useState(true);
   const [establishmentId, setEstablishmentId] = useState<string | null>(null);
@@ -413,6 +457,7 @@ export default function DashboardOverview() {
 
   return (
     <div className="space-y-10">
+      <style>{calendarStyles}</style>
       <div className="flex flex-col gap-1">
         <h2 className="text-3xl font-bold tracking-tight text-title dark:text-white">Olá, {userName}! 👋</h2>
         <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm">Gerencie seu negócio com precisão e facilidade.</p>
@@ -726,19 +771,6 @@ export default function DashboardOverview() {
                 onSelect={(days) => setSelectedDays(days || [])}
                 locale={ptBR}
                 className="rdp-custom"
-                modifiersStyles={{
-                  selected: { 
-                    backgroundColor: '#fd9602', 
-                    color: '#000', 
-                    fontWeight: '900',
-                    borderRadius: '12px',
-                    boxShadow: '0 0 15px rgba(245, 158, 11, 0.4)'
-                  },
-                  today: {
-                    color: '#fd9602',
-                    border: '2px solid #fd9602'
-                  }
-                }}
               />
           </div>
           <div className="space-y-4">
