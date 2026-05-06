@@ -151,16 +151,27 @@ export default function FinancePage() {
 
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('despesas')
-        .update({
-          descricao: editingTransaction.title,
-          valor: parseFloat(editingTransaction.value.replace(',', '.')),
-          categoria: editingTransaction.category
-        })
-        .eq('id', editingTransaction.id);
+      if (editingTransaction.type === 'expense') {
+        const { error } = await supabase
+          .from('despesas')
+          .update({
+            descricao: editingTransaction.title,
+            valor: parseFloat(editingTransaction.value.replace(',', '.')),
+            categoria: editingTransaction.category
+          })
+          .eq('id', editingTransaction.id);
+        if (error) throw error;
+      } else {
+        // Income (Agendamento)
+        const { error } = await supabase
+          .from('agendamentos')
+          .update({
+            preco_total: parseFloat(editingTransaction.value.replace(',', '.'))
+          })
+          .eq('id', editingTransaction.id);
+        if (error) throw error;
+      }
 
-      if (error) throw error;
       toast.success("Transação atualizada!");
       setShowEditModal(false);
       fetchFinanceData();
@@ -171,17 +182,25 @@ export default function FinancePage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (transaction: any) => {
     if (!establishmentId) return;
 
     setIsDeleting(true);
     try {
-      const { error } = await supabase
-        .from('despesas')
-        .delete()
-        .eq('id', id);
+      if (transaction.type === 'expense') {
+        const { error } = await supabase
+          .from('despesas')
+          .delete()
+          .eq('id', transaction.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('agendamentos')
+          .delete()
+          .eq('id', transaction.id);
+        if (error) throw error;
+      }
 
-      if (error) throw error;
       toast.success("Transação excluída!");
       setDeleteConfirmId(null);
       fetchFinanceData();
@@ -296,15 +315,16 @@ export default function FinancePage() {
       </div>
 
       {/* Edit Modal */}
-      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Editar Despesa">
+      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title={editingTransaction?.type === 'income' ? "Ajustar Receita" : "Editar Despesa"}>
         <form onSubmit={handleUpdate} className="space-y-6">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Descrição</label>
             <input 
               required 
+              disabled={editingTransaction?.type === 'income'}
               value={editingTransaction?.title || ""} 
               onChange={e => setEditingTransaction({...editingTransaction, title: e.target.value})} 
-              className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl p-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold" 
+              className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl p-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold disabled:opacity-50" 
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -320,16 +340,17 @@ export default function FinancePage() {
             <div className="space-y-2">
               <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Categoria</label>
               <select 
+                disabled={editingTransaction?.type === 'income'}
                 value={editingTransaction?.category || ""} 
                 onChange={e => setEditingTransaction({...editingTransaction, category: e.target.value})}
-                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl p-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold appearance-none cursor-pointer"
+                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl p-4 dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold appearance-none cursor-pointer disabled:opacity-50"
               >
+                <option value="Serviço">Serviço</option>
                 <option value="Suprimentos">Suprimentos</option>
                 <option value="Aluguel">Aluguel</option>
                 <option value="Energia/Água">Energia/Água</option>
                 <option value="Marketing">Marketing</option>
                 <option value="Equipamentos">Equipamentos</option>
-                <option value="Serviço">Serviço</option>
                 <option value="Outros">Outros</option>
               </select>
             </div>
@@ -346,7 +367,7 @@ export default function FinancePage() {
           <p className="text-zinc-500 font-medium">Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.</p>
           <div className="flex gap-3">
             <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all">Cancelar</button>
-            <button onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)} disabled={isDeleting} className="flex-1 py-4 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-600 transition-all flex items-center justify-center gap-2">
+            <button onClick={() => deleteConfirmId && handleDelete(transactions.find(t => t.id === deleteConfirmId))} disabled={isDeleting} className="flex-1 py-4 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-600 transition-all flex items-center justify-center gap-2">
               {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sim, Excluir"}
             </button>
           </div>
@@ -410,26 +431,20 @@ function TransactionRow({ transaction, onEdit, onDelete }: any) {
           {type === "income" ? "+" : "-"} R$ {value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
        </td>
        <td className="px-8 py-6 text-right">
-          {type === "expense" ? (
-            <div className="flex justify-end gap-2">
-              <button 
-                onClick={onEdit}
-                className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-[#fd9602] hover:bg-[#fd9602]/10 rounded-xl transition-all"
-              >
-                <Edit2 size={16} />
-              </button>
-              <button 
-                onClick={onDelete}
-                className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          ) : (
-            <div className="flex justify-end pr-3">
-               <Check className="text-emerald-500/20 w-5 h-5" />
-            </div>
-          )}
+          <div className="flex justify-end gap-2">
+            <button 
+              onClick={onEdit}
+              className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-[#fd9602] hover:bg-[#fd9602]/10 rounded-xl transition-all"
+            >
+              <Edit2 size={16} />
+            </button>
+            <button 
+              onClick={onDelete}
+              className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
        </td>
     </tr>
   );
