@@ -69,7 +69,7 @@ export default function DashboardOverview() {
   // Expenses Logic
   const [showExpensesModal, setShowExpensesModal] = useState(false);
   const [expenseLoading, setExpenseLoading] = useState(false);
-  const [expenseData, setExpenseData] = useState({ description: "", value: "" });
+  const [expenseData, setExpenseData] = useState({ description: "", value: "", category: "Outros" });
 
   // Goals Logic
   const [showGoalsModal, setShowGoalsModal] = useState(false);
@@ -313,12 +313,13 @@ export default function DashboardOverview() {
         .insert([{
           estabelecimento_id: establishmentId,
           descricao: expenseData.description,
-          valor: parseFloat(expenseData.value.replace(',', '.'))
+          valor: parseFloat(expenseData.value.replace(',', '.')),
+          categoria: expenseData.category
         }]);
       if (error) throw error;
       toast.success("Despesa registrada no financeiro!");
       setShowExpensesModal(false);
-      setExpenseData({ description: "", value: "" });
+      setExpenseData({ description: "", value: "", category: "Outros" });
       fetchStats(establishmentId);
     } catch (error: any) {
       toast.error("Erro ao lançar despesa: " + error.message);
@@ -411,9 +412,14 @@ export default function DashboardOverview() {
                   <div className={`p-2.5 rounded-xl ${stat.bg}`}>
                     <stat.icon className={`w-5 h-5 ${stat.color}`} />
                   </div>
-                  <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-full uppercase tracking-tighter">
-                    {stat.trend}
-                  </span>
+                  <Tooltip text="Comparação com mês anterior">
+                    <motion.span 
+                      whileHover={{ scale: 1.1, backgroundColor: "rgba(16, 185, 129, 0.2)" }}
+                      className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-full uppercase tracking-tighter cursor-help transition-colors"
+                    >
+                      {stat.trend}
+                    </motion.span>
+                  </Tooltip>
                 </div>
                 <div className="space-y-1">
                   <p className="text-zinc-500 dark:text-zinc-400 text-[10px] font-bold uppercase tracking-widest">{stat.label}</p>
@@ -471,6 +477,37 @@ export default function DashboardOverview() {
                       <button onClick={() => setOpenMenuId(openMenuId === app.id ? null : app.id)} className="p-2.5 hover:bg-zinc-800 dark:hover:bg-zinc-700 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-title dark:hover:text-white transition-all">
                         <MoreHorizontal className="w-5 h-5" />
                       </button>
+
+                      <AnimatePresence>
+                        {openMenuId === app.id && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)} />
+                            <motion.div 
+                              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                              className="absolute right-0 mt-2 w-48 bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl z-50 py-2 overflow-hidden"
+                            >
+                              <button 
+                                onClick={() => {
+                                  setSelectedApp(app);
+                                  setShowDetailsModal(true);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-zinc-400 hover:text-white hover:bg-white/5 transition-all"
+                              >
+                                <Eye size={16} className="text-[#fd9602]" /> Ver Detalhes
+                              </button>
+                              <button 
+                                onClick={() => setOpenMenuId(null)}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-zinc-400 hover:text-red-400 hover:bg-red-500/5 transition-all"
+                              >
+                                <Trash2 size={16} /> Cancelar Agendamento
+                              </button>
+                            </motion.div>
+                          </>
+                        )}
+                      </AnimatePresence>
                     </div>
                   </div>
                 </div>
@@ -529,7 +566,38 @@ export default function DashboardOverview() {
                   exit={{ opacity: 0, scale: 0.95 }}
                 >
                   <QuickActionButton 
-                    icon={isPaused ? <CheckCircle /> : <Ban />} 
+                    icon={isPaused ? (
+                      <div className="relative">
+                        <Coffee />
+                        <motion.div 
+                          animate={{ 
+                            y: [-2, -8], 
+                            opacity: [0, 1, 0],
+                            x: [0, 2, -2, 0]
+                          }}
+                          transition={{ 
+                            duration: 2, 
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                          className="absolute -top-3 left-1 w-1 h-2 bg-zinc-400/40 rounded-full blur-[1px]"
+                        />
+                        <motion.div 
+                          animate={{ 
+                            y: [-2, -10], 
+                            opacity: [0, 0.8, 0],
+                            x: [2, -1, 1, 2]
+                          }}
+                          transition={{ 
+                            duration: 2.5, 
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            delay: 0.5
+                          }}
+                          className="absolute -top-4 left-3 w-1 h-2 bg-zinc-400/30 rounded-full blur-[1px]"
+                        />
+                      </div>
+                    ) : <Ban />} 
                     label={isPaused ? "Pausa Ativada" : "Marcar Pausa"} 
                     color={isPaused ? "bg-emerald-500" : "bg-blue-500"}
                     onClick={() => setShowPauseModal(true)} 
@@ -699,6 +767,21 @@ export default function DashboardOverview() {
           <div className="space-y-3">
             <label className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Valor (R$)</label>
             <input required type="text" value={expenseData.value} onChange={e => setExpenseData({...expenseData, value: e.target.value})} placeholder="0,00" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-700 rounded-2xl px-6 py-5 dark:text-white outline-none focus:ring-4 focus:ring-[#fd9602]/10 transition-all font-black text-2xl placeholder:text-zinc-600" />
+          </div>
+          <div className="space-y-3">
+            <label className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Categoria</label>
+            <select 
+              value={expenseData.category} 
+              onChange={e => setExpenseData({...expenseData, category: e.target.value})}
+              className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-700 rounded-2xl px-6 py-5 dark:text-white outline-none focus:ring-4 focus:ring-[#fd9602]/10 transition-all font-bold appearance-none cursor-pointer"
+            >
+              <option value="Suprimentos">Suprimentos</option>
+              <option value="Aluguel">Aluguel</option>
+              <option value="Energia/Água">Energia/Água</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Equipamentos">Equipamentos</option>
+              <option value="Outros">Outros</option>
+            </select>
           </div>
           <button type="submit" disabled={expenseLoading} className="w-full btn-primary py-6 text-lg font-black flex items-center justify-center gap-3">
             {expenseLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Registrar Saída"}
