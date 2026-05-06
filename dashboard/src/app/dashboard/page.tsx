@@ -480,7 +480,6 @@ export default function DashboardOverview() {
 
   return (
     <div className="space-y-10">
-      <style>{calendarStyles}</style>
       <div className="flex flex-col gap-1">
         <h2 className="text-3xl font-bold tracking-tight text-title dark:text-white">Olá, {userName}! 👋</h2>
         <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm">Gerencie seu negócio com precisão e facilidade.</p>
