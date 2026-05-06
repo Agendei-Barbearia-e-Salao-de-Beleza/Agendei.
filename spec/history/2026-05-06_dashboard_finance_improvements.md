@@ -9,8 +9,9 @@
 ### 🛠️ Alterações Realizadas
 
 #### Dashboard Administrativo
-- **Correção do Botão "Ver Detalhes"**: Implementação de menu dropdown nos itens da agenda de hoje. O botão agora abre corretamente o modal de detalhes do agendamento.
-- **Novo Ícone de Pausa**: Substituição do ícone de check por um ícone de café (`Coffee`) com animação de fumaça (partículas ascendentes) para indicar estabelecimento pausado.
+- **Melhoria no Dropdown**: O menu "Ver Detalhes" foi redimensionado para ser maior e mais elegante, com efeito de desfoque e melhor posicionamento.
+- **Ícones de Ações Rápidas**: Atualizados para exibir ícones coloridos sem fundo sólido, proporcionando um visual mais limpo e moderno.
+- **Novo Ícone de Pausa**: Implementação do ícone de café (`Coffee`) (remoção da animação de fumaça conforme solicitado).
 - **Interatividade nos Cards**: Adição de tooltips e efeitos de hover nos cards de estatísticas e spans de porcentagem (trends).
 
 #### Build e Infraestrutura
