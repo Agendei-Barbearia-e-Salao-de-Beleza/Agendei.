@@ -31,6 +31,11 @@ export default function DashboardOverview() {
   const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
   const [userName, setUserName] = useState("");
   
+  // Dashboard UI State
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [selectedApp, setSelectedApp] = useState<any>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  
   // Onboarding Logic
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
