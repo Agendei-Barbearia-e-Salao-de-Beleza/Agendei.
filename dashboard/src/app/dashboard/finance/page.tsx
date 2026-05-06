@@ -59,16 +59,20 @@ export default function FinancePage() {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    // Entradas (Agendamentos)
+    // Entradas Reais (Pagamentos confirmados no mês)
     const { data: incomeData } = await supabase
       .from('agendamentos')
-      .select('preco_total')
+      .select('pagamentos!inner(valor)')
       .eq('estabelecimento_id', estId)
-      .gte('data_hora', startOfMonth.toISOString());
+      .eq('pagamentos.status', 'PAGO')
+      .gte('pagamentos.pago_em', startOfMonth.toISOString());
 
-    const income = incomeData?.reduce((acc, curr) => acc + Number(curr.preco_total), 0) || 0;
+    const income = incomeData?.reduce((acc, curr: any) => {
+      const pays = Array.isArray(curr.pagamentos) ? curr.pagamentos : [curr.pagamentos];
+      return acc + pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0);
+    }, 0) || 0;
 
-    // Saídas (Despesas)
+    // Saídas (Despesas no mês)
     const { data: expenseData } = await supabase
       .from('despesas')
       .select('valor')
@@ -78,10 +82,22 @@ export default function FinancePage() {
     const expense = expenseData?.reduce((acc, curr) => acc + Number(curr.valor), 0) || 0;
 
     // Saldo Total (Geral)
-    const { data: allIncome } = await supabase.from('agendamentos').select('preco_total').eq('estabelecimento_id', estId);
-    const { data: allExpense } = await supabase.from('despesas').select('valor').eq('estabelecimento_id', estId);
+    const { data: allIncome } = await supabase
+      .from('agendamentos')
+      .select('pagamentos!inner(valor)')
+      .eq('estabelecimento_id', estId)
+      .eq('pagamentos.status', 'PAGO');
+
+    const { data: allExpense } = await supabase
+      .from('despesas')
+      .select('valor')
+      .eq('estabelecimento_id', estId);
     
-    const totalInc = allIncome?.reduce((acc, curr) => acc + Number(curr.preco_total), 0) || 0;
+    const totalInc = allIncome?.reduce((acc, curr: any) => {
+      const pays = Array.isArray(curr.pagamentos) ? curr.pagamentos : [curr.pagamentos];
+      return acc + pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0);
+    }, 0) || 0;
+
     const totalExp = allExpense?.reduce((acc, curr) => acc + Number(curr.valor), 0) || 0;
 
     setTotals({
@@ -194,6 +210,9 @@ export default function FinancePage() {
           .eq('id', transaction.id);
         if (error) throw error;
       } else {
+        // First delete associated payments
+        await supabase.from('pagamentos').delete().eq('agendamento_id', transaction.id);
+
         const { error } = await supabase
           .from('agendamentos')
           .delete()

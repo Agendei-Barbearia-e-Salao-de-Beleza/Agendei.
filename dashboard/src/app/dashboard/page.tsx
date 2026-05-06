@@ -199,19 +199,32 @@ export default function DashboardOverview() {
       .eq('estabelecimento_id', estId)
       .gte('data_hora', startOfMonth.toISOString());
 
-    const { data: payments } = await supabase
-      .from('pagamentos')
+    // Entradas Reais (Filtradas por Estabelecimento)
+    const { data: incomeData } = await supabase
+      .from('agendamentos')
+      .select('pagamentos!inner(valor)')
+      .eq('estabelecimento_id', estId)
+      .eq('pagamentos.status', 'PAGO')
+      .gte('pagamentos.pago_em', startOfMonth.toISOString());
+
+    const totalRevenue = incomeData?.reduce((acc, curr: any) => {
+      const pays = Array.isArray(curr.pagamentos) ? curr.pagamentos : [curr.pagamentos];
+      return acc + pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0);
+    }, 0) || 0;
+
+    const { data: expenses } = await supabase
+      .from('despesas')
       .select('valor')
-      .gte('pago_em', startOfMonth.toISOString())
-      .eq('status', 'PAGO');
-    
-    const totalRevenue = payments?.reduce((acc, curr) => acc + Number(curr.valor), 0) || 0;
+      .eq('estabelecimento_id', estId)
+      .gte('data', startOfMonth.toISOString().split('T')[0]);
+
+    const totalExpense = expenses?.reduce((acc, curr) => acc + Number(curr.valor), 0) || 0;
 
     setStats(prev => [
       { ...prev[0], value: (clientCount || 0).toString() },
       { ...prev[1], value: (monthAppCount || 0).toString() },
-      { ...prev[2], value: `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },
-      { ...prev[3], value: "100%" }
+      { ...prev[2], value: `R$ ${(totalRevenue - totalExpense).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, label: "Saldo Mensal" },
+      { ...prev[3], value: `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, label: "Receita Bruta" }
     ]);
 
     setWeeklyGoal(prev => ({ ...prev, current: totalRevenue }));
