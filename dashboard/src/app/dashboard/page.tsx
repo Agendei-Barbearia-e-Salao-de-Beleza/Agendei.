@@ -16,9 +16,15 @@ import { Modal } from "@/components/Modal";
 import { DayPicker } from "react-day-picker";
 import { CustomDatePicker, CustomTimePicker } from "@/components/Pickers";
 import "react-day-picker/dist/style.css";
+import "@/styles/calendar.css";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { DashboardCards } from "@/components/dashboard/DashboardCards";
+import { QuickActions } from "@/components/dashboard/QuickActions";
+import { AppointmentModal } from "@/components/modals/AppointmentModal";
+import { ExpenseModal } from "@/components/modals/ExpenseModal";
+import { PauseModal } from "@/components/modals/PauseModal";
 
 interface Service {
   id: string;
@@ -26,49 +32,7 @@ interface Service {
   preco: number;
 }
 
-const calendarStyles = `
-  .rdp-custom {
-    --rdp-accent-color: #fd9602;
-    --rdp-background-color: #fd9602;
-    margin: 0;
-  }
-  .rdp-nav_button {
-    color: #fd9602 !important;
-    background: rgba(253, 150, 2, 0.1) !important;
-    border-radius: 12px !important;
-  }
-  .rdp-nav_button:hover {
-    background: #fd9602 !important;
-    color: #000 !important;
-  }
-  .rdp-head_cell {
-    color: #666 !important;
-    font-size: 11px !important;
-    font-weight: 900 !important;
-    text-transform: uppercase !important;
-    padding-bottom: 15px !important;
-  }
-  .rdp-day {
-    font-weight: 600 !important;
-    border-radius: 12px !important;
-    transition: all 0.2s ease !important;
-  }
-  .rdp-day:hover:not(.rdp-day_selected) {
-    background: rgba(253, 150, 2, 0.1) !important;
-    color: #fd9602 !important;
-  }
-  .rdp-day_selected {
-    background: #fd9602 !important;
-    color: #000 !important;
-    font-weight: 900 !important;
-    box-shadow: 0 8px 20px rgba(253, 150, 2, 0.3) !important;
-  }
-  .rdp-day_today:not(.rdp-day_selected) {
-    color: #fd9602 !important;
-    font-weight: 900 !important;
-    border: 2px solid rgba(253, 150, 2, 0.3) !important;
-  }
-`;
+
 
 export default function DashboardOverview() {
   const [loading, setLoading] = useState(true);
@@ -184,14 +148,21 @@ export default function DashboardOverview() {
   }
 
   async function fetchStats(estId: string) {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const startOfLastMonth = new Date(startOfMonth);
+    startOfLastMonth.setMonth(startOfLastMonth.getMonth() - 1);
+
+    const endOfLastMonth = new Date(startOfMonth);
+    endOfLastMonth.setMilliseconds(-1);
+
+    // Current Month Data
     const { count: clientCount } = await supabase
       .from('clientes_estabelecimentos')
       .select('cliente_id', { count: 'exact', head: true })
       .eq('estabelecimento_id', estId);
-
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
 
     const { count: monthAppCount } = await supabase
       .from('agendamentos')
@@ -199,7 +170,6 @@ export default function DashboardOverview() {
       .eq('estabelecimento_id', estId)
       .gte('data_hora', startOfMonth.toISOString());
 
-    // Entradas Reais (Filtradas por Estabelecimento)
     const { data: incomeData } = await supabase
       .from('agendamentos')
       .select('pagamentos!inner(valor)')
@@ -220,11 +190,49 @@ export default function DashboardOverview() {
 
     const totalExpense = expenses?.reduce((acc, curr) => acc + Number(curr.valor), 0) || 0;
 
+    // Last Month Data
+    const { count: lastClientCount } = await supabase
+      .from('clientes_estabelecimentos')
+      .select('cliente_id', { count: 'exact', head: true })
+      .eq('estabelecimento_id', estId)
+      .lt('criado_em', startOfMonth.toISOString()); // approximate for clients up to last month
+
+    const { count: lastMonthAppCount } = await supabase
+      .from('agendamentos')
+      .select('id', { count: 'exact', head: true })
+      .eq('estabelecimento_id', estId)
+      .gte('data_hora', startOfLastMonth.toISOString())
+      .lte('data_hora', endOfLastMonth.toISOString());
+
+    const { data: lastIncomeData } = await supabase
+      .from('agendamentos')
+      .select('pagamentos!inner(valor)')
+      .eq('estabelecimento_id', estId)
+      .eq('pagamentos.status', 'PAGO')
+      .gte('pagamentos.pago_em', startOfLastMonth.toISOString())
+      .lte('pagamentos.pago_em', endOfLastMonth.toISOString());
+
+    const lastTotalRevenue = lastIncomeData?.reduce((acc, curr: any) => {
+      const pays = Array.isArray(curr.pagamentos) ? curr.pagamentos : [curr.pagamentos];
+      return acc + pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0);
+    }, 0) || 0;
+
+    // Helper to calculate trend
+    const calcTrend = (current: number, previous: number) => {
+      if (previous === 0) return current > 0 ? "+100%" : "0%";
+      const change = ((current - previous) / previous) * 100;
+      return `${change > 0 ? '+' : ''}${change.toFixed(0)}%`;
+    };
+
+    const clientTrend = calcTrend(clientCount || 0, lastClientCount || 0);
+    const appTrend = calcTrend(monthAppCount || 0, lastMonthAppCount || 0);
+    const revTrend = calcTrend(totalRevenue, lastTotalRevenue);
+
     setStats(prev => [
-      { ...prev[0], value: (clientCount || 0).toString() },
-      { ...prev[1], value: (monthAppCount || 0).toString() },
-      { ...prev[2], value: `R$ ${(totalRevenue - totalExpense).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, label: "Saldo Mensal" },
-      { ...prev[3], value: `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, label: "Receita Bruta" }
+      { ...prev[0], value: (clientCount || 0).toString(), trend: clientTrend },
+      { ...prev[1], value: (monthAppCount || 0).toString(), trend: appTrend },
+      { ...prev[2], value: `R$ ${(totalRevenue - totalExpense).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, label: "Saldo Mensal", trend: revTrend },
+      { ...prev[3], value: `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, label: "Receita Bruta", trend: revTrend }
     ]);
 
     setWeeklyGoal(prev => ({ ...prev, current: totalRevenue }));
@@ -349,7 +357,7 @@ export default function DashboardOverview() {
     toast.success("Tudo pronto! Vamos começar.");
   };
 
-  const handlePauseSubmit = async (e: React.FormEvent) => {
+  const handlePauseSubmit = async (e: any) => {
     e.preventDefault();
     if (!establishmentId || selectedDays.length === 0) {
       toast.error("Selecione ao menos um dia no calendário.");
@@ -472,42 +480,12 @@ export default function DashboardOverview() {
 
   return (
     <div className="space-y-10">
-      <style>{calendarStyles}</style>
       <div className="flex flex-col gap-1">
         <h2 className="text-3xl font-bold tracking-tight text-title dark:text-white">Olá, {userName}! 👋</h2>
         <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm">Gerencie seu negócio com precisão e facilidade.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Tooltip key={stat.label} text={`Ir para ${stat.label}`}>
-            <Link href={stat.href} className="block">
-              <motion.div 
-                whileHover={{ y: -6, borderColor: "rgba(245, 158, 11, 0.4)", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)" }}
-                className="glass-card p-6 rounded-2xl w-full cursor-pointer shadow-sm"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`p-2.5 rounded-xl ${stat.bg}`}>
-                    <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                  </div>
-                  <Tooltip text="Comparação com mês anterior">
-                    <motion.span 
-                      whileHover={{ scale: 1.1, backgroundColor: "rgba(16, 185, 129, 0.2)" }}
-                      className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-full uppercase tracking-tighter cursor-help transition-colors"
-                    >
-                      {stat.trend}
-                    </motion.span>
-                  </Tooltip>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-zinc-500 dark:text-zinc-400 text-[10px] font-bold uppercase tracking-widest">{stat.label}</p>
-                  <p className="text-2xl font-bold text-title dark:text-white tracking-tight">{stat.value}</p>
-                </div>
-              </motion.div>
-            </Link>
-          </Tooltip>
-        ))}
-      </div>
+      <DashboardCards stats={stats} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
@@ -637,31 +615,12 @@ export default function DashboardOverview() {
             </motion.div>
           </Tooltip>
 
-          <div className="glass-card p-8 rounded-2xl space-y-6 shadow-lg border border-white/5 bg-zinc-900/50">
-            <h3 className="text-title dark:text-white font-black text-lg uppercase tracking-tight">Ações Rápidas</h3>
-            <div className="space-y-3">
-              <QuickActionButton icon={<Calendar className="text-[#fd9602]" />} label="Marcar Consulta" color="text-[#fd9602]" onClick={() => setShowAppointmentModal(true)} />
-              
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={isPaused ? "folga" : "pausa"}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                >
-                  <QuickActionButton 
-                    icon={isPaused ? <Coffee className="text-emerald-500" /> : <Ban className="text-blue-500" />} 
-                    label={isPaused ? "Pausa Ativada" : "Marcar Pausa"} 
-                    color={isPaused ? "text-emerald-500" : "text-blue-500"}
-                    onClick={() => setShowPauseModal(true)} 
-                    statusIndicator={isPaused} 
-                  />
-                </motion.div>
-              </AnimatePresence>
-
-              <QuickActionButton icon={<DollarSign className="text-red-500" />} label="Lançar Despesa" color="text-red-500" onClick={() => setShowExpensesModal(true)} />
-            </div>
-          </div>
+          <QuickActions 
+            setShowAppointmentModal={setShowAppointmentModal}
+            setShowPauseModal={setShowPauseModal}
+            setShowExpensesModal={setShowExpensesModal}
+            isPaused={isPaused}
+          />
         </div>
       </div>
 
@@ -724,159 +683,42 @@ export default function DashboardOverview() {
         )}
       </AnimatePresence>
 
-      {/* Appointment Modal */}
-      <Modal isOpen={showAppointmentModal} onClose={() => setShowAppointmentModal(false)} title="Marcar Consulta">
-        <form onSubmit={handleAppSave} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Cliente</label>
-            <div className="relative group">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600 group-focus-within:text-[#fd9602]" />
-              <input required value={appFormData.customer} onChange={e => setAppFormData({...appFormData, customer: e.target.value})} type="text" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl pl-12 pr-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Data</label>
-              <CustomDatePicker 
-                date={appFormData.date} 
-                onChange={(d) => setAppFormData({ ...appFormData, date: d })} 
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Horário</label>
-              <CustomTimePicker 
-                time={appFormData.time} 
-                onChange={(t) => setAppFormData({ ...appFormData, time: t })} 
-              />
-            </div>
-          </div>
-          <div className="space-y-4">
-            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Serviços</label>
-            <div className="relative group">
-              <Sparkles className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600 group-focus-within:text-[#fd9602]" />
-              <input type="text" value={serviceSearch} onChange={e => setServiceSearch(e.target.value)} placeholder="Pesquisar serviço..." className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle rounded-2xl pl-12 pr-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 font-bold" />
-              {serviceSearch && (
-                <div className="absolute z-50 w-full mt-2 bg-zinc-100 dark:bg-zinc-900 border border-subtle rounded-2xl shadow-2xl max-h-48 overflow-y-auto p-2">
-                  {(() => {
-                    const filtered = availableServices.filter(s => s.nome.toLowerCase().includes(serviceSearch.toLowerCase()));
-                    if (filtered.length === 0) {
-                      return (
-                        <div className="p-8 text-center space-y-2">
-                          <p className="text-zinc-500 font-bold text-sm">Não encontrado</p>
-                          <p className="text-[10px] text-zinc-600 uppercase tracking-widest">Tente outro nome</p>
-                        </div>
-                      );
-                    }
-                    return filtered.map(s => (
-                      <button key={s.id} type="button" onClick={() => {
-                        if (!selectedServices.find(x => x.id === s.id)) setSelectedServices([...selectedServices, s]);
-                        setServiceSearch("");
-                      }} className="w-full text-left p-3 hover:bg-[#fd9602] hover:text-zinc-950 rounded-xl flex justify-between items-center font-bold text-sm">
-                        {s.nome} <span>R$ {s.preco}</span>
-                      </button>
-                    ));
-                  })()}
-                </div>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {selectedServices.map(s => (
-                <div key={s.id} className="flex items-center gap-2 bg-[#fd9602] text-zinc-950 px-3 py-1.5 rounded-xl text-[10px] font-black">
-                  {s.nome} <button onClick={() => setSelectedServices(selectedServices.filter(x => x.id !== s.id))} type="button"><X size={12} /></button>
-                </div>
-              ))}
-            </div>
-          </div>
-          <button type="submit" disabled={appLoading} className="btn-primary w-full py-5 text-lg font-black flex items-center justify-center gap-2">
-            {appLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirmar Agendamento"}
-          </button>
-        </form>
-      </Modal>
+      {/* Extracted Modals */}
+      <AppointmentModal 
+        isOpen={showAppointmentModal}
+        onClose={() => setShowAppointmentModal(false)}
+        onSubmit={handleAppSave}
+        appFormData={appFormData}
+        setAppFormData={setAppFormData}
+        serviceSearch={serviceSearch}
+        setServiceSearch={setServiceSearch}
+        availableServices={availableServices}
+        selectedServices={selectedServices}
+        setSelectedServices={setSelectedServices}
+        appLoading={appLoading}
+      />
 
-      {/* Pause Modal */}
-      <Modal isOpen={showPauseModal} onClose={() => setShowPauseModal(false)} title="Planejar Folga">
-        <div className="space-y-8 max-h-[85vh] overflow-y-auto pr-2 custom-scrollbar p-1">
-          <div className="bg-zinc-100 dark:bg-zinc-900/50 p-6 rounded-3xl border border-subtle dark:border-zinc-800 flex flex-col items-center">
-             <DayPicker
-                mode="multiple"
-                selected={selectedDays}
-                onSelect={(days) => setSelectedDays(days || [])}
-                locale={ptBR}
-                className="rdp-custom"
-              />
-          </div>
-          <div className="space-y-4">
-            <label className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Motivo da Folga</label>
-            <input value={pauseReason} onChange={e => setPauseReason(e.target.value)} placeholder="Ex: Reforma, Feriado..." className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-700 rounded-2xl px-6 py-5 dark:text-white outline-none focus:ring-4 focus:ring-[#fd9602]/10 transition-all font-bold placeholder:text-zinc-600" />
-          </div>
-          <button onClick={handlePauseSubmit} disabled={pauseLoading} className="w-full btn-primary py-6 text-lg font-black flex items-center justify-center gap-3">
-            {pauseLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Agendar Folga"}
-          </button>
+      <PauseModal 
+        isOpen={showPauseModal}
+        onClose={() => setShowPauseModal(false)}
+        selectedDays={selectedDays}
+        setSelectedDays={setSelectedDays}
+        pauseReason={pauseReason}
+        setPauseReason={setPauseReason}
+        handlePauseSubmit={handlePauseSubmit}
+        pauseLoading={pauseLoading}
+        allPauses={allPauses}
+        removePause={removePause}
+      />
 
-          {allPauses.length > 0 && (
-            <div className="space-y-4 pt-4 border-t border-subtle dark:border-zinc-800">
-              <label className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Folgas Agendadas</label>
-              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                {allPauses.map((p: any) => (
-                  <div key={p.id} className="flex items-center justify-between p-4 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl border border-subtle dark:border-zinc-800 group">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-title dark:text-white">
-                        {new Date(p.data + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                      </span>
-                      <span className="text-[10px] text-zinc-500 font-medium">{p.motivo || "Sem motivo informado"}</span>
-                    </div>
-                    <button 
-                      onClick={() => removePause(p.id)} 
-                      className="p-2.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all"
-                      title="Remover Folga"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </Modal>
-
-      <Modal isOpen={showExpensesModal} onClose={() => setShowExpensesModal(false)} title="Lançar Despesa">
-        <form className="space-y-8" onSubmit={handleExpenseSubmit}>
-           <div className="space-y-3">
-            <label className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">O que você pagou?</label>
-            <input required type="text" value={expenseData.description} onChange={e => setExpenseData({...expenseData, description: e.target.value})} placeholder="Ex: Aluguel..." className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-700 rounded-2xl px-6 py-5 dark:text-white outline-none focus:ring-4 focus:ring-[#fd9602]/10 transition-all font-bold placeholder:text-zinc-600" />
-          </div>
-          <div className="space-y-3">
-            <label className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Valor (R$)</label>
-            <input required type="text" value={expenseData.value} onChange={e => setExpenseData({...expenseData, value: e.target.value})} placeholder="0,00" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-700 rounded-2xl px-6 py-5 dark:text-white outline-none focus:ring-4 focus:ring-[#fd9602]/10 transition-all font-black text-2xl placeholder:text-zinc-600" />
-          </div>
-          <div className="space-y-3">
-            <label className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Categoria</label>
-            <select 
-              value={expenseData.category} 
-              onChange={e => setExpenseData({...expenseData, category: e.target.value})}
-              className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-700 rounded-2xl px-6 py-5 dark:text-white outline-none focus:ring-4 focus:ring-[#fd9602]/10 transition-all font-bold appearance-none cursor-pointer"
-            >
-              <option value="Suprimentos">Suprimentos</option>
-              <option value="Aluguel">Aluguel</option>
-              <option value="Energia/Água">Energia/Água</option>
-              <option value="Marketing">Marketing</option>
-              <option value="Equipamentos">Equipamentos</option>
-              <option value="Outros">Outros</option>
-            </select>
-          </div>
-          <div className="space-y-3">
-            <label className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Data do Pagamento</label>
-            <CustomDatePicker 
-              date={expenseData.date} 
-              onChange={(d) => setExpenseData({ ...expenseData, date: d })} 
-            />
-          </div>
-          <button type="submit" disabled={expenseLoading} className="w-full btn-primary py-6 text-lg font-black flex items-center justify-center gap-3">
-            {expenseLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Registrar Saída"}
-          </button>
-        </form>
-      </Modal>
+      <ExpenseModal 
+        isOpen={showExpensesModal}
+        onClose={() => setShowExpensesModal(false)}
+        onSubmit={handleExpenseSubmit}
+        expenseData={expenseData}
+        setExpenseData={setExpenseData}
+        expenseLoading={expenseLoading}
+      />
 
       <Modal isOpen={showGoalsModal} onClose={() => setShowGoalsModal(false)} title="Meta de Faturamento">
         <form className="space-y-8" onSubmit={handleGoalSubmit}>

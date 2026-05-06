@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS public.usuarios (
     nome VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE,
     telefone VARCHAR(20),
+    avatar_url TEXT,
     perfil public.perfil_usuario NOT NULL DEFAULT 'CLIENTE',
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -29,6 +30,9 @@ CREATE TABLE IF NOT EXISTS public.estabelecimentos (
     proprietario_id UUID REFERENCES public.usuarios(id) ON DELETE CASCADE,
     nome VARCHAR(255) NOT NULL,
     tipo public.tipo_estabelecimento NOT NULL DEFAULT 'BARBEARIA',
+    logo_url TEXT,
+    endereco TEXT,
+    telefone_comercial VARCHAR(20),
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
