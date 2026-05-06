@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, UserPlus, Mail, Phone, Calendar as CalendarIcon, X, Check, MoreVertical, Trash2, Loader2 } from "lucide-react";
+import { Search, UserPlus, Mail, Phone, Calendar as CalendarIcon, X, Check, MoreVertical, Trash2, Loader2, Edit2 } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "@/components/Modal";
 import { supabase } from "@/lib/supabase";
@@ -12,8 +12,10 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<any>(null);
   const [establishmentId, setEstablishmentId] = useState<string | null>(null);
-  const [newCustomer, setNewCustomer] = useState({ name: "", email: "", phone: "" });
+  
+  const [formData, setFormData] = useState({ name: "", email: "", phone: "" });
 
   useEffect(() => {
     fetchInitialData();
@@ -43,10 +45,11 @@ export default function CustomersPage() {
   }
 
   async function fetchCustomers(estId: string) {
-    // Busca usuários que possuem agendamentos neste estabelecimento
-    const { data: appointments, error } = await supabase
-      .from('agendamentos')
-      .select('usuarios!agendamentos_cliente_id_fkey(*)')
+    const { data, error } = await supabase
+      .from('clientes_estabelecimentos')
+      .select(`
+        usuarios (*)
+      `)
       .eq('estabelecimento_id', estId);
 
     if (error) {
@@ -54,12 +57,7 @@ export default function CustomersPage() {
       return;
     }
 
-    // Extrair usuários únicos dos agendamentos
-    const uniqueCustomers = Array.from(new Set(appointments?.map(a => JSON.stringify(a.usuarios))))
-      .map(s => JSON.parse(s))
-      .filter(u => u !== null);
-
-    setCustomers(uniqueCustomers);
+    setCustomers(data?.map(d => d.usuarios).filter(u => u !== null) || []);
   }
 
   const filteredCustomers = useMemo(() => {
@@ -71,35 +69,72 @@ export default function CustomersPage() {
     );
   }, [customers, searchTerm]);
 
-  const handleAddCustomer = async (e: React.FormEvent) => {
+  const handleOpenModal = (customer?: any) => {
+    if (customer) {
+      setEditingCustomer(customer);
+      setFormData({
+        name: customer.nome,
+        email: customer.email,
+        phone: customer.telefone || ""
+      });
+    } else {
+      setEditingCustomer(null);
+      setFormData({ name: "", email: "", phone: "" });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!establishmentId) return;
 
     setLoading(true);
     try {
-      // Cria o usuário cliente
-      const { data: userData, error: userError } = await supabase
-        .from('usuarios')
-        .insert([{
-          nome: newCustomer.name,
-          email: newCustomer.email,
-          telefone: newCustomer.phone,
-          perfil: 'CLIENTE'
-        }])
-        .select()
-        .single();
+      if (editingCustomer) {
+        // Update
+        const { error } = await supabase
+          .from('usuarios')
+          .update({
+            nome: formData.name,
+            email: formData.email,
+            telefone: formData.phone
+          })
+          .eq('id', editingCustomer.id);
 
-      if (userError) throw userError;
+        if (error) throw error;
+        toast.success("Cliente atualizado!");
+      } else {
+        // Create
+        // 1. Create User
+        const { data: userData, error: userError } = await supabase
+          .from('usuarios')
+          .insert([{
+            nome: formData.name,
+            email: formData.email,
+            telefone: formData.phone,
+            perfil: 'CLIENTE'
+          }])
+          .select()
+          .single();
 
-      // Cria um agendamento "fantasma" ou apenas vincula? 
-      // Por enquanto, apenas atualizamos a lista localmente para simular o vínculo
-      setCustomers([userData, ...customers]);
+        if (userError) throw userError;
+
+        // 2. Create Mapping
+        const { error: mapError } = await supabase
+          .from('clientes_estabelecimentos')
+          .insert([{
+            cliente_id: userData.id,
+            estabelecimento_id: establishmentId
+          }]);
+
+        if (mapError) throw mapError;
+        toast.success("Cliente cadastrado!");
+      }
       
+      await fetchCustomers(establishmentId);
       setIsModalOpen(false);
-      toast.success("Cliente cadastrado com sucesso!");
-      setNewCustomer({ name: "", email: "", phone: "" });
     } catch (error: any) {
-      toast.error("Erro ao cadastrar: " + error.message);
+      toast.error("Erro ao salvar: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -107,12 +142,19 @@ export default function CustomersPage() {
 
   const deleteCustomer = async (id: string) => {
     if (!confirm("Remover este cliente da sua base?")) return;
+    if (!establishmentId) return;
     
     try {
-      // Como o cliente pode estar em outros estabelecimentos, aqui apenas removemos localmente
-      // No mundo real, deletaríamos o vínculo.
+      const { error } = await supabase
+        .from('clientes_estabelecimentos')
+        .delete()
+        .eq('cliente_id', id)
+        .eq('estabelecimento_id', establishmentId);
+
+      if (error) throw error;
+      
       setCustomers(customers.filter(c => c.id !== id));
-      toast.success("Cliente removido da sua visualização.");
+      toast.success("Cliente removido.");
     } catch (error) {
       toast.error("Erro ao remover cliente.");
     }
@@ -126,7 +168,7 @@ export default function CustomersPage() {
           <p className="text-zinc-500 font-medium">Base de dados completa dos seus clientes.</p>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => handleOpenModal()}
           className="bg-[#fd9602] text-zinc-950 font-bold px-6 py-4 rounded-xl flex items-center gap-2 hover:brightness-110 transition-all shadow-lg shadow-[#fd9602]/20 active:scale-95 cursor-pointer"
         >
           <UserPlus className="w-5 h-5" />
@@ -173,9 +215,19 @@ export default function CustomersPage() {
                         <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-[0.2em]">Cliente Fiel</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold mb-1">Faturamento</p>
-                      <p className="text-lg font-bold text-[#fd9602]">R$ 0,00</p>
+                    <div className="flex gap-2">
+                       <button 
+                        onClick={() => handleOpenModal(customer)}
+                        className="p-3 bg-zinc-800 dark:bg-zinc-800 hover:bg-[#fd9602]/10 text-zinc-500 hover:text-[#fd9602] rounded-xl transition-all cursor-pointer border border-subtle dark:border-zinc-700 shadow-sm"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button 
+                        onClick={() => deleteCustomer(customer.id)}
+                        className="p-3 bg-zinc-800 dark:bg-zinc-800 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded-xl transition-all cursor-pointer border border-subtle dark:border-zinc-700 shadow-sm"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </div>
 
@@ -191,16 +243,6 @@ export default function CustomersPage() {
                     <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
                       <CalendarIcon className="w-4 h-4" />
                       <span className="text-xs font-medium">Cadastrado em: {new Date(customer.criado_em).toLocaleDateString()}</span>
-                    </div>
-
-                    <div className="flex justify-end pt-2">
-                      <button 
-                        onClick={() => deleteCustomer(customer.id)}
-                        className="p-3 bg-zinc-800 dark:bg-zinc-800 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded-xl transition-all cursor-pointer border border-subtle dark:border-zinc-700 shadow-sm"
-                        title="Excluir Cliente"
-                      >
-                        <Trash2 size={16} />
-                      </button>
                     </div>
                   </div>
                 </motion.div>
@@ -220,27 +262,27 @@ export default function CustomersPage() {
         </div>
       )}
 
-      {/* Add Modal */}
+      {/* Add/Edit Modal */}
       <Modal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        title="Novo Cliente"
+        title={editingCustomer ? "Editar Cliente" : "Novo Cliente"}
       >
-        <form onSubmit={handleAddCustomer} className="space-y-6">
+        <form onSubmit={handleSave} className="space-y-6">
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Nome Completo</label>
-            <input required value={newCustomer.name} onChange={e => setNewCustomer({...newCustomer, name: e.target.value})} type="text" placeholder="Ex: João Silva" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 rounded-xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
+            <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} type="text" placeholder="Ex: João Silva" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 rounded-xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-1">E-mail</label>
-            <input required value={newCustomer.email} onChange={e => setNewCustomer({...newCustomer, email: e.target.value})} type="email" placeholder="joao@email.com" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 rounded-xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
+            <input required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} type="email" placeholder="joao@email.com" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 rounded-xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Telefone</label>
-            <input required value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} type="text" placeholder="(11) 99999-0000" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 rounded-xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
+            <input required value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} type="text" placeholder="(11) 99999-0000" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 rounded-xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
           </div>
           <button type="submit" disabled={loading} className="w-full btn-primary py-5 text-lg flex items-center justify-center gap-2">
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Cadastrar Cliente"}
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (editingCustomer ? "Salvar Alterações" : "Cadastrar Cliente")}
           </button>
         </form>
       </Modal>

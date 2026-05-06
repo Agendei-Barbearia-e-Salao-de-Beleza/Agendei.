@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import {
   Users, Calendar, DollarSign, Clock,
   MoreHorizontal, TrendingUp, ChevronRight,
-  Eye, Coffee, Ban, Tag, Plus, Loader2
+  Eye, Coffee, Ban, Tag, Plus, Loader2, CheckCircle2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -19,6 +19,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function DashboardOverview() {
   const [loading, setLoading] = useState(true);
+  const [establishmentId, setEstablishmentId] = useState<string | null>(null);
   const [stats, setStats] = useState([
     { label: "Clientes Totais", value: "0", icon: Users, color: "text-blue-500", bg: "bg-blue-500/10", trend: "0%", href: "/dashboard/customers" },
     { label: "Agendamentos/Mês", value: "0", icon: Calendar, color: "text-[#fd9602]", bg: "bg-[#fd9602]/10", trend: "0%", href: "/dashboard/appointments" },
@@ -31,11 +32,15 @@ export default function DashboardOverview() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  
+  // Pause Logic
   const [isPaused, setIsPaused] = useState(false);
   const [showPauseModal, setShowPauseModal] = useState(false);
+  const [pauseLoading, setPauseLoading] = useState(false);
+  const [pauseData, setPauseData] = useState({ date: new Date().toISOString().split('T')[0], reason: "" });
+
   const [showExpensesModal, setShowExpensesModal] = useState(false);
   const [showGoalsModal, setShowGoalsModal] = useState(false);
-  const [selectedDays, setSelectedDays] = useState<Date[]>([]);
   const [weeklyGoal, setWeeklyGoal] = useState({ current: 0, target: 12000 });
 
   useEffect(() => {
@@ -57,9 +62,11 @@ export default function DashboardOverview() {
         .single();
 
       if (estData) {
+        setEstablishmentId(estData.id);
         await Promise.all([
           fetchStats(estData.id),
-          fetchTodayAppointments(estData.id)
+          fetchTodayAppointments(estData.id),
+          checkTodayPause(estData.id)
         ]);
       }
     } catch (error) {
@@ -70,13 +77,11 @@ export default function DashboardOverview() {
   }
 
   async function fetchStats(estId: string) {
-    // Clientes únicos
     const { count: clientCount } = await supabase
-      .from('agendamentos')
+      .from('clientes_estabelecimentos')
       .select('cliente_id', { count: 'exact', head: true })
       .eq('estabelecimento_id', estId);
 
-    // Agendamentos no mês atual
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
@@ -87,7 +92,6 @@ export default function DashboardOverview() {
       .eq('estabelecimento_id', estId)
       .gte('data_hora', startOfMonth.toISOString());
 
-    // Receita no mês
     const { data: payments } = await supabase
       .from('pagamentos')
       .select('valor')
@@ -112,7 +116,7 @@ export default function DashboardOverview() {
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('agendamentos')
       .select(`
         *,
@@ -135,16 +139,45 @@ export default function DashboardOverview() {
     }
   }
 
-  const handleExpenseSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.success("Despesa lançada com sucesso!");
-    setShowExpensesModal(false);
-  };
+  async function checkTodayPause(estId: string) {
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await supabase
+      .from('indisponibilidades')
+      .select('*')
+      .eq('estabelecimento_id', estId)
+      .eq('data', today);
 
-  const handleGoalSubmit = (e: React.FormEvent) => {
+    if (data && data.length > 0) {
+      setIsPaused(true);
+    }
+  }
+
+  const handlePauseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Meta atualizada!");
-    setShowGoalsModal(false);
+    if (!establishmentId) return;
+
+    setPauseLoading(true);
+    try {
+      const { error } = await supabase
+        .from('indisponibilidades')
+        .insert([{
+          estabelecimento_id: establishmentId,
+          data: pauseData.date,
+          motivo: pauseData.reason
+        }]);
+
+      if (error) throw error;
+
+      toast.success("Pausa registrada com sucesso!");
+      setShowPauseModal(false);
+      if (pauseData.date === new Date().toISOString().split('T')[0]) {
+        setIsPaused(true);
+      }
+    } catch (error: any) {
+      toast.error("Erro ao registrar pausa: " + error.message);
+    } finally {
+      setPauseLoading(false);
+    }
   };
 
   return (
@@ -162,7 +195,6 @@ export default function DashboardOverview() {
             <Link href={stat.href} className="block">
               <motion.div 
                 whileHover={{ y: -6, borderColor: "rgba(245, 158, 11, 0.4)", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)" }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 className="glass-card p-6 rounded-2xl w-full cursor-pointer shadow-sm"
               >
                 <div className="flex items-center justify-between mb-4">
@@ -183,9 +215,7 @@ export default function DashboardOverview() {
         ))}
       </div>
 
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
         {/* Left: Agenda de Hoje */}
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between px-1">
@@ -202,10 +232,7 @@ export default function DashboardOverview() {
               </div>
             ) : todayAppointments.length > 0 ? (
               todayAppointments.map((app) => (
-                <div
-                  key={app.id}
-                  className="p-5 flex items-center justify-between group relative hover:bg-zinc-500/5 dark:hover:bg-white/5 transition-colors"
-                >
+                <div key={app.id} className="p-5 flex items-center justify-between group hover:bg-zinc-500/5 dark:hover:bg-white/5 transition-colors">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl bg-zinc-800/50 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 flex items-center justify-center font-bold text-zinc-500 group-hover:bg-[#fd9602] group-hover:text-zinc-950 transition-all">
                       {app.avatar}
@@ -224,7 +251,7 @@ export default function DashboardOverview() {
                       </div>
                       <span className={cn(
                         "text-[9px] font-bold tracking-[0.1em] px-2.5 py-1 rounded-lg",
-                        app.status === "CONFIRMADO" || app.status === "APROVADO" && "text-blue-500 bg-blue-500/10",
+                        (app.status === "CONFIRMADO" || app.status === "APROVADO") && "text-blue-500 bg-blue-500/10",
                         app.status === "PENDENTE" && "text-[#fd9602] bg-[#fd9602]/10",
                         app.status === "CONCLUIDO" && "text-emerald-500 bg-emerald-500/10"
                       )}>
@@ -233,31 +260,9 @@ export default function DashboardOverview() {
                     </div>
                     
                     <div className="relative">
-                      <button 
-                        onClick={() => setOpenMenuId(openMenuId === app.id ? null : app.id)}
-                        className="p-2.5 hover:bg-zinc-800 dark:hover:bg-zinc-700 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-title dark:hover:text-white transition-all"
-                      >
+                      <button onClick={() => setOpenMenuId(openMenuId === app.id ? null : app.id)} className="p-2.5 hover:bg-zinc-800 dark:hover:bg-zinc-700 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-title dark:hover:text-white transition-all">
                         <MoreHorizontal className="w-5 h-5" />
                       </button>
-
-                      {openMenuId === app.id && (
-                        <>
-                          <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />
-                          <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 border border-subtle dark:border-zinc-800 rounded-2xl shadow-2xl z-20 p-1.5 overflow-hidden">
-                            <button 
-                              onClick={() => {
-                                setSelectedApp(app);
-                                setShowDetailsModal(true);
-                                setOpenMenuId(null);
-                              }}
-                              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#fd9602] hover:text-zinc-950 text-zinc-600 dark:text-zinc-400 font-bold text-xs transition-all group/item"
-                            >
-                              <Eye className="w-4 h-4 group-hover/item:text-zinc-950" />
-                              Ver detalhes
-                            </button>
-                          </div>
-                        </>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -271,18 +276,14 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* Right: Sidebar Stats */}
+        {/* Right: Sidebar */}
         <div className="space-y-6">
-          {/* Meta Semanal Card */}
           <Tooltip text="Clique para gerenciar suas metas">
             <motion.div 
               whileHover={{ scale: 1.02, borderColor: "rgba(245, 158, 11, 0.5)" }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
               onClick={() => setShowGoalsModal(true)}
-              className="relative overflow-hidden group p-8 rounded-2xl border border-[#fd9602]/20 glass-card bg-gradient-to-br from-[#fd9602]/5 to-transparent cursor-pointer w-full shadow-lg"
+              className="relative overflow-hidden group p-8 rounded-2xl border border-[#fd9602]/20 glass-card bg-gradient-to-br from-[#fd9602]/5 to-transparent cursor-pointer shadow-lg"
             >
-              <div className="absolute inset-0 bg-accent opacity-[0.03] group-hover:opacity-[0.05] transition-opacity" />
-              
               <div className="relative z-10 space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
@@ -295,30 +296,23 @@ export default function DashboardOverview() {
                     <TrendingUp className="text-accent w-6 h-6" />
                   </div>
                 </div>
-
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
                     <span>Progresso</span>
                     <span className="text-[#fd9602] font-bold">R$ {weeklyGoal.current.toLocaleString()} / {weeklyGoal.target / 1000}k</span>
                   </div>
                   <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-2.5 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(100, (weeklyGoal.current / weeklyGoal.target) * 100)}%` }}
-                      transition={{ duration: 1, ease: "easeOut" }}
-                      className="bg-accent h-full shadow-[0_0_20px_rgba(245,158,11,0.4)]"
-                    />
+                    <div style={{ width: `${Math.min(100, (weeklyGoal.current / weeklyGoal.target) * 100)}%` }} className="bg-accent h-full shadow-[0_0_20px_rgba(245, 158, 11, 0.4)]" />
                   </div>
                 </div>
               </div>
             </motion.div>
           </Tooltip>
 
-          {/* Ações Rápidas Section */}
           <div className="glass-card p-8 rounded-2xl space-y-6 shadow-lg">
             <h3 className="text-title dark:text-white font-bold text-lg">Ações Rápidas</h3>
             <div className="space-y-3">
-              <QuickActionButton icon={<Calendar />} label="Novo Agendamento" tooltip="Marcar horário para cliente" href="/dashboard/appointments?openModal=true" />
+              <QuickActionButton icon={<Calendar />} label="Novo Agendamento" tooltip="Marcar horário para cliente" href="/dashboard/appointments" />
               <QuickActionButton icon={isPaused ? <Coffee className="text-emerald-500" /> : <Ban />} label={isPaused ? "Pausa Ativa" : "Marcar Pausa"} tooltip="Definir período sem trabalho" onClick={() => setShowPauseModal(true)} statusIndicator={isPaused} />
               <QuickActionButton icon={<DollarSign />} label="Lançar Despesa" tooltip="Registrar saída de caixa" onClick={() => setShowExpensesModal(true)} />
             </div>
@@ -327,11 +321,51 @@ export default function DashboardOverview() {
       </div>
 
       {/* Modals */}
+      <Modal isOpen={showPauseModal} onClose={() => setShowPauseModal(false)} title="Registrar Pausa">
+        <form onSubmit={handlePauseSubmit} className="space-y-6">
+           <div className="space-y-2">
+            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Data da Pausa</label>
+            <input required type="date" value={pauseData.date} onChange={e => setPauseData({...pauseData, date: e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 rounded-xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Motivo (Opcional)</label>
+            <textarea value={pauseData.reason} onChange={e => setPauseData({...pauseData, reason: e.target.value})} placeholder="Ex: Manutenção, Feriado..." className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 rounded-xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 resize-none" rows={3} />
+          </div>
+          <button type="submit" disabled={pauseLoading} className="w-full btn-primary py-5 text-lg flex items-center justify-center gap-2">
+            {pauseLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirmar Pausa"}
+          </button>
+        </form>
+      </Modal>
+
+      <Modal isOpen={showExpensesModal} onClose={() => setShowExpensesModal(false)} title="Lançar Despesa">
+        <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); toast.success("Despesa registrada!"); setShowExpensesModal(false); }}>
+           <div className="space-y-2">
+            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Descrição</label>
+            <input required type="text" placeholder="Ex: Aluguel, Produtos..." className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 rounded-xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Valor (R$)</label>
+            <input required type="text" placeholder="0,00" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 rounded-xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
+          </div>
+          <button type="submit" className="w-full btn-primary py-5 text-lg">Lançar Agora</button>
+        </form>
+      </Modal>
+
+      <Modal isOpen={showGoalsModal} onClose={() => setShowGoalsModal(false)} title="Meta Semanal">
+        <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); toast.success("Meta atualizada!"); setShowGoalsModal(false); }}>
+           <div className="space-y-2">
+            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Valor da Meta (R$)</label>
+            <input required type="text" placeholder="Ex: 12000" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 rounded-xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20" />
+          </div>
+          <button type="submit" className="w-full btn-primary py-5 text-lg">Salvar Meta</button>
+        </form>
+      </Modal>
+
       <Modal isOpen={showDetailsModal} onClose={() => setShowDetailsModal(false)} title="Detalhes do Agendamento">
         {selectedApp && (
           <div className="space-y-6">
             <div className="flex items-center gap-4 p-4 bg-zinc-100/50 dark:bg-zinc-800/30 rounded-2xl border border-subtle dark:border-zinc-800">
-              <div className="w-12 h-12 rounded-xl bg-[#fd9602] flex items-center justify-center font-bold text-zinc-950 text-xl shadow-[0_0_15px_rgba(245,158,11,0.3)]">{selectedApp.avatar}</div>
+              <div className="w-12 h-12 rounded-xl bg-[#fd9602] flex items-center justify-center font-bold text-zinc-950 text-xl">{selectedApp.avatar}</div>
               <div>
                 <h4 className="font-bold text-title dark:text-white">{selectedApp.customer}</h4>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">{selectedApp.service}</p>
@@ -347,12 +381,10 @@ export default function DashboardOverview() {
                 <p className="text-sm font-bold text-[#fd9602]">{selectedApp.status}</p>
               </div>
             </div>
-            <button className="w-full btn-primary py-4" onClick={() => setShowDetailsModal(false)}>Fechar Detalhes</button>
+            <button className="w-full btn-primary py-4" onClick={() => setShowDetailsModal(false)}>Fechar</button>
           </div>
         )}
       </Modal>
-
-      {/* Outros Modais continuam iguais para manter o design */}
     </div>
   );
 }
@@ -362,7 +394,6 @@ function QuickActionButton({ icon, label, tooltip, href, onClick, statusIndicato
     <motion.div 
       whileHover={{ x: 10, backgroundColor: "rgba(245, 158, 11, 0.08)", borderColor: "rgba(245, 158, 11, 0.3)", scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
-      transition={{ type: "spring", stiffness: 350, damping: 25 }}
       onClick={onClick}
       className="w-full flex items-center justify-between p-5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 transition-colors group cursor-pointer relative"
     >
@@ -372,7 +403,7 @@ function QuickActionButton({ icon, label, tooltip, href, onClick, statusIndicato
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-950 dark:group-hover:text-white transition-colors">{label}</span>
-          {statusIndicator && <div className="w-2 h-2 rounded-full bg-emerald-500 pulse-green" />}
+          {statusIndicator && <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />}
         </div>
       </div>
       <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 group-hover:text-[#fd9602] transition-all group-hover:translate-x-1" />
