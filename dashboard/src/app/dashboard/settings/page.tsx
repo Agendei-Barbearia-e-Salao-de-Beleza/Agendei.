@@ -176,8 +176,8 @@ export default function SettingsPage() {
       if (error) throw error;
       setMfaFactorId(data.id);
       setMfaQrCode(data.totp.qr_code);
-    } catch (err) {
-      toast.error("Erro ao iniciar 2FA. O e-mail precisa estar verificado.");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao iniciar 2FA.");
     } finally {
       setMfaEnrolling(false);
     }
