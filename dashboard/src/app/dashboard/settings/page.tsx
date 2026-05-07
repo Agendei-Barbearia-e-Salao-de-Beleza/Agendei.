@@ -61,6 +61,8 @@ export default function SettingsPage() {
         
       if (estError) {
         console.error("Erro Estabelecimentos:", estError.message, estError.hint, estError.details);
+      } else if (estData) {
+        console.log("Colunas detectadas em Estabelecimentos:", Object.keys(estData));
       }
         
       const { data: userData, error: userError } = await supabase
@@ -345,21 +347,21 @@ export default function SettingsPage() {
                         exit={{ opacity: 0, y: -10 }}
                         className="space-y-6"
                     >
-                        <h3 className="text-xl font-bold text-white light:text-zinc-950">Notificações</h3>
+                        <h3 className="text-xl font-bold text-white">Notificações</h3>
                         <p className="text-zinc-500 text-sm">Controle como você e seus clientes são avisados.</p>
                         <div className="space-y-4">
-                            <div className="flex items-center justify-between p-4 bg-zinc-900 light:bg-zinc-100 rounded-2xl border border-zinc-800 light:border-zinc-200">
+                            <div className="flex items-center justify-between p-4 bg-zinc-900 rounded-2xl border border-zinc-800">
                                 <div>
-                                    <p className="font-bold text-white light:text-zinc-950 text-sm">Lembretes de Agendamento</p>
+                                    <p className="font-bold text-white text-sm">Lembretes de Agendamento</p>
                                     <p className="text-xs text-zinc-500">Envia SMS/Email para o cliente 24h antes.</p>
                                 </div>
                                 <div onClick={() => handleToggleNotification('notificacao_lembretes')} className={`w-12 h-6 rounded-full relative cursor-pointer shadow-inner transition-colors ${profile.notificacao_lembretes ? 'bg-[#fd9602]' : 'bg-zinc-700'}`}>
                                     <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm transition-all ${profile.notificacao_lembretes ? 'right-0.5' : 'left-0.5'}`}></div>
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between p-4 bg-zinc-900 light:bg-zinc-100 rounded-2xl border border-zinc-800 light:border-zinc-200">
+                            <div className="flex items-center justify-between p-4 bg-zinc-900 rounded-2xl border border-zinc-800">
                                 <div>
-                                    <p className="font-bold text-white light:text-zinc-950 text-sm">Alertas Financeiros</p>
+                                    <p className="font-bold text-white text-sm">Alertas Financeiros</p>
                                     <p className="text-xs text-zinc-500">Avisos de metas atingidas e fechamento de caixa.</p>
                                 </div>
                                 <div onClick={() => handleToggleNotification('notificacao_financeiro')} className={`w-12 h-6 rounded-full relative cursor-pointer shadow-inner transition-colors ${profile.notificacao_financeiro ? 'bg-[#fd9602]' : 'bg-zinc-700'}`}>
@@ -378,22 +380,22 @@ export default function SettingsPage() {
                         exit={{ opacity: 0, y: -10 }}
                         className="space-y-6"
                     >
-                        <h3 className="text-xl font-bold text-white light:text-zinc-950">Segurança</h3>
+                        <h3 className="text-xl font-bold text-white">Segurança</h3>
                         <p className="text-zinc-500 text-sm">Proteja sua conta e atualize seus dados de acesso.</p>
                         
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">E-mail de Login</label>
-                                <input value={secEmail} onChange={e => setSecEmail(e.target.value)} type="email" placeholder="seu@email.com" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                <input value={secEmail} onChange={e => setSecEmail(e.target.value)} type="email" placeholder="seu@email.com" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Nova Senha</label>
-                                    <input value={newPassword} onChange={e => setNewPassword(e.target.value)} type="password" placeholder="••••••••" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                    <input value={newPassword} onChange={e => setNewPassword(e.target.value)} type="password" placeholder="••••••••" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Confirmar Nova Senha</label>
-                                    <input value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} type="password" placeholder="••••••••" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                    <input value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} type="password" placeholder="••••••••" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
                                 </div>
                             </div>
                             <button 
@@ -427,7 +429,7 @@ export default function SettingsPage() {
                                                 placeholder="000000" 
                                                 value={mfaCode}
                                                 onChange={e => setMfaCode(e.target.value.replace(/\D/g, ''))}
-                                                className="w-full text-center tracking-widest bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-2 py-2 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all"
+                                                className="w-full text-center tracking-widest bg-zinc-950 border border-zinc-800 rounded-xl px-2 py-2 text-zinc-100 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all"
                                             />
                                             <button 
                                                 onClick={handleVerifyMfa}
