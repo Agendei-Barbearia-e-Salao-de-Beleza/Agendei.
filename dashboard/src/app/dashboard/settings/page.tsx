@@ -132,58 +132,7 @@ export default function SettingsPage() {
       };
       reader.readAsDataURL(file);
     }
-  };
 
-  const handleCropComplete = async (croppedBlob: Blob) => {
-    setIsCropModalOpen(false);
-    setUploadingImage(true);
-
-    try {
-      const fileName = `${profile.id || 'temp'}-${uploadType}-${Date.now()}.webp`;
-      const filePath = `${profile.id}/${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from('logos')
-        .upload(filePath, croppedBlob, {
-          contentType: 'image/webp',
-          upsert: true
-        });
-
-      if (error) throw error;
-
-      // Get Public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('logos')
-        .getPublicUrl(filePath);
-
-      if (uploadType === 'logo') {
-        setProfile(prev => ({ ...prev, logo_url: publicUrl }));
-        toast.success("Logo processada! Não esqueça de salvar as alterações.");
-      } else {
-        setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
-        toast.success("Avatar processado! Não esqueça de salvar as alterações.");
-      }
-    } catch (error: any) {
-      console.error(error);
-      toast.error("Erro ao fazer upload da imagem. Verifique se o bucket 'logos' existe no Supabase.");
-    } finally {
-      setUploadingImage(false);
-      setTempImage(null);
-    }
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'avatar') => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setTempImage(reader.result as string);
-        setUploadType(type);
-        setIsCropModalOpen(true);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const handleCropComplete = async (croppedBlob: Blob) => {
     setIsCropModalOpen(false);
