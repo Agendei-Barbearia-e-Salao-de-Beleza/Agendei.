@@ -53,17 +53,21 @@ export default function SettingsPage() {
       
       setSecEmail(user.email || "");
 
-      const { data: estData } = await supabase
+      const { data: estData, error: estError } = await supabase
         .from('estabelecimentos')
         .select('*')
         .eq('proprietario_id', user.id)
         .single();
         
-      const { data: userData } = await supabase
+      if (estError) console.error("Erro Estabelecimentos:", estError);
+        
+      const { data: userData, error: userError } = await supabase
         .from('usuarios')
         .select('avatar_url')
         .eq('id', user.id)
         .single();
+
+      if (userError) console.error("Erro Usuários:", userError);
 
       if (estData) {
         setProfile({
