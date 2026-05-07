@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("perfil");
@@ -26,7 +27,9 @@ export default function SettingsPage() {
     instagram_url: "",
     facebook_url: "",
     whatsapp_url: "",
-    tiktok_url: ""
+    tiktok_url: "",
+    notificacao_lembretes: true,
+    notificacao_financeiro: false
   });
 
   // Estados de Segurança
@@ -34,6 +37,13 @@ export default function SettingsPage() {
   const [secEmail, setSecEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Estados de Segurança - MFA
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [mfaQrCode, setMfaQrCode] = useState("");
+  const [mfaFactorId, setMfaFactorId] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaEnrolling, setMfaEnrolling] = useState(false);
 
   // Fetch inicial
   React.useEffect(() => {
@@ -67,13 +77,43 @@ export default function SettingsPage() {
           instagram_url: estData.instagram_url || "",
           facebook_url: estData.facebook_url || "",
           whatsapp_url: estData.whatsapp_url || "",
-          tiktok_url: estData.tiktok_url || ""
+          tiktok_url: estData.tiktok_url || "",
+          notificacao_lembretes: estData.notificacao_lembretes ?? true,
+          notificacao_financeiro: estData.notificacao_financeiro ?? false
         });
       }
+
+      const { data: mfaData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (mfaData) {
+        setMfaEnabled(mfaData.nextLevel === 'aal2' || mfaData.currentLevel === 'aal2');
+      }
+
       setLoadingProfile(false);
     }
     loadData();
   }, []);
+
+  const handleToggleNotification = async (field: 'notificacao_lembretes' | 'notificacao_financeiro') => {
+    if (!profile.id) return;
+    const newValue = !profile[field];
+    
+    // Optimistic update
+    setProfile(prev => ({ ...prev, [field]: newValue }));
+    
+    try {
+      const { error } = await supabase
+        .from('estabelecimentos')
+        .update({ [field]: newValue })
+        .eq('id', profile.id);
+        
+      if (error) throw error;
+      toast.success(newValue ? "Notificação ativada!" : "Notificação desativada!");
+    } catch (error) {
+      // Revert on failure
+      setProfile(prev => ({ ...prev, [field]: !newValue }));
+      toast.error("Erro ao atualizar notificação.");
+    }
+  };
 
   const handleSaveProfile = async () => {
     setSavingProfile(true);
@@ -126,6 +166,40 @@ export default function SettingsPage() {
       toast.error(error.message || "Erro ao atualizar segurança.");
     } finally {
       setSecLoading(false);
+    }
+  };
+
+  const handleEnrollMfa = async () => {
+    setMfaEnrolling(true);
+    try {
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
+      if (error) throw error;
+      setMfaFactorId(data.id);
+      setMfaQrCode(data.totp.qr_code);
+    } catch (err) {
+      toast.error("Erro ao iniciar 2FA. O e-mail precisa estar verificado.");
+    } finally {
+      setMfaEnrolling(false);
+    }
+  };
+
+  const handleVerifyMfa = async () => {
+    if (!mfaCode || mfaCode.length !== 6) return toast.error("O código deve ter 6 dígitos.");
+    setMfaEnrolling(true);
+    try {
+      const challenge = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
+      if (challenge.error) throw challenge.error;
+      const verify = await supabase.auth.mfa.verify({ factorId: mfaFactorId, challengeId: challenge.data.id, code: mfaCode });
+      if (verify.error) throw verify.error;
+      toast.success("Autenticação em 2 Fatores ativada com sucesso!");
+      setMfaEnabled(true);
+      setMfaQrCode("");
+      setMfaFactorId("");
+      setMfaCode("");
+    } catch (err) {
+      toast.error("Código incorreto. Tente novamente.");
+    } finally {
+      setMfaEnrolling(false);
     }
   };
 
@@ -269,8 +343,8 @@ export default function SettingsPage() {
                                     <p className="font-bold text-white light:text-zinc-950 text-sm">Lembretes de Agendamento</p>
                                     <p className="text-xs text-zinc-500">Envia SMS/Email para o cliente 24h antes.</p>
                                 </div>
-                                <div className="w-12 h-6 bg-[#fd9602] rounded-full relative cursor-pointer shadow-inner">
-                                    <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 right-0.5 shadow-sm"></div>
+                                <div onClick={() => handleToggleNotification('notificacao_lembretes')} className={`w-12 h-6 rounded-full relative cursor-pointer shadow-inner transition-colors ${profile.notificacao_lembretes ? 'bg-[#fd9602]' : 'bg-zinc-700'}`}>
+                                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm transition-all ${profile.notificacao_lembretes ? 'right-0.5' : 'left-0.5'}`}></div>
                                 </div>
                             </div>
                             <div className="flex items-center justify-between p-4 bg-zinc-900 light:bg-zinc-100 rounded-2xl border border-zinc-800 light:border-zinc-200">
@@ -278,8 +352,8 @@ export default function SettingsPage() {
                                     <p className="font-bold text-white light:text-zinc-950 text-sm">Alertas Financeiros</p>
                                     <p className="text-xs text-zinc-500">Avisos de metas atingidas e fechamento de caixa.</p>
                                 </div>
-                                <div className="w-12 h-6 bg-zinc-700 rounded-full relative cursor-pointer shadow-inner">
-                                    <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 shadow-sm"></div>
+                                <div onClick={() => handleToggleNotification('notificacao_financeiro')} className={`w-12 h-6 rounded-full relative cursor-pointer shadow-inner transition-colors ${profile.notificacao_financeiro ? 'bg-[#fd9602]' : 'bg-zinc-700'}`}>
+                                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm transition-all ${profile.notificacao_financeiro ? 'right-0.5' : 'left-0.5'}`}></div>
                                 </div>
                             </div>
                         </div>
@@ -323,12 +397,47 @@ export default function SettingsPage() {
                         </div>
 
                         <div className="pt-6 border-t border-zinc-800 light:border-zinc-200">
-                            <div className="flex items-center justify-between p-4 bg-zinc-900 light:bg-zinc-100 rounded-2xl border border-zinc-800 light:border-zinc-200">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-zinc-900 light:bg-zinc-100 rounded-2xl border border-zinc-800 light:border-zinc-200 gap-4">
                                 <div>
                                     <p className="font-bold text-white light:text-zinc-950 text-sm flex items-center gap-2">Autenticação em 2 Fatores <span className="bg-emerald-500/20 text-emerald-500 text-[9px] px-2 py-0.5 rounded-full">Recomendado</span></p>
-                                    <p className="text-xs text-zinc-500">Adicione uma camada extra de segurança.</p>
+                                    <p className="text-xs text-zinc-500 mt-1">Adicione uma camada extra de segurança à sua conta.</p>
                                 </div>
-                                <button className="text-[#fd9602] font-bold text-sm bg-[#fd9602]/10 px-4 py-2 rounded-xl hover:bg-[#fd9602]/20 transition-all">Ativar</button>
+                                
+                                {mfaEnabled ? (
+                                    <button disabled className="text-emerald-500 font-bold text-sm bg-emerald-500/10 px-4 py-2 rounded-xl transition-all cursor-default">Ativado</button>
+                                ) : mfaQrCode ? (
+                                    <div className="flex flex-col items-end gap-3 w-full md:w-auto mt-4 md:mt-0">
+                                        <div className="p-3 bg-white rounded-xl shadow-sm">
+                                            <QRCodeSVG value={mfaQrCode} size={120} />
+                                        </div>
+                                        <div className="flex w-full max-w-[200px] gap-2">
+                                            <input 
+                                                type="text" 
+                                                maxLength={6}
+                                                placeholder="000000" 
+                                                value={mfaCode}
+                                                onChange={e => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                                                className="w-full text-center tracking-widest bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-2 py-2 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all"
+                                            />
+                                            <button 
+                                                onClick={handleVerifyMfa}
+                                                disabled={mfaEnrolling || mfaCode.length !== 6}
+                                                className="bg-[#fd9602] text-zinc-950 font-bold px-4 py-2 rounded-xl hover:opacity-90 transition-all text-sm disabled:opacity-50 flex items-center justify-center min-w-[80px]"
+                                            >
+                                                {mfaEnrolling ? <Loader2 className="w-4 h-4 animate-spin" /> : "Validar"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button 
+                                        onClick={handleEnrollMfa}
+                                        disabled={mfaEnrolling}
+                                        className="text-[#fd9602] font-bold text-sm bg-[#fd9602]/10 px-4 py-2 rounded-xl hover:bg-[#fd9602]/20 transition-all disabled:opacity-50 flex items-center gap-2"
+                                    >
+                                        {mfaEnrolling && <Loader2 className="w-3 h-3 animate-spin" />}
+                                        Ativar 2FA
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </motion.div>

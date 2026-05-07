@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS public.estabelecimentos (
     facebook_url TEXT,
     whatsapp_url TEXT,
     tiktok_url TEXT,
+    notificacao_lembretes BOOLEAN DEFAULT true,
+    notificacao_financeiro BOOLEAN DEFAULT false,
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
