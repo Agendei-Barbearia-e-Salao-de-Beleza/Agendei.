@@ -20,7 +20,7 @@ export default function SettingsPage() {
     id: "",
     proprietario_id: "",
     nome: "",
-    telefone_comercial: "",
+    telefone: "",
     endereco: "",
     logo_url: "",
     avatar_url: "",
@@ -59,30 +59,18 @@ export default function SettingsPage() {
         .eq('proprietario_id', user.id)
         .single();
         
-      if (estError) {
-        console.error("Erro Estabelecimentos:", estError.message, estError.hint, estError.details);
-      } else if (estData) {
-        console.log("Colunas detectadas em Estabelecimentos:", Object.keys(estData));
-      }
-        
-      const { data: userData, error: userError } = await supabase
+      const { data: userData } = await supabase
         .from('usuarios')
         .select('*')
         .eq('id', user.id)
         .single();
-
-      if (userError) {
-        console.error("Erro Usuários:", userError.message, userError.hint, userError.details);
-      } else if (userData) {
-        console.log("Colunas detectadas em Usuários:", Object.keys(userData));
-      }
 
       if (estData) {
         setProfile({
           id: estData.id,
           proprietario_id: user.id,
           nome: estData.nome || "",
-          telefone_comercial: estData.telefone_comercial || "",
+          telefone: estData.telefone || "",
           endereco: estData.endereco || "",
           logo_url: estData.logo_url || "",
           avatar_url: userData?.avatar_url || "",
@@ -133,7 +121,7 @@ export default function SettingsPage() {
       if (profile.id) {
         await supabase.from('estabelecimentos').update({
           nome: profile.nome,
-          telefone_comercial: profile.telefone_comercial,
+          telefone: profile.telefone,
           endereco: profile.endereco,
           logo_url: profile.logo_url,
           instagram_url: profile.instagram_url,
@@ -267,8 +255,8 @@ export default function SettingsPage() {
                                             <input value={profile.nome} onChange={e => setProfile({...profile, nome: e.target.value})} type="text" placeholder="Nome do Local" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Telefone Comercial</label>
-                                            <input value={profile.telefone_comercial} onChange={e => setProfile({...profile, telefone_comercial: e.target.value})} type="text" placeholder="(11) 99999-8888" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Telefone</label>
+                                            <input value={profile.telefone} onChange={e => setProfile({...profile, telefone: e.target.value})} type="text" placeholder="(11) 99999-9999" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
