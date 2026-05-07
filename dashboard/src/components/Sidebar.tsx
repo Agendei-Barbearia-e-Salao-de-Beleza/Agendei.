@@ -51,7 +51,7 @@ export default function Sidebar() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data, error } = await supabase.from('estabelecimentos').select('nome, logo_url').eq('proprietario_id', user.id).single();
-        if (error) console.error("Sidebar Fetch Error:", error);
+        if (error) console.error("Sidebar Fetch Error:", error.message, error.hint, error.details);
         if (data) {
           setEstabInfo(data);
         }

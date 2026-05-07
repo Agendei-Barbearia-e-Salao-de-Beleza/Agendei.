@@ -59,15 +59,21 @@ export default function SettingsPage() {
         .eq('proprietario_id', user.id)
         .single();
         
-      if (estError) console.error("Erro Estabelecimentos:", estError);
+      if (estError) {
+        console.error("Erro Estabelecimentos:", estError.message, estError.hint, estError.details);
+      }
         
       const { data: userData, error: userError } = await supabase
         .from('usuarios')
-        .select('avatar_url')
+        .select('*')
         .eq('id', user.id)
         .single();
 
-      if (userError) console.error("Erro Usuários:", userError);
+      if (userError) {
+        console.error("Erro Usuários:", userError.message, userError.hint, userError.details);
+      } else if (userData) {
+        console.log("Colunas detectadas em Usuários:", Object.keys(userData));
+      }
 
       if (estData) {
         setProfile({
