@@ -51,15 +51,20 @@ export default function Register() {
       });
 
       if (error) {
-        toast.error(error.message || "Ocorreu um erro ao tentar criar a conta.");
+        // EXPLICAÇÃO: Captura erros específicos de SMTP/E-mail que podem ocorrer se o provedor externo falhar
+        if (error.message.includes("email") || error.status === 500) {
+          toast.error("Erro ao enviar e-mail de confirmação. Verifique as configurações de SMTP no Dashboard do Supabase.");
+        } else {
+          toast.error(error.message || "Ocorreu um erro ao tentar criar a conta.");
+        }
         setLoading(false);
         return;
       }
 
-      toast.success("Conta criada com sucesso! Você já pode fazer login.");
+      toast.success("Conta criada com sucesso! Verifique seu e-mail para confirmar o cadastro.");
       setTimeout(() => {
         window.location.href = "/";
-      }, 2000);
+      }, 3000);
     } catch (err) {
       toast.error("Ocorreu um erro inesperado.");
       setLoading(false);
