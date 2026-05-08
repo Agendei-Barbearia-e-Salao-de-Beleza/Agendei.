@@ -9,5 +9,5 @@ import java.util.UUID;
 
 @Repository
 public interface ServiceRepository extends JpaRepository<Service, UUID> {
-    List<Service> findByCategory(String category);
+
 }

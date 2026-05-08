@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { User, Bell, Shield, Palette, Smartphone, Save, Settings } from "lucide-react";
+import { User, Bell, Shield, Palette, Smartphone, Save, Settings, Loader2, Camera, Upload } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { supabase } from "@/lib/supabase";
-import { Loader2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { ImageCropModal } from "@/components/modals/ImageCropModal";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("perfil");
@@ -20,7 +20,7 @@ export default function SettingsPage() {
     id: "",
     proprietario_id: "",
     nome: "",
-    telefone_comercial: "",
+    telefone: "",
     endereco: "",
     logo_url: "",
     avatar_url: "",
@@ -31,6 +31,12 @@ export default function SettingsPage() {
     notificacao_lembretes: true,
     notificacao_financeiro: false
   });
+
+  // Estados para Upload de Imagem
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [tempImage, setTempImage] = useState<string | null>(null);
+  const [uploadType, setUploadType] = useState<'logo' | 'avatar'>('logo');
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Estados de Segurança
   const [secLoading, setSecLoading] = useState(false);
@@ -49,7 +55,10 @@ export default function SettingsPage() {
   React.useEffect(() => {
     async function loadData() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setLoadingProfile(false);
+        return;
+      }
       
       setSecEmail(user.email || "");
 
@@ -70,7 +79,7 @@ export default function SettingsPage() {
           id: estData.id,
           proprietario_id: user.id,
           nome: estData.nome || "",
-          telefone_comercial: estData.telefone_comercial || "",
+          telefone: estData.telefone || "",
           endereco: estData.endereco || "",
           logo_url: estData.logo_url || "",
           avatar_url: userData?.avatar_url || "",
@@ -115,13 +124,64 @@ export default function SettingsPage() {
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'avatar') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setTempImage(reader.result as string);
+        setUploadType(type);
+        setIsCropModalOpen(true);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    setIsCropModalOpen(false);
+    setUploadingImage(true);
+
+    try {
+      const fileName = `${profile.id || 'temp'}-${uploadType}-${Date.now()}.webp`;
+      const filePath = `${profile.id}/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('logos')
+        .upload(filePath, croppedBlob, {
+          contentType: 'image/webp',
+          upsert: true
+        });
+
+      if (error) throw error;
+
+      // Get Public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('logos')
+        .getPublicUrl(filePath);
+
+      if (uploadType === 'logo') {
+        setProfile(prev => ({ ...prev, logo_url: publicUrl }));
+        toast.success("Logo processada! Nao esqueca de salvar as alteracoes.");
+      } else {
+        setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+        toast.success("Avatar processado! Nao esqueca de salvar as alteracoes.");
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Erro ao fazer upload da imagem. Verifique se o bucket 'logos' existe no Supabase.");
+    } finally {
+      setUploadingImage(false);
+      setTempImage(null);
+    }
+  };
+
   const handleSaveProfile = async () => {
     setSavingProfile(true);
     try {
       if (profile.id) {
         await supabase.from('estabelecimentos').update({
           nome: profile.nome,
-          telefone_comercial: profile.telefone_comercial,
+          telefone: profile.telefone,
           endereco: profile.endereco,
           logo_url: profile.logo_url,
           instagram_url: profile.instagram_url,
@@ -238,14 +298,63 @@ export default function SettingsPage() {
                                 <div className="space-y-6">
                                     <h3 className="text-xl font-bold text-white light:text-zinc-950">Informações Gerais</h3>
                                     
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Logo do Estabelecimento (URL)</label>
-                                            <input value={profile.logo_url} onChange={e => setProfile({...profile, logo_url: e.target.value})} type="text" placeholder="https://..." className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        {/* Logo Upload Section */}
+                                        <div className="space-y-4">
+                                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Logo do Estabelecimento</label>
+                                            <div className="flex items-center gap-6">
+                                                <div className="relative group">
+                                                    <div className="w-24 h-24 rounded-2xl bg-zinc-950 border-2 border-zinc-800 overflow-hidden flex items-center justify-center shadow-inner">
+                                                        {profile.logo_url ? (
+                                                            <img src={profile.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <Camera size={32} className="text-zinc-700" />
+                                                        )}
+                                                        {uploadingImage && uploadType === 'logo' && (
+                                                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                                                <Loader2 className="w-6 h-6 animate-spin text-[#fd9602]" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col gap-2">
+                                                    <label className="cursor-pointer bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-zinc-700">
+                                                        <Upload size={14} />
+                                                        {profile.logo_url ? "Trocar Logo" : "Subir Logo"}
+                                                        <input type="file" className="hidden" accept="image/*" onChange={e => handleFileSelect(e, 'logo')} />
+                                                    </label>
+                                                    <p className="text-[10px] text-zinc-500">Recomendado: Quadrada (1:1)</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Avatar do Proprietário (URL)</label>
-                                            <input value={profile.avatar_url} onChange={e => setProfile({...profile, avatar_url: e.target.value})} type="text" placeholder="https://..." className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+
+                                        {/* Avatar Upload Section */}
+                                        <div className="space-y-4">
+                                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Avatar do Proprietário</label>
+                                            <div className="flex items-center gap-6">
+                                                <div className="relative group">
+                                                    <div className="w-24 h-24 rounded-full bg-zinc-950 border-2 border-zinc-800 overflow-hidden flex items-center justify-center shadow-inner">
+                                                        {profile.avatar_url ? (
+                                                            <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <User size={32} className="text-zinc-700" />
+                                                        )}
+                                                        {uploadingImage && uploadType === 'avatar' && (
+                                                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                                                <Loader2 className="w-6 h-6 animate-spin text-[#fd9602]" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col gap-2">
+                                                    <label className="cursor-pointer bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-zinc-700">
+                                                        <Upload size={14} />
+                                                        {profile.avatar_url ? "Trocar Foto" : "Subir Foto"}
+                                                        <input type="file" className="hidden" accept="image/*" onChange={e => handleFileSelect(e, 'avatar')} />
+                                                    </label>
+                                                    <p className="text-[10px] text-zinc-500">Foto do seu perfil pessoal</p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -256,11 +365,11 @@ export default function SettingsPage() {
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Telefone Comercial</label>
-                                            <input value={profile.telefone_comercial} onChange={e => setProfile({...profile, telefone_comercial: e.target.value})} type="text" placeholder="(11) 99999-8888" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                            <input value={profile.telefone} onChange={e => setProfile({...profile, telefone: e.target.value})} type="text" placeholder="(11) 99999-8888" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Endereço Completo</label>
+                                        <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Endereco Completo</label>
                                         <input value={profile.endereco} onChange={e => setProfile({...profile, endereco: e.target.value})} type="text" placeholder="Rua das Belezas, 123" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
                                     </div>
                                 </div>
@@ -297,7 +406,7 @@ export default function SettingsPage() {
                                     className="bg-[#fd9602] text-zinc-950 font-bold px-8 py-3 rounded-xl hover:bg-[#fd9602]/90 transition-all flex items-center gap-2 shadow-lg shadow-[#fd9602]/10 active:scale-95 disabled:opacity-50"
                                 >
                                     {savingProfile ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={18} />}
-                                    {savingProfile ? "Salvando..." : "Salvar Alterações"}
+                                    {savingProfile ? "Salvando..." : "Salvar Alteracoes"}
                                 </button>
                             </>
                         )}
@@ -451,7 +560,7 @@ export default function SettingsPage() {
                         exit={{ opacity: 0, y: -10 }}
                         className="space-y-6"
                     >
-                        <h3 className="text-xl font-bold text-white light:text-zinc-950">Aparência</h3>
+                        <h3 className="text-xl font-bold text-white light:text-zinc-950">Aparencia</h3>
                         <p className="text-zinc-500 text-sm">Personalize a cara do seu dashboard.</p>
                         
                         <div className="space-y-4">
@@ -483,6 +592,19 @@ export default function SettingsPage() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Modal de Crop */}
+            {tempImage && (
+                <ImageCropModal 
+                    image={tempImage}
+                    isOpen={isCropModalOpen}
+                    onClose={() => {
+                        setIsCropModalOpen(false);
+                        setTempImage(null);
+                    }}
+                    onCropComplete={handleCropComplete}
+                />
+            )}
         </div>
       </div>
     </div>
