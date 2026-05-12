@@ -88,14 +88,27 @@ export default function DashboardOverview() {
 
   useEffect(() => {
     fetchDashboardData();
-    checkOnboarding();
   }, []);
 
-  function checkOnboarding() {
+  async function checkOnboarding(estId?: string) {
     const completed = localStorage.getItem('agendei_onboarding_completed');
-    if (!completed) {
-      setTimeout(() => setShowOnboarding(true), 1500);
+    if (completed) return;
+
+    // Se tivermos o ID do estabelecimento, verificamos se ele já tem serviços
+    if (estId) {
+      const { count } = await supabase
+        .from('servicos')
+        .select('id', { count: 'exact', head: true })
+        .eq('estabelecimento_id', estId);
+      
+      // Se já tem serviços, ele não é um "primeiro usuário"
+      if (count && count > 0) {
+        localStorage.setItem('agendei_onboarding_completed', 'true');
+        return;
+      }
     }
+
+    setTimeout(() => setShowOnboarding(true), 800);
   }
 
   async function fetchDashboardData() {
@@ -119,8 +132,11 @@ export default function DashboardOverview() {
           fetchTodayAppointments(estData.id),
           fetchPauses(estData.id),
           fetchGoal(estData.id),
-          fetchServices(estData.id)
+          fetchServices(estData.id),
+          checkOnboarding(estData.id)
         ]);
+      } else {
+        checkOnboarding();
       }
     } catch (error) {
       console.error(error);

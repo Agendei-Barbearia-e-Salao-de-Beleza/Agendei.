@@ -2,13 +2,15 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Scissors, Calendar, BarChart3, ShieldCheck, ArrowRight, Mail, Lock } from "lucide-react";
+import { Scissors, Calendar, BarChart3, ShieldCheck, ArrowRight, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { GoogleAuthButton } from "@/components/GoogleAuthButton";
 
 export default function Home() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -113,22 +115,29 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between ml-1">
-                  <label className="text-sm font-medium text-zinc-400">Senha</label>
-                  <a href="/forgot-password" className="text-xs text-[#fd9602] hover:underline cursor-pointer">Esqueceu a senha?</a>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between ml-1">
+                    <label className="text-sm font-medium text-zinc-400">Senha</label>
+                    <a href="/forgot-password" className="text-xs text-[#fd9602] hover:underline cursor-pointer">Esqueceu a senha?</a>
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-700" />
+                    <input 
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-12 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#fd9602]/50 transition-all placeholder:text-zinc-700 cursor-pointer"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-zinc-700 hover:text-zinc-400 transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-700" />
-                  <input 
-                    type="password" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-12 pr-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#fd9602]/50 transition-all placeholder:text-zinc-700 cursor-pointer"
-                  />
-                </div>
-              </div>
 
               <button 
                 type="submit"
@@ -143,10 +152,7 @@ export default function Home() {
                 <div className="relative flex justify-center text-xs uppercase"><span className="bg-zinc-900 px-2 text-zinc-600">Ou continue com</span></div>
               </div>
 
-              <button type="button" className="w-full bg-zinc-950 border border-zinc-800 hover:bg-zinc-900 text-zinc-300 font-medium py-3 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer">
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
-                Google Workspace
-              </button>
+              <GoogleAuthButton label="Entrar com Google" />
             </form>
 
             <p className="mt-8 text-center text-xs text-zinc-600">

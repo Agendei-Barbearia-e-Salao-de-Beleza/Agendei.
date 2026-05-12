@@ -180,8 +180,12 @@ BEGIN
   VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'nome', 'Administrador'), NEW.email, 'ADMIN')
   ON CONFLICT (email) DO UPDATE SET id = EXCLUDED.id;
 
-  INSERT INTO public.estabelecimentos (id, proprietario_id, nome, tipo)
-  VALUES (v_est_id, NEW.id, COALESCE(NEW.raw_user_meta_data->>'nome_estabelecimento', 'Meu Estabelecimento'), COALESCE((NEW.raw_user_meta_data->>'tipo')::public.tipo_estabelecimento, 'BARBEARIA'));
+  INSERT INTO public.estabelecimentos (id, proprietario_id, nome, tipo, endereco)
+  VALUES (v_est_id, NEW.id, 
+    COALESCE(NEW.raw_user_meta_data->>'nome_estabelecimento', 'Meu Estabelecimento'), 
+    COALESCE((NEW.raw_user_meta_data->>'tipo')::public.tipo_estabelecimento, 'BARBEARIA'),
+    NEW.raw_user_meta_data->>'endereco'
+  );
 
   RETURN NEW;
 END;
