@@ -79,7 +79,7 @@ export default function SettingsPage() {
           id: estData.id,
           proprietario_id: user.id,
           nome: estData.nome || "",
-          telefone: estData.telefone || "",
+          telefone: estData.telefone_comercial || "",
           endereco: estData.endereco || "",
           logo_url: estData.logo_url || "",
           avatar_url: userData?.avatar_url || "",
@@ -181,7 +181,7 @@ export default function SettingsPage() {
       if (profile.id) {
         await supabase.from('estabelecimentos').update({
           nome: profile.nome,
-          telefone: profile.telefone,
+          telefone_comercial: profile.telefone,
           endereco: profile.endereco,
           logo_url: profile.logo_url,
           instagram_url: profile.instagram_url,
