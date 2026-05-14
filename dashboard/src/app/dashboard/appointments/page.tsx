@@ -99,7 +99,7 @@ export default function AppointmentsPage() {
       .order('data_hora', { ascending: false });
 
     if (data) {
-      setAppointments(data.map(app => {
+      setAppointments((data as any[]).map((app: any) => {
         const dt = new Date(app.data_hora);
         return {
           id: app.id,
