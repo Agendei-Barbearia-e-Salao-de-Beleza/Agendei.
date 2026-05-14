@@ -193,7 +193,7 @@ export default function DashboardOverview() {
       .eq('pagamentos.status', 'PAGO')
       .gte('pagamentos.pago_em', startOfMonth.toISOString());
 
-    const totalRevenue = incomeData?.reduce((acc, curr: any) => {
+    const totalRevenue = incomeData?.reduce((acc: number, curr: any) => {
       const pays = Array.isArray(curr.pagamentos) ? curr.pagamentos : [curr.pagamentos];
       return acc + pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0);
     }, 0) || 0;
@@ -204,7 +204,7 @@ export default function DashboardOverview() {
       .eq('estabelecimento_id', estId)
       .gte('data', startOfMonth.toISOString().split('T')[0]);
 
-    const totalExpense = expenses?.reduce((acc, curr) => acc + Number(curr.valor), 0) || 0;
+    const totalExpense = expenses?.reduce((acc: number, curr: any) => acc + Number(curr.valor), 0) || 0;
 
     // Last Month Data
     const { count: lastClientCount } = await supabase
@@ -228,7 +228,7 @@ export default function DashboardOverview() {
       .gte('pagamentos.pago_em', startOfLastMonth.toISOString())
       .lte('pagamentos.pago_em', endOfLastMonth.toISOString());
 
-    const lastTotalRevenue = lastIncomeData?.reduce((acc, curr: any) => {
+    const lastTotalRevenue = lastIncomeData?.reduce((acc: number, curr: any) => {
       const pays = Array.isArray(curr.pagamentos) ? curr.pagamentos : [curr.pagamentos];
       return acc + pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0);
     }, 0) || 0;
@@ -272,7 +272,7 @@ export default function DashboardOverview() {
       .order('data_hora', { ascending: true });
 
     if (data) {
-      setTodayAppointments(data.map(app => ({
+      setTodayAppointments(data.map((app: any) => ({
         id: app.id,
         customer: (app.usuarios as any)?.nome || "Cliente",
         service: Array.isArray(app.servicos) ? app.servicos.map((s: any) => s.nome).join(", ") : "Serviço",

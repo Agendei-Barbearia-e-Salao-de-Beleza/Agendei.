@@ -76,7 +76,7 @@ export default function FinancePage() {
       .eq('pagamentos.status', 'PAGO')
       .gte('pagamentos.pago_em', startOfMonth.toISOString());
 
-    const income = incomeData?.reduce((acc, curr: any) => {
+    const income = incomeData?.reduce((acc: number, curr: any) => {
       const pays = Array.isArray(curr.pagamentos) ? curr.pagamentos : [curr.pagamentos];
       return acc + pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0);
     }, 0) || 0;
@@ -88,7 +88,7 @@ export default function FinancePage() {
       .eq('estabelecimento_id', estId)
       .gte('data', startOfMonth.toISOString().split('T')[0]);
 
-    const expense = expenseData?.reduce((acc, curr) => acc + Number(curr.valor), 0) || 0;
+    const expense = expenseData?.reduce((acc: number, curr: any) => acc + Number(curr.valor), 0) || 0;
 
     // Last Month Entradas Reais
     const { data: lastIncomeData } = await supabase
@@ -99,7 +99,7 @@ export default function FinancePage() {
       .gte('pagamentos.pago_em', startOfLastMonth.toISOString())
       .lte('pagamentos.pago_em', endOfLastMonth.toISOString());
 
-    const lastIncome = lastIncomeData?.reduce((acc, curr: any) => {
+    const lastIncome = lastIncomeData?.reduce((acc: number, curr: any) => {
       const pays = Array.isArray(curr.pagamentos) ? curr.pagamentos : [curr.pagamentos];
       return acc + pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0);
     }, 0) || 0;
@@ -112,7 +112,7 @@ export default function FinancePage() {
       .gte('data', startOfLastMonth.toISOString().split('T')[0])
       .lte('data', endOfLastMonth.toISOString().split('T')[0]);
 
-    const lastExpense = lastExpenseData?.reduce((acc, curr) => acc + Number(curr.valor), 0) || 0;
+    const lastExpense = lastExpenseData?.reduce((acc: number, curr: any) => acc + Number(curr.valor), 0) || 0;
 
     // Saldo Total (Geral)
     const { data: allIncome } = await supabase
@@ -126,12 +126,12 @@ export default function FinancePage() {
       .select('valor')
       .eq('estabelecimento_id', estId);
     
-    const totalInc = allIncome?.reduce((acc, curr: any) => {
+    const totalInc = allIncome?.reduce((acc: number, curr: any) => {
       const pays = Array.isArray(curr.pagamentos) ? curr.pagamentos : [curr.pagamentos];
       return acc + pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0);
     }, 0) || 0;
 
-    const totalExp = allExpense?.reduce((acc, curr) => acc + Number(curr.valor), 0) || 0;
+    const totalExp = allExpense?.reduce((acc: number, curr: any) => acc + Number(curr.valor), 0) || 0;
 
     const calcTrend = (current: number, previous: number) => {
       if (previous === 0) return current > 0 ? "+100%" : "0%";
@@ -157,7 +157,7 @@ export default function FinancePage() {
     ]);
 
     const combined = [
-      ...(incRes.data?.map(i => ({
+      ...(incRes.data?.map((i: any) => ({
         id: i.id,
         title: `Agendamento: ${(i.usuarios as any)?.nome || "Cliente"}`,
         category: "Serviço",
@@ -165,7 +165,7 @@ export default function FinancePage() {
         value: Number(i.preco_total),
         type: "income"
       })) || []),
-      ...(expRes.data?.map(e => ({
+      ...(expRes.data?.map((e: any) => ({
         id: e.id,
         title: e.descricao,
         category: e.categoria || "Despesa",
@@ -187,7 +187,7 @@ export default function FinancePage() {
 
     if (data) {
       const monthlyValues = new Array(12).fill(0);
-      data.forEach(item => {
+      data.forEach((item: any) => {
         const month = new Date(item.data_hora).getMonth();
         monthlyValues[month] += Number(item.preco_total);
       });

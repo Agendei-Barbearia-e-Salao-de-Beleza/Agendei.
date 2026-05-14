@@ -57,7 +57,7 @@ export default function CustomersPage() {
       return;
     }
 
-    setCustomers(data?.map(d => d.usuarios).filter(u => u !== null) || []);
+    setCustomers(data?.map((d: any) => d.usuarios).filter((u: any) => u !== null) || []);
   }
 
   const filteredCustomers = useMemo(() => {
