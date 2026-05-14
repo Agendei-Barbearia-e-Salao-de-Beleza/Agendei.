@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "sonner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Suspense } from "react";
+import FirebaseAnalytics from "@/components/FirebaseAnalytics";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -26,6 +28,9 @@ export default function RootLayout({
       <body className={`${jakarta.variable} font-sans antialiased`} suppressHydrationWarning>
         <ThemeProvider>
           <Toaster richColors position="top-right" />
+          <Suspense fallback={null}>
+            <FirebaseAnalytics />
+          </Suspense>
           {children}
           <SpeedInsights />
         </ThemeProvider>
