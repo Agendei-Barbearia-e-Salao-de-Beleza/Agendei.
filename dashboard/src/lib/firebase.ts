@@ -22,4 +22,10 @@ export const analytics = (typeof window !== 'undefined' && app) ?
   isSupported().then(yes => yes ? getAnalytics(app) : null).catch(() => null) : 
   null;
 
+// Função restaurada para compatibilidade com o componente FirebaseAnalytics
+export const initAnalytics = async () => {
+  if (typeof window === 'undefined') return null;
+  return await analytics;
+};
+
 export default app;
