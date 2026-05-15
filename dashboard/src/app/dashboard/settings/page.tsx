@@ -79,7 +79,7 @@ export default function SettingsPage() {
           id: estData.id,
           proprietario_id: user.id,
           nome: estData.nome || "",
-          telefone: estData.telefone_comercial || "",
+          telefone: estData.telefone || "",
           endereco: estData.endereco || "",
           logo_url: estData.logo_url || "",
           avatar_url: userData?.avatar_url || "",
@@ -179,9 +179,9 @@ export default function SettingsPage() {
     setSavingProfile(true);
     try {
       if (profile.id) {
-        await supabase.from('estabelecimentos').update({
+        const { error: estError } = await supabase.from('estabelecimentos').update({
           nome: profile.nome,
-          telefone_comercial: profile.telefone,
+          telefone: profile.telefone,
           endereco: profile.endereco,
           logo_url: profile.logo_url,
           instagram_url: profile.instagram_url,
@@ -189,16 +189,29 @@ export default function SettingsPage() {
           whatsapp_url: profile.whatsapp_url,
           tiktok_url: profile.tiktok_url
         }).eq('id', profile.id);
+
+        if (estError) {
+          console.error("Erro Supabase (Estabelecimento):", estError);
+          throw estError;
+        }
       }
+
       if (profile.proprietario_id) {
-        await supabase.from('usuarios').update({
+        const { error: userError } = await supabase.from('usuarios').update({
           avatar_url: profile.avatar_url
         }).eq('id', profile.proprietario_id);
+
+        if (userError) {
+          console.error("Erro Supabase (Usuario):", userError);
+          throw userError;
+        }
       }
+
       toast.success("Perfil salvo com sucesso!");
       window.dispatchEvent(new Event('profileUpdated'));
-    } catch (error) {
-      toast.error("Erro ao salvar perfil.");
+    } catch (error: any) {
+      console.error("Falha ao salvar perfil:", error);
+      toast.error(error.message || "Erro ao salvar perfil.");
     } finally {
       setSavingProfile(false);
     }

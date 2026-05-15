@@ -116,7 +116,7 @@ export default function Sidebar() {
           )}
           <div className="flex flex-col overflow-hidden">
             <span className="text-sm font-bold text-white truncate">{estabInfo.nome}</span>
-            <span className="text-[9px] text-zinc-500 truncate uppercase tracking-widest font-bold">Admin / Demo</span>
+            <span className="text-[9px] text-zinc-500 truncate uppercase tracking-widest font-bold">Gerente</span>
           </div>
         </div>
 
