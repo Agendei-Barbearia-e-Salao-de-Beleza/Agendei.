@@ -182,14 +182,17 @@ export default function FinancePage() {
   async function fetchChartData(estId: string) {
     const { data } = await supabase
       .from('agendamentos')
-      .select('preco_total, data_hora')
-      .eq('estabelecimento_id', estId);
+      .select('data_hora, pagamentos!inner(valor)')
+      .eq('estabelecimento_id', estId)
+      .eq('pagamentos.status', 'PAGO');
 
     if (data) {
       const monthlyValues = new Array(12).fill(0);
       data.forEach((item: any) => {
         const month = new Date(item.data_hora).getMonth();
-        monthlyValues[month] += Number(item.preco_total);
+        const pays = Array.isArray(item.pagamentos) ? item.pagamentos : [item.pagamentos];
+        const val = pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0);
+        monthlyValues[month] += val;
       });
       setChartData(monthlyValues);
     }

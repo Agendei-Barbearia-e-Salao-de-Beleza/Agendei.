@@ -198,3 +198,25 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_novo_usuario();
+
+-- Gatilho de Agendamento Concluído para Gerar Pagamento Automaticamente (Faturamento)
+CREATE OR REPLACE FUNCTION public.handle_agendamento_concluido()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.status = 'CONCLUIDO' AND (TG_OP = 'INSERT' OR OLD.status IS NULL OR OLD.status <> 'CONCLUIDO') THEN
+    -- Garante que o registro de pagamento existe para contabilizar faturamento
+    IF NOT EXISTS (SELECT 1 FROM public.pagamentos WHERE agendamento_id = NEW.id) THEN
+      INSERT INTO public.pagamentos (agendamento_id, valor, metodo, status, pago_em)
+      VALUES (NEW.id, NEW.preco_total, 'DINHEIRO_LOCAL', 'PAGO', CURRENT_TIMESTAMP);
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+DROP TRIGGER IF EXISTS on_agendamento_concluido ON public.agendamentos;
+CREATE TRIGGER on_agendamento_concluido
+  AFTER INSERT OR UPDATE OF status ON public.agendamentos
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_agendamento_concluido();
+

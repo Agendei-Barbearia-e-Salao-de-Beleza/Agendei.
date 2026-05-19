@@ -583,6 +583,24 @@ export default function App() {
 
     const totalExpense = expenseData?.reduce((acc: number, curr: any) => acc + Number(curr.valor), 0) || 0
 
+    // Fetch and populate chartData (Annual Billing)
+    const { data: chartDataResponse } = await supabase
+      .from('agendamentos')
+      .select('data_hora, pagamentos!inner(valor)')
+      .eq('estabelecimento_id', estId)
+      .eq('pagamentos.status', 'PAGO')
+
+    if (chartDataResponse) {
+      const monthlyValues = new Array(12).fill(0)
+      chartDataResponse.forEach((item: any) => {
+        const month = new Date(item.data_hora).getMonth()
+        const pays = Array.isArray(item.pagamentos) ? item.pagamentos : [item.pagamentos]
+        const val = pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0)
+        monthlyValues[month] += val
+      })
+      setChartData(monthlyValues)
+    }
+
     setStats({
       totalClients: clientCount || 0,
       monthAppointments: monthAppCount || 0,
@@ -813,7 +831,7 @@ export default function App() {
                 agendamento_id: appId,
                 valor: app.totalPrice,
                 status: 'PAGO',
-                metodo: 'DINHEIRO',
+                metodo: 'DINHEIRO_LOCAL',
                 pago_em: new Date().toISOString()
               }])
             if (payError) throw payError
