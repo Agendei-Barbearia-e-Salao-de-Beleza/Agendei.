@@ -157,6 +157,8 @@ CREATE POLICY "Admins gerenciam serviços" ON public.servicos FOR ALL USING (
 DROP POLICY IF EXISTS "Admins gerenciam agendamentos" ON public.agendamentos;
 CREATE POLICY "Admins gerenciam agendamentos" ON public.agendamentos FOR ALL USING (
   EXISTS (SELECT 1 FROM public.estabelecimentos e WHERE e.id = estabelecimento_id AND e.proprietario_id = auth.uid())
+) WITH CHECK (
+  EXISTS (SELECT 1 FROM public.estabelecimentos e WHERE e.id = estabelecimento_id AND e.proprietario_id = auth.uid())
 );
 
 DROP POLICY IF EXISTS "Admins gerenciam pagamentos" ON public.pagamentos;

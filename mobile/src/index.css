@@ -256,3 +256,37 @@ body {
   background-color: rgba(0, 0, 0, 0.04) !important;
 }
 
+/* ============================================
+   Light Mode – Targeted Component Overrides
+   ============================================ */
+
+/* 1. "Ir para data específica" button – white in light mode */
+.light label.rounded-full {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #374151 !important;
+}
+.light label.rounded-full:hover {
+  background-color: #f4f4f5 !important;
+}
+
+/* 2. Client search bar – white background in light mode */
+.light .bg-zinc-900\/60 {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 3. Photo import label buttons – white in light mode */
+.light label.bg-zinc-900 {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #09090b !important;
+}
+.light label.bg-zinc-900:hover {
+  background-color: #f4f4f5 !important;
+}
+
+/* 4. Goal progress bar track – light gray in light mode (not black) */
+.light .bg-zinc-950\/80 {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
