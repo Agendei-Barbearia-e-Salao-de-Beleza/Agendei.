@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { X, Tag } from 'lucide-react'
+import { X, Tag, Play } from 'lucide-react'
 
 interface Service {
   id: string
@@ -62,12 +62,23 @@ export const CatalogPreviewModal: React.FC<CatalogPreviewModalProps> = ({
                 className="bg-zinc-950 border border-white/5 rounded-2xl overflow-hidden"
               >
                 {s.imagem_url && (
-                  <div className="h-32 w-full relative overflow-hidden">
-                    <img 
-                      src={s.imagem_url} 
-                      alt={s.nome}
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="h-40 w-full relative overflow-hidden bg-zinc-900 border-b border-white/5">
+                    {(() => {
+                      const imgs = s.imagem_url.split('||').filter(Boolean);
+                      if (imgs.length === 0) return null;
+                      return (
+                        <div className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scrollbar-none scroll-smooth">
+                          {imgs.map((img, idx) => (
+                            <img 
+                              key={idx}
+                              src={img} 
+                              alt={`${s.nome} ${idx}`}
+                              className="w-full h-full object-cover shrink-0 snap-center"
+                            />
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
                 
@@ -86,9 +97,9 @@ export const CatalogPreviewModal: React.FC<CatalogPreviewModalProps> = ({
                       href={s.video_url} 
                       target="_blank" 
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-[10px] font-bold text-[#fd9602] hover:underline"
+                      className="inline-flex items-center gap-1.5 text-[10px] font-bold text-[#fd9602] hover:underline"
                     >
-                      ▶ Ver Vídeo Demonstrativo
+                      <Play className="w-3 h-3 fill-current" /> Ver Vídeo Demonstrativo
                     </a>
                   )}
                 </div>

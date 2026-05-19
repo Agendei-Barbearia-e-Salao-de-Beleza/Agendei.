@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Edit2, Trash2, Clock, X, Sparkles, Tag, Layers, Loader2 } from "lucide-react";
+import { Search, Plus, Edit2, Trash2, Clock, X, Sparkles, Tag, Layers, Loader2, Camera, Play } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "@/components/Modal";
 import { supabase } from "@/lib/supabase";
@@ -251,16 +251,16 @@ export default function ServicesPage() {
                   item.tipo === "PLAN" ? "ring-2 ring-[#fd9602]/20" : ""
                 }`}
               >
-                <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-all flex gap-2 z-10">
+                <div className="absolute top-6 right-6 flex gap-2 z-20">
                   <button 
                     onClick={() => handleOpenModal(item)}
-                    className="p-2.5 bg-zinc-800 dark:bg-zinc-800 hover:bg-[#fd9602]/10 text-zinc-500 hover:text-[#fd9602] rounded-xl transition-all cursor-pointer border border-subtle dark:border-zinc-700"
+                    className="p-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-[#fd9602]/15 text-zinc-650 dark:text-zinc-400 hover:text-[#fd9602] rounded-xl transition-all cursor-pointer border border-subtle dark:border-zinc-700 shadow-sm"
                   >
                     <Edit2 size={14} />
                   </button>
                   <button 
                     onClick={() => handleDelete(item.id)}
-                    className="p-2.5 bg-zinc-800 dark:bg-zinc-800 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded-xl transition-all cursor-pointer border border-subtle dark:border-zinc-700"
+                    className="p-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-red-500/15 text-zinc-650 dark:text-zinc-400 hover:text-red-500 rounded-xl transition-all cursor-pointer border border-subtle dark:border-zinc-700 shadow-sm"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -268,16 +268,31 @@ export default function ServicesPage() {
 
                 <div className="space-y-6">
                   {item.imagem_url && (
-                    <div className="w-full h-40 rounded-2xl overflow-hidden relative">
-                      <img src={item.imagem_url} alt={item.nome} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <div className="w-full h-44 rounded-[20px] overflow-hidden relative bg-zinc-900 border border-subtle dark:border-zinc-800">
+                      {(() => {
+                        const imgs = item.imagem_url.split('||').filter(Boolean);
+                        if (imgs.length === 0) return null;
+                        return (
+                          <div className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scrollbar-none scroll-smooth">
+                            {imgs.map((img: string, idx: number) => (
+                              <img 
+                                key={idx}
+                                src={img} 
+                                alt={`${item.nome} ${idx}`}
+                                className="w-full h-full object-cover shrink-0 snap-center"
+                              />
+                            ))}
+                          </div>
+                        );
+                      })()}
                       {item.video_url && (
                         <a 
                           href={item.video_url} 
                           target="_blank" 
                           rel="noopener noreferrer" 
-                          className="absolute bottom-3 right-3 bg-zinc-950/80 hover:bg-zinc-950 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-white/10 flex items-center gap-1 transition-all cursor-pointer"
+                          className="absolute bottom-3 right-3 bg-zinc-950/80 hover:bg-zinc-950 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-white/10 flex items-center gap-1.5 transition-all cursor-pointer z-10"
                         >
-                          ▶ Assistir Vídeo
+                          <Play size={10} className="fill-current" /> Assistir Vídeo
                         </a>
                       )}
                     </div>
@@ -395,15 +410,98 @@ export default function ServicesPage() {
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Imagem do Serviço (URL)</label>
-            <input 
-              type="url" 
-              value={formData.imagem_url}
-              onChange={(e) => setFormData({ ...formData, imagem_url: e.target.value })}
-              placeholder="https://exemplo.com/imagem.jpg (links externos aceitos)"
-              className="w-full bg-zinc-100/50 dark:bg-zinc-800/50 border border-subtle dark:border-zinc-800 rounded-2xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20"
-            />
+          <div className="space-y-3">
+            <label className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-1">
+              Imagens do Serviço ({formData.imagem_url ? formData.imagem_url.split('||').filter(Boolean).length : 0})
+            </label>
+            
+            {/* Adição manual de links */}
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                placeholder="Adicionar link de imagem..."
+                id="manual-service-web-img-url"
+                className="flex-1 bg-zinc-100/50 dark:bg-zinc-800/50 border border-subtle dark:border-zinc-800 rounded-2xl px-4 py-3 text-sm text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const val = (e.target as HTMLInputElement).value.trim();
+                    if (val) {
+                      const current = formData.imagem_url ? formData.imagem_url.split('||').filter(Boolean) : [];
+                      if (!current.includes(val)) current.push(val);
+                      setFormData({ ...formData, imagem_url: current.join('||') });
+                      (e.target as HTMLInputElement).value = '';
+                    }
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById('manual-service-web-img-url') as HTMLInputElement;
+                  if (el && el.value.trim()) {
+                    const val = el.value.trim();
+                    const current = formData.imagem_url ? formData.imagem_url.split('||').filter(Boolean) : [];
+                    if (!current.includes(val)) current.push(val);
+                    setFormData({ ...formData, imagem_url: current.join('||') });
+                    el.value = '';
+                  }
+                }}
+                className="bg-zinc-800 dark:bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-4 rounded-2xl text-xs font-bold border border-subtle dark:border-zinc-700 transition-all cursor-pointer"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Importação Local */}
+            <label className="bg-zinc-150 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-subtle dark:border-zinc-700 rounded-2xl py-3 px-4 text-center text-xs font-bold text-title dark:text-white flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 transition-all">
+              <Camera size={14} className="text-[#fd9602]" /> Importar Fotos Locais (Múltiplas)
+              <input 
+                type="file" 
+                multiple
+                accept="image/*" 
+                className="hidden" 
+                onChange={(e) => {
+                  if (e.target.files) {
+                    const files = Array.from(e.target.files);
+                    files.forEach(file => {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        if (reader.result && typeof reader.result === 'string') {
+                          const val = reader.result;
+                          const current = formData.imagem_url ? formData.imagem_url.split('||').filter(Boolean) : [];
+                          if (!current.includes(val)) current.push(val);
+                          setFormData(prev => ({ ...prev, imagem_url: current.join('||') }));
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    });
+                  }
+                }}
+              />
+            </label>
+
+            {/* Miniaturas de visualização */}
+            {formData.imagem_url && formData.imagem_url.split('||').filter(Boolean).length > 0 && (
+              <div className="grid grid-cols-6 gap-2 pt-1.5 max-h-24 overflow-y-auto pr-1">
+                {formData.imagem_url.split('||').filter(Boolean).map((img: string, i: number) => (
+                  <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-subtle dark:border-zinc-800 bg-zinc-950 shrink-0">
+                    <img src={img} alt={`Preview ${i}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = formData.imagem_url ? formData.imagem_url.split('||').filter(Boolean) : [];
+                        current.splice(i, 1);
+                        setFormData({ ...formData, imagem_url: current.join('||') });
+                      }}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 shadow-md hover:bg-red-650 transition-all cursor-pointer border-none"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

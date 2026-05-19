@@ -37,7 +37,7 @@ export function AppointmentModal({
   appLoading
 }: AppointmentModalProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Marcar Consulta">
+    <Modal isOpen={isOpen} onClose={onClose} title="Marcar Agendamento">
       <form onSubmit={onSubmit} className="space-y-6">
         <div className="space-y-2">
           <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Cliente</label>
