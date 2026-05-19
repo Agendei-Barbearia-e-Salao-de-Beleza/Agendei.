@@ -1387,10 +1387,20 @@ export default function App() {
                         </button>
                       </div>
                       <div className="w-full bg-zinc-950/80 rounded-full h-1.5 mt-2 overflow-hidden border border-white/5 relative">
-                        <div 
-                          className="bg-[#fd9602] h-full rounded-full transition-all duration-500" 
-                          style={{ width: `${Math.min((stats.monthlyBalance / (monthlyGoal || 1)) * 100, 100)}%` }}
-                        />
+                        {(() => {
+                          const pct = Math.max(0, Math.min((stats.monthlyBalance / (monthlyGoal || 1)) * 100, 100));
+                          const barBg = pct <= 15 
+                            ? 'bg-[#fd9602]' 
+                            : pct < 80 
+                              ? 'bg-gradient-to-r from-[#fd9602] to-emerald-500' 
+                              : 'bg-emerald-500';
+                          return (
+                            <div 
+                              className={`${barBg} h-full rounded-full transition-all duration-500`} 
+                              style={{ width: `${pct}%` }}
+                            />
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
