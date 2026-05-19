@@ -196,16 +196,7 @@ body {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08) !important;
 }
 
-/* Force solid white tabbar in light mode */
-.light nav.fixed,
-.light nav.glass-card {
-  background: #ffffff !important;
-  background-color: #ffffff !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06) !important;
-}
+
 
 /* Scoped Light Mode Modal Overrides */
 .light .fixed.inset-0 .bg-zinc-900,
@@ -296,15 +287,7 @@ body {
   background-color: rgba(0, 0, 0, 0.08) !important;
 }
 
-/* 5. Dark Mode premium glassmorphism tabbar (prevent disappearing) */
-.dark nav.fixed,
-.dark nav.glass-card,
-:not(.light) nav.fixed {
-  background: rgba(9, 9, 11, 0.96) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
+
 
 
 

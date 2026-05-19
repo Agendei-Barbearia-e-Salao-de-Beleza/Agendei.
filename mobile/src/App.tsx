@@ -2224,8 +2224,8 @@ export default function App() {
                         </div>
                       )}
                       <div>
-                        <h3 className="text-base font-black text-white" style={{ color: '#ffffff' }}>{establishmentData.nome}</h3>
-                        <p className="text-xs font-semibold text-zinc-300" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>Gerente: {userName}</p>
+                        <h3 className="text-base font-black profile-banner-text">{establishmentData.nome}</h3>
+                        <p className="text-xs font-semibold profile-banner-text-muted">Gerente: {userName}</p>
                       </div>
                     </div>
                   </div>
@@ -2352,7 +2352,15 @@ export default function App() {
             </main>
 
             {/* REDESIGNED FLOATING PILL TAB BAR (EXACTLY 5 ICON-ONLY BUTTONS) */}
-            <nav className="fixed bottom-6 left-4 right-4 z-40 glass-card px-4 py-3.5 rounded-full flex items-center justify-around max-w-lg mx-auto transition-all duration-300">
+            <nav 
+              className="fixed bottom-6 left-4 right-4 z-40 px-4 py-3.5 rounded-full flex items-center justify-around max-w-lg mx-auto transition-all duration-300 shadow-[0_15px_40px_rgba(0,0,0,0.12)]"
+              style={{
+                backgroundColor: theme === 'light' ? '#ffffff' : 'rgba(9, 9, 11, 0.96)',
+                backdropFilter: theme === 'light' ? 'none' : 'blur(20px)',
+                WebkitBackdropFilter: theme === 'light' ? 'none' : 'blur(20px)',
+                border: theme === 'light' ? '1px solid rgba(0, 0, 0, 0.08)' : '1px solid rgba(255, 255, 255, 0.08)'
+              }}
+            >
               <button 
                 onClick={() => setCurrentTab('home')}
                 className={`relative flex items-center justify-center p-2.5 rounded-full transition-all ${

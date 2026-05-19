@@ -6,13 +6,10 @@ Implementar a infraestrutura completa de notificações por push para dispositiv
 ## 📋 TODO
 - [x] **Notificações Push com FCM**: Integrar `@capacitor/push-notifications` e `@capacitor-community/firebase-analytics` no Mobile para capturar Device Tokens e sincronizá-los com o perfil de usuário no Supabase.
 - [x] **Controle de Status Bar Nativo**: Instalar e integrar `@capacitor/status-bar` no ciclo de vida do tema no React, chaveando estilos de ícones (escuro/claro) e cor de fundo programaticamente no Android/iOS.
-- [x] **Tabbar Dinâmica de Alto Contraste**: Ajustar as classes e overrides globais de CSS no `index.css` e `App.tsx` para forçar fundo branco sólido com alta legibilidade no tema claro, mantendo o glassmorphism elegante no tema escuro.
-- [x] **Faturamento Unificado ("Marcar como Pago")**: Implementar o botão e ação de liquidação financeira de agendamentos no dashboard do site web e no mobile, com atualização via RPC e registro na tabela `pagamentos`.
-- [x] **Upgrade de Mídia no Catálogo**: Adicionar o recurso de importação de múltiplas imagens do armazenamento local e da galeria de fotos para serviços, permitindo ao gerente flexibilidade de catálogo.
-- [x] **Substituição de Emojis por Ícones de Biblioteca**: Remover emojis remanescentes de botões de mídia no Mobile e Dashboard, substituindo-os por ícones das bibliotecas de vetores oficiais (`lucide-react`).
-- [x] **Ajustes de UI de Configurações**: Manter legibilidade alta (texto branco sólido) no card do estabelecimento no topo das Configurações quando o tema claro for acionado, eliminando contornos espúrios.
+- [x] **Tabbar Dinâmica de Alto Contraste**: Excluir regras globais de CSS com `!important` conflitantes no `index.css` e adotar controle inline DOM dinâmico (`style={{ ... }}`) no React para garantir imunidade absoluta e fundo branco sólido perfeito no tema claro.
+- [x] **Ajustes de UI de Configurações**: Utilizar as classes específicas `.profile-banner-text` e `.profile-banner-text-muted` no card de estabelecimento no topo das Configurações, garantindo textos em branco absoluto e cinza claro sobre o degradê de fundo escuro em qualquer tema.
 
 ## 📝 Notas
-- O aplicativo móvel agora utiliza com sucesso a sincronização reativa de temas diretamente na raiz do WebView através do Capacitor.
-- O fluxo de pagamento resolve problemas de RLS (Row-Level Security) no Supabase através da RPC nativa `atualizar_status_agendamento`, com plano de contingência para inserções locais.
+- O aplicativo móvel agora utiliza com sucesso a sincronização reativa de temas diretamente na raiz do WebView através do Capacitor, com a tabbar controlada por injeção reativa DOM infalível no React.
+- Resolvido o conflito onde classes globais de `.light .text-white` forçavam o texto do banner a ficar preto (invisível sobre a imagem) no tema claro.
 - A consistência do design mobile/web foi levada ao estado da arte, removendo as marcações de emojis e aplicando as diretrizes premium de branding e tipografia estabelecidas.
