@@ -10,6 +10,44 @@ import {
 } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
+import { FirebaseAnalytics } from '@capacitor-community/firebase-analytics'
+import { PushNotifications } from '@capacitor/push-notifications'
+
+// Safe wrappers for Native APIs to prevent crashes when testing in web browsers
+const safeInitAnalytics = async () => {
+  try {
+    await FirebaseAnalytics.setCollectionEnabled({ enabled: true })
+  } catch (e) {
+    console.warn('Firebase Analytics not supported in this environment.', e)
+  }
+}
+
+const safeLogEvent = async (name: string, params?: any) => {
+  try {
+    await FirebaseAnalytics.logEvent({ name, params })
+  } catch (e) {
+    console.warn('Firebase Analytics event log skipped:', name, e)
+  }
+}
+
+const safeSetCurrentScreen = async (screenName: string) => {
+  try {
+    await FirebaseAnalytics.setScreenName({ screenName, nameOverride: 'App' })
+  } catch (e) {
+    console.warn('Firebase Analytics screen view skipped:', screenName, e)
+  }
+}
+
+const safeRegisterPush = async () => {
+  try {
+    const result = await PushNotifications.requestPermissions()
+    if (result.receive === 'granted') {
+      await PushNotifications.register()
+    }
+  } catch (e) {
+    console.warn('Push Notifications not supported in this environment.', e)
+  }
+}
 
 interface Service {
   id: string
@@ -254,6 +292,54 @@ export default function App() {
   const [notifications, setNotifications] = useState<{ id: string; title: string; description: string; time: string; unread: boolean; }[]>([])
   const [reviews, setReviews] = useState<{ id: string; customer: string; rating: number; comment: string; date: string; media?: string; }[]>([])
 
+  // Initialize Firebase Analytics & Register Push Notifications Listeners
+  useEffect(() => {
+    safeInitAnalytics()
+    safeSetCurrentScreen("Splash/Carregamento")
+
+    try {
+      // Listen to push notification callbacks
+      PushNotifications.addListener('registration', token => {
+        console.log('FCM Token do aparelho:', token.value)
+        localStorage.setItem('agendei_fcm_token', token.value)
+      })
+
+      PushNotifications.addListener('pushNotificationReceived', notification => {
+        toast.success(`🔔 ${notification.title}\n${notification.body}`)
+      })
+
+      PushNotifications.addListener('pushNotificationActionPerformed', action => {
+        console.log('Notificação clicada:', action.notification)
+      })
+    } catch (err) {
+      console.warn('Native Push Notification listeners not active in web mode.')
+    }
+  }, [])
+
+  // Track Screen Changes with Analytics
+  useEffect(() => {
+    if (authState === 'main') {
+      const tabLabels: Record<string, string> = {
+        home: "Dashboard Principal",
+        agenda: "Agenda de Horários",
+        finance: "Painel Financeiro",
+        customers: "Lista de Clientes",
+        profile: "Perfil do Estabelecimento"
+      }
+      safeSetCurrentScreen(tabLabels[currentTab] || currentTab)
+    }
+  }, [currentTab, authState])
+
+  // Track Pix QR Code generation events on Firebase Analytics
+  useEffect(() => {
+    if (showPixModal && pixPaymentApp) {
+      safeLogEvent("pix_code_generated", {
+        value: pixPaymentApp.totalPrice,
+        currency: "BRL"
+      })
+    }
+  }, [showPixModal, pixPaymentApp])
+
   // Form States
   const [appFormData, setAppFormData] = useState({
     customerName: '',
@@ -327,6 +413,7 @@ export default function App() {
         setUserName(session.user.user_metadata?.nome || 'Gerente')
         setAuthState('main')
         fetchEstablishmentData(session.user.id)
+        safeRegisterPush()
       } else {
         setAuthState('login')
       }
@@ -363,6 +450,7 @@ export default function App() {
         toast.success('Login realizado com sucesso!')
         setAuthState('main')
         fetchEstablishmentData(data.user.id)
+        safeRegisterPush()
       }
     } catch (error: any) {
       toast.error(error.message || 'Credenciais inválidas.')

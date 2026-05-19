@@ -11,6 +11,8 @@
     "sync": "npm run build && npx cap sync android"
   },
   "dependencies": {
+    "@capacitor-community/firebase-analytics": "^8.0.0",
+    "@capacitor/push-notifications": "^8.1.1",
     "@supabase/supabase-js": "^2.106.0",
     "framer-motion": "^12.39.0",
     "lucide-react": "^1.16.0",
