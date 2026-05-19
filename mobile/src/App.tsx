@@ -291,9 +291,23 @@ export default function App() {
 
     try {
       // Listen to push notification callbacks
-      PushNotifications.addListener('registration', token => {
+      PushNotifications.addListener('registration', async token => {
         console.log('FCM Token do aparelho:', token.value)
         localStorage.setItem('agendei_fcm_token', token.value)
+        
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session?.user?.id) {
+            const { error } = await supabase
+              .from('usuarios')
+              .update({ firebase_token: token.value })
+              .eq('id', session.user.id)
+            if (error) console.error('Erro ao salvar token FCM no Supabase:', error)
+            else console.log('FCM Token salvo com sucesso no perfil do usuário no Supabase!')
+          }
+        } catch (e) {
+          console.error('Erro ao sincronizar token FCM recém-registrado:', e)
+        }
       })
 
       PushNotifications.addListener('pushNotificationReceived', notification => {
@@ -405,6 +419,19 @@ export default function App() {
         setAuthState('main')
         fetchEstablishmentData(session.user.id)
         safeRegisterPush()
+        
+        // Sincroniza token FCM do localStorage se disponível
+        const savedToken = localStorage.getItem('agendei_fcm_token')
+        if (savedToken) {
+          supabase
+            .from('usuarios')
+            .update({ firebase_token: savedToken })
+            .eq('id', session.user.id)
+            .then(({ error }) => {
+              if (error) console.error('Erro ao sincronizar token salvo no Supabase:', error)
+              else console.log('Token FCM pré-existente sincronizado no Supabase!')
+            })
+        }
       } else {
         setAuthState('login')
       }
@@ -442,6 +469,19 @@ export default function App() {
         setAuthState('main')
         fetchEstablishmentData(data.user.id)
         safeRegisterPush()
+        
+        // Sincroniza token FCM do localStorage se disponível
+        const savedToken = localStorage.getItem('agendei_fcm_token')
+        if (savedToken) {
+          supabase
+            .from('usuarios')
+            .update({ firebase_token: savedToken })
+            .eq('id', data.user.id)
+            .then(({ error }) => {
+              if (error) console.error('Erro ao sincronizar token salvo no Supabase:', error)
+              else console.log('Token FCM pré-existente sincronizado no Supabase!')
+            })
+        }
       }
     } catch (error: any) {
       toast.error(error.message || 'Credenciais inválidas.')
