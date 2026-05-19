@@ -229,6 +229,7 @@ export default function App() {
   // Modals States (iOS Sheet Style)
   const [showAppModal, setShowAppModal] = useState(false)
   const [showExpenseModal, setShowExpenseModal] = useState(false)
+  const [showIncomeModal, setShowIncomeModal] = useState(false)
   const [showPauseModal, setShowPauseModal] = useState(false)
   const [showServiceModal, setShowServiceModal] = useState(false)
   const [showCustomerModal, setShowCustomerModal] = useState(false)
@@ -247,6 +248,12 @@ export default function App() {
     description: '',
     value: '',
     category: 'Suprimentos',
+    date: new Date().toISOString().split('T')[0]
+  })
+  const [incomeFormData, setIncomeFormData] = useState({
+    description: '',
+    value: '',
+    category: 'Outros',
     date: new Date().toISOString().split('T')[0]
   })
   const [pauseFormData, setPauseFormData] = useState({
@@ -274,7 +281,7 @@ export default function App() {
   }, [pauses])
 
   // Check if any modal is active to trigger parent background scaling (iOS style)
-  const anyModalActive = showAppModal || showExpenseModal || showPauseModal || showServiceModal || showCustomerModal || showServiceListModal || showForgotPassword || showDetailsModal
+  const anyModalActive = showAppModal || showExpenseModal || showIncomeModal || showPauseModal || showServiceModal || showCustomerModal || showServiceListModal || showForgotPassword || showDetailsModal
 
   // Sync theme to document element
   useEffect(() => {
@@ -570,10 +577,19 @@ export default function App() {
       .eq('pagamentos.status', 'PAGO')
       .gte('pagamentos.pago_em', startOfMonth.toISOString())
 
-    const totalIncome = incomeData?.reduce((acc: number, curr: any) => {
+    const appointmentIncome = incomeData?.reduce((acc: number, curr: any) => {
       const pays = Array.isArray(curr.pagamentos) ? curr.pagamentos : [curr.pagamentos]
       return acc + pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0)
     }, 0) || 0
+
+    const { data: extrasData } = await supabase
+      .from('receitas_extras')
+      .select('valor')
+      .eq('estabelecimento_id', estId)
+      .gte('data', startOfMonth.toISOString().split('T')[0])
+
+    const extrasIncome = extrasData?.reduce((acc: number, curr: any) => acc + Number(curr.valor), 0) || 0
+    const totalIncome = appointmentIncome + extrasIncome
 
     const { data: expenseData } = await supabase
       .from('despesas')
@@ -673,9 +689,10 @@ export default function App() {
   }
 
   async function fetchFinanceData(estId: string) {
-    const [incRes, expRes] = await Promise.all([
+    const [incRes, expRes, extrasRes] = await Promise.all([
       supabase.from('agendamentos').select('id, preco_total, data_hora, status, usuarios!agendamentos_cliente_id_fkey(nome)').eq('estabelecimento_id', estId).order('data_hora', { ascending: false }).limit(10),
-      supabase.from('despesas').select('id, valor, descricao, data, categoria').eq('estabelecimento_id', estId).order('data', { ascending: false }).limit(10)
+      supabase.from('despesas').select('id, valor, descricao, data, categoria').eq('estabelecimento_id', estId).order('data', { ascending: false }).limit(10),
+      supabase.from('receitas_extras').select('id, valor, descricao, data, categoria').eq('estabelecimento_id', estId).order('data', { ascending: false }).limit(10)
     ])
 
     const combined = [
@@ -686,6 +703,15 @@ export default function App() {
         date: new Date(i.data_hora).toLocaleDateString('pt-BR'),
         rawDate: new Date(i.data_hora).toISOString().split('T')[0],
         value: Number(i.preco_total || 0),
+        type: 'income'
+      })) || []),
+      ...(extrasRes.data?.map((r: any) => ({
+        id: r.id,
+        title: r.descricao,
+        category: r.categoria || 'Receita Extra',
+        date: new Date(r.data + 'T00:00:00').toLocaleDateString('pt-BR'),
+        rawDate: r.data,
+        value: Number(r.valor),
         type: 'income'
       })) || []),
       ...(expRes.data?.map((e: any) => ({
@@ -902,6 +928,41 @@ export default function App() {
       refreshAllData(establishmentId)
     } catch (e: any) {
       toast.error('Erro ao lançar despesa: ' + e.message)
+    } finally {
+      setGlobalLoading(false)
+    }
+  }
+
+  // Create Income (Receita Extra) Save
+  async function handleCreateIncome(e: React.FormEvent) {
+    e.preventDefault()
+    if (!establishmentId || !incomeFormData.description || !incomeFormData.value) return
+
+    setGlobalLoading(true)
+    try {
+      const { error } = await supabase
+        .from('receitas_extras')
+        .insert([{
+          estabelecimento_id: establishmentId,
+          descricao: incomeFormData.description,
+          valor: parseFloat(incomeFormData.value.replace(',', '.')),
+          categoria: incomeFormData.category,
+          data: incomeFormData.date
+        }])
+
+      if (error) throw error
+
+      toast.success('Entrada registrada no financeiro!')
+      setShowIncomeModal(false)
+      setIncomeFormData({
+        description: '',
+        value: '',
+        category: 'Outros',
+        date: new Date().toISOString().split('T')[0]
+      })
+      refreshAllData(establishmentId)
+    } catch (e: any) {
+      toast.error('Erro ao lançar entrada: ' + e.message)
     } finally {
       setGlobalLoading(false)
     }
@@ -1697,12 +1758,20 @@ export default function App() {
                       <h2 className="text-2xl font-black text-white">Fluxo de Caixa</h2>
                       <p className="text-zinc-500 text-sm">Entradas e saídas recentes.</p>
                     </div>
-                    <button 
-                      onClick={() => setShowExpenseModal(true)}
-                      className="h-10 bg-red-500/15 border border-red-500/25 text-red-500 font-bold px-4 rounded-xl flex items-center justify-center text-xs gap-1 hover:bg-red-500 hover:text-zinc-950 transition-colors"
-                    >
-                      <DollarSign className="w-3.5 h-3.5" /> Lançar Saída
-                    </button>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setShowIncomeModal(true)}
+                        className="h-10 bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 font-bold px-3 rounded-xl flex items-center justify-center text-xs gap-1 hover:bg-emerald-500 hover:text-zinc-950 transition-colors"
+                      >
+                        <ArrowUpRight className="w-3.5 h-3.5" /> Entrada
+                      </button>
+                      <button 
+                        onClick={() => setShowExpenseModal(true)}
+                        className="h-10 bg-red-500/15 border border-red-500/25 text-red-500 font-bold px-3 rounded-xl flex items-center justify-center text-xs gap-1 hover:bg-red-500 hover:text-zinc-950 transition-colors"
+                      >
+                        <ArrowDownRight className="w-3.5 h-3.5" /> Saída
+                      </button>
+                    </div>
                   </div>
 
                   {/* Balanced Cards */}
@@ -2592,6 +2661,96 @@ export default function App() {
                   className="w-full h-12 bg-red-500 hover:bg-red-600 text-zinc-950 font-bold rounded-2xl flex items-center justify-center text-sm mt-6 shadow-lg shadow-red-500/10"
                 >
                   Registrar Despesa
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* INCOME (LANÇAR ENTRADA) MODAL */}
+        {showIncomeModal && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/80 backdrop-blur-sm">
+            <div className="absolute inset-0" onClick={() => setShowIncomeModal(false)} />
+            
+            <motion.div 
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              className="w-full max-w-md bg-zinc-900 border-t border-white/10 ios-sheet p-6 relative z-10"
+            >
+              {/* Drag Indicator */}
+              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5" onClick={() => setShowIncomeModal(false)} />
+              
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-base font-black text-white flex items-center gap-2">
+                  <ArrowUpRight className="w-4 h-4 text-emerald-400" /> Registrar Entrada Manual
+                </h3>
+                <button 
+                  onClick={() => setShowIncomeModal(false)}
+                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 border border-white/5"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateIncome} className="space-y-4">
+                <div>
+                  <label className="block text-zinc-400 text-xs font-bold mb-1.5">Descrição da Entrada</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="Ex: Venda de produto, Gorjeta, Serviço avulso..."
+                    value={incomeFormData.description}
+                    onChange={e => setIncomeFormData(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-zinc-400 text-xs font-bold mb-1.5">Valor (R$)</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="0,00"
+                      value={incomeFormData.value}
+                      onChange={e => setIncomeFormData(prev => ({ ...prev, value: e.target.value }))}
+                      className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-zinc-400 text-xs font-bold mb-1.5">Data</label>
+                    <input 
+                      type="date" 
+                      required
+                      value={incomeFormData.date}
+                      onChange={e => setIncomeFormData(prev => ({ ...prev, date: e.target.value }))}
+                      className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-zinc-400 text-xs font-bold mb-1.5">Categoria</label>
+                  <select 
+                    value={incomeFormData.category}
+                    onChange={e => setIncomeFormData(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 text-zinc-400"
+                  >
+                    <option value="Outros">Outros</option>
+                    <option value="Venda de Produto">Venda de Produto</option>
+                    <option value="Gorjeta">Gorjeta</option>
+                    <option value="Serviço Avulso">Serviço Avulso</option>
+                    <option value="Reembolso">Reembolso</option>
+                  </select>
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold rounded-2xl flex items-center justify-center text-sm mt-6 shadow-lg shadow-emerald-500/10"
+                >
+                  Registrar Entrada
                 </button>
               </form>
             </motion.div>

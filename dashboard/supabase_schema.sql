@@ -107,6 +107,16 @@ CREATE TABLE IF NOT EXISTS public.metas (
     atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS public.receitas_extras (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    estabelecimento_id UUID REFERENCES public.estabelecimentos(id) ON DELETE CASCADE,
+    descricao TEXT NOT NULL,
+    valor DECIMAL(10,2) NOT NULL,
+    categoria TEXT DEFAULT 'Outros',
+    data DATE DEFAULT CURRENT_DATE,
+    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- RLS (Row Level Security)
 ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.estabelecimentos ENABLE ROW LEVEL SECURITY;
@@ -117,6 +127,7 @@ ALTER TABLE public.indisponibilidades ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.clientes_estabelecimentos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.despesas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.metas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.receitas_extras ENABLE ROW LEVEL SECURITY;
 
 -- Políticas
 DROP POLICY IF EXISTS "Ver próprio perfil" ON public.usuarios;
@@ -170,6 +181,11 @@ CREATE POLICY "Admins gerenciam suas despesas" ON public.despesas FOR ALL USING 
 
 DROP POLICY IF EXISTS "Admins gerenciam suas metas" ON public.metas;
 CREATE POLICY "Admins gerenciam suas metas" ON public.metas FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.estabelecimentos e WHERE e.id = estabelecimento_id AND e.proprietario_id = auth.uid())
+);
+
+DROP POLICY IF EXISTS "Admins gerenciam suas receitas extras" ON public.receitas_extras;
+CREATE POLICY "Admins gerenciam suas receitas extras" ON public.receitas_extras FOR ALL USING (
     EXISTS (SELECT 1 FROM public.estabelecimentos e WHERE e.id = estabelecimento_id AND e.proprietario_id = auth.uid())
 );
 
