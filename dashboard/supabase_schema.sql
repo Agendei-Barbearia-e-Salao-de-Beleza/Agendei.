@@ -252,10 +252,10 @@ CREATE TRIGGER on_agendamento_concluido
   EXECUTE FUNCTION public.handle_agendamento_concluido();
 
 -- =============================================================
+-- =============================================================
 -- RPC: atualizar_status_agendamento
 -- Bypassa RLS usando SECURITY DEFINER para evitar 400 no PATCH.
--- Valida que o agendamento pertence ao estabelecimento do usuário
--- antes de atualizar. Cria pagamento automaticamente se CONCLUIDO.
+-- Descobre dinamicamente um valor válido do enum metodo_pagamento.
 -- =============================================================
 CREATE OR REPLACE FUNCTION public.atualizar_status_agendamento(
   p_agendamento_id UUID,
@@ -265,7 +265,7 @@ RETURNS JSON AS $$
 DECLARE
   v_agendamento public.agendamentos%ROWTYPE;
   v_db_status public.status_agendamento;
-  v_est_owner UUID;
+  v_metodo public.metodo_pagamento;
 BEGIN
   -- Map PAGO → CONCLUIDO (o enum não tem PAGO)
   IF p_novo_status = 'PAGO' THEN
@@ -275,7 +275,7 @@ BEGIN
   END IF;
 
   -- Verifica se o agendamento pertence ao estabelecimento do usuário autenticado
-  SELECT a.*, e.proprietario_id INTO v_agendamento
+  SELECT a.* INTO v_agendamento
   FROM public.agendamentos a
   JOIN public.estabelecimentos e ON e.id = a.estabelecimento_id
   WHERE a.id = p_agendamento_id
@@ -290,17 +290,26 @@ BEGIN
   SET status = v_db_status
   WHERE id = p_agendamento_id;
 
-  -- Se marcado como CONCLUIDO/PAGO, cria registro de pagamento se não existir
+  -- Se CONCLUIDO, cria registro de pagamento descobrindo o metodo válido dinamicamente
   IF v_db_status = 'CONCLUIDO' THEN
-    INSERT INTO public.pagamentos (agendamento_id, valor, metodo, status, pago_em)
-    SELECT p_agendamento_id, v_agendamento.preco_total, 'DINHEIRO_LOCAL', 'PAGO', NOW()
-    WHERE NOT EXISTS (
-      SELECT 1 FROM public.pagamentos WHERE agendamento_id = p_agendamento_id
-    );
+    IF NOT EXISTS (SELECT 1 FROM public.pagamentos WHERE agendamento_id = p_agendamento_id) THEN
+      -- Descobre o primeiro valor válido do enum metodo_pagamento
+      SELECT enumlabel::public.metodo_pagamento INTO v_metodo
+      FROM pg_enum
+      WHERE enumtypid = 'public.metodo_pagamento'::regtype
+      ORDER BY enumsortorder
+      LIMIT 1;
+
+      INSERT INTO public.pagamentos (agendamento_id, valor, metodo, status, pago_em)
+      VALUES (p_agendamento_id, v_agendamento.preco_total, v_metodo, 'PAGO', NOW());
+    END IF;
   END IF;
 
   RETURN json_build_object('success', true, 'status', v_db_status::TEXT);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+GRANT EXECUTE ON FUNCTION public.atualizar_status_agendamento TO authenticated;
+
 
 
