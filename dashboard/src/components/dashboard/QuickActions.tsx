@@ -22,7 +22,7 @@ export function QuickActions({
       <div className="space-y-3">
         <QuickActionButton 
           icon={<Calendar className="text-[#fd9602]" />} 
-          label="Marcar Consulta" 
+          label="Marcar Agendamento" 
           color="text-[#fd9602]" 
           onClick={() => setShowAppointmentModal(true)} 
         />
