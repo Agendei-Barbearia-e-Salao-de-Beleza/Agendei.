@@ -5,7 +5,7 @@ import {
   Plus, Loader2, ArrowUpRight, ArrowDownRight, Wallet, Trash2, 
   LogOut, Search, Eye, EyeOff, Check, X, Tag, User, 
   RefreshCw, Coffee, Ban, Moon, Sun, Camera, Briefcase, Image, 
-  MapPin, Phone, CheckCircle2, Link, Key, ChevronLeft, ChevronRight
+  MapPin, Phone, CheckCircle2, Link, Key, ChevronLeft, ChevronRight, Target
 } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -94,6 +94,11 @@ export default function App() {
   // Forgot password states
   const [showForgotPassword, setShowForgotPassword] = useState(false)
   const [forgotEmail, setForgotEmail] = useState('')
+
+  // Goal (Meta) states
+  const [monthlyGoal, setMonthlyGoal] = useState<number>(5000)
+  const [showGoalModal, setShowGoalModal] = useState(false)
+  const [goalInput, setGoalInput] = useState('5000')
 
   // Establishment Details
   const [establishmentLogo, setEstablishmentLogo] = useState<string | null>(null)
@@ -399,6 +404,18 @@ export default function App() {
           whatsapp_url: estData.whatsapp_url || '',
           tiktok_url: estData.tiktok_url || ''
         })
+
+        // Fetch monthly goal from metas
+        const { data: goalData } = await supabase
+          .from('metas')
+          .select('valor_meta')
+          .eq('estabelecimento_id', estData.id)
+          .single()
+        if (goalData) {
+          setMonthlyGoal(Number(goalData.valor_meta))
+          setGoalInput(goalData.valor_meta.toString())
+        }
+
         refreshAllData(estData.id)
       }
 
@@ -408,6 +425,36 @@ export default function App() {
       }
     } catch (error) {
       console.error(error)
+    }
+  }
+
+  async function handleSaveGoal() {
+    if (!establishmentId) return
+    setGlobalLoading(true)
+    try {
+      const value = parseFloat(goalInput)
+      if (isNaN(value) || value < 0) {
+        toast.error('Insira um valor de meta válido.')
+        return
+      }
+
+      const { error } = await supabase
+        .from('metas')
+        .upsert({
+          estabelecimento_id: establishmentId,
+          valor_meta: value,
+          atualizado_em: new Date().toISOString()
+        }, { onConflict: 'estabelecimento_id' })
+
+      if (error) throw error
+
+      setMonthlyGoal(value)
+      setShowGoalModal(false)
+      toast.success('Meta atualizada com sucesso!')
+    } catch (err: any) {
+      toast.error('Erro ao atualizar meta: ' + err.message)
+    } finally {
+      setGlobalLoading(false)
     }
   }
 
@@ -1205,13 +1252,13 @@ export default function App() {
             className="flex-1 flex flex-col min-h-screen bg-[var(--background)] text-[var(--foreground)] overflow-hidden transition-colors duration-300"
           >
             {/* Header - Fixed and spaced below standard notification notch area */}
-            <header className="px-6 pt-14 pb-4 flex items-center justify-between fixed top-0 left-0 right-0 z-30 border-b border-white/5 bg-zinc-950/90 backdrop-blur-md transition-colors duration-300 max-w-lg mx-auto">
+            <header className="px-6 pt-14 pb-4 flex items-center justify-between fixed top-0 left-0 right-0 z-30 border-b border-[var(--border)] bg-[var(--modal-bg-glass)] backdrop-blur-md transition-colors duration-300 max-w-lg mx-auto">
               <div className="flex items-center gap-2.5">
                 <div className="bg-[#fd9602] p-1.5 rounded-lg shadow-md shadow-[#fd9602]/20">
                   <Scissors className="text-zinc-950 w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-black text-white tracking-tight">Agendei<span className="text-[#fd9602]">.</span></h2>
+                  <h2 className="text-lg font-black text-[var(--foreground)] tracking-tight">Agendei<span className="text-[#fd9602]">.</span></h2>
                   <p className="text-[10px] text-[#fd9602] font-extrabold uppercase tracking-widest leading-none">Manager App</p>
                 </div>
               </div>
@@ -1219,7 +1266,7 @@ export default function App() {
                 {establishmentId ? (
                   <button 
                     onClick={() => refreshAllData(establishmentId)}
-                    className="p-2 rounded-full border border-white/5 bg-zinc-900/50 hover:bg-zinc-900 transition-colors"
+                    className="p-2 rounded-full border border-[var(--border)] bg-zinc-900/50 light:bg-zinc-100 hover:bg-zinc-900 light:hover:bg-zinc-200 text-[var(--foreground)] transition-colors"
                   >
                     <RefreshCw className="w-4 h-4 text-zinc-400" />
                   </button>
@@ -1312,6 +1359,21 @@ export default function App() {
                       <span className="text-2xl font-black text-[#fd9602] mt-1 block">
                         R$ {stats.monthlyBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
+                      <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                        <span>Meta: R$ {monthlyGoal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        <button 
+                          onClick={() => setShowGoalModal(true)} 
+                          className="text-[#fd9602] hover:underline cursor-pointer"
+                        >
+                          Ajustar Meta
+                        </button>
+                      </div>
+                      <div className="w-full bg-zinc-950/80 rounded-full h-1.5 mt-2 overflow-hidden border border-white/5 relative">
+                        <div 
+                          className="bg-[#fd9602] h-full rounded-full transition-all duration-500" 
+                          style={{ width: `${Math.min((stats.monthlyBalance / (monthlyGoal || 1)) * 100, 100)}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -1528,7 +1590,7 @@ export default function App() {
 
                   {/* Elegant micro Calendar Jump option */}
                   <div className="flex items-center justify-end">
-                    <label className="text-[10px] text-zinc-500 font-bold hover:text-[#fd9602] flex items-center gap-1.5 cursor-pointer transition-colors bg-zinc-900/20 px-3 py-1.5 rounded-full border border-white/5">
+                    <label className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold hover:text-[#fd9602] flex items-center gap-1.5 cursor-pointer transition-colors bg-white dark:bg-zinc-900/20 px-3 py-1.5 rounded-full border border-[var(--border)] shadow-sm hover:bg-zinc-50 dark:hover:bg-zinc-900/50">
                       <Calendar className="w-3.5 h-3.5 text-[#fd9602]" />
                       Ir para data específica
                       <input 
@@ -1713,7 +1775,7 @@ export default function App() {
                       placeholder="Pesquisar cliente..."
                       value={customerSearch}
                       onChange={e => setCustomerSearch(e.target.value)}
-                      className="w-full bg-zinc-900/60 border border-white/5 rounded-2xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
+                      className="w-full bg-zinc-900/60 light:bg-white border border-[var(--border)] text-[var(--foreground)] rounded-2xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-[#fd9602] shadow-sm"
                     />
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4" />
                   </div>
@@ -1791,7 +1853,7 @@ export default function App() {
                             onChange={e => setManagerAvatar(e.target.value)}
                             className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-[#fd9602]"
                           />
-                          <label className="bg-zinc-900 hover:bg-zinc-800 border border-white/5 rounded-2xl py-2 px-4 text-center text-xs font-black text-zinc-300 flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 transition-all">
+                          <label className="bg-zinc-900 light:bg-white hover:bg-zinc-800 light:hover:bg-zinc-100 border border-[var(--border)] rounded-2xl py-2 px-4 text-center text-xs font-black text-[var(--foreground)] flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 transition-all shadow-sm">
                             <Camera className="w-4 h-4 text-[#fd9602]" /> Importar e Ajustar Foto
                             <input 
                               type="file" 
@@ -1852,7 +1914,7 @@ export default function App() {
                             onChange={e => setEstablishmentLogo(e.target.value)}
                             className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-blue-500"
                           />
-                          <label className="bg-zinc-900 hover:bg-zinc-800 border border-white/5 rounded-2xl py-2 px-4 text-center text-xs font-black text-zinc-300 flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 transition-all">
+                          <label className="bg-zinc-900 light:bg-white hover:bg-zinc-800 light:hover:bg-zinc-100 border border-[var(--border)] rounded-2xl py-2 px-4 text-center text-xs font-black text-[var(--foreground)] flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 transition-all shadow-sm">
                             <Image className="w-4 h-4 text-blue-500" /> Importar e Ajustar Banner
                             <input 
                               type="file" 
@@ -2572,7 +2634,12 @@ export default function App() {
 
         {/* CUSTOMER MODAL */}
         {showCustomerModal && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/80 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/80 backdrop-blur-sm"
+          >
             <div className="absolute inset-0" onClick={() => setShowCustomerModal(false)} />
             
             <motion.div 
@@ -2580,18 +2647,18 @@ export default function App() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="w-full max-w-md bg-zinc-900 border-t border-white/10 ios-sheet p-6 relative z-10"
+              className="w-full max-w-md bg-zinc-900 light:bg-white border-t border-white/10 light:border-black/5 ios-sheet p-6 relative z-10 animate-fade-in-up"
             >
               {/* Drag Indicator */}
               <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5" onClick={() => setShowCustomerModal(false)} />
               
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
+                <h3 className="text-base font-black text-[var(--foreground)] flex items-center gap-2">
                   <User className="w-4 h-4 text-[#fd9602]" /> Cadastrar Cliente
                 </h3>
                 <button 
                   onClick={() => setShowCustomerModal(false)}
-                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 border border-white/5"
+                  className="text-zinc-500 hover:text-zinc-300 light:hover:text-zinc-700 p-1.5 rounded-full bg-zinc-950 light:bg-zinc-100 border border-white/5 light:border-black/5"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -2599,25 +2666,25 @@ export default function App() {
 
               <form onSubmit={handleCreateCustomer} className="space-y-4">
                 <div>
-                  <label className="block text-zinc-400 text-xs font-bold mb-1.5">Nome Completo</label>
+                  <label className="block text-zinc-400 light:text-zinc-500 text-xs font-bold mb-1.5">Nome Completo</label>
                   <input 
                     type="text" 
                     required
                     placeholder="Nome do cliente"
                     value={customerFormData.nome}
                     onChange={e => setCustomerFormData(prev => ({ ...prev, nome: e.target.value }))}
-                    className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
+                    className="w-full bg-zinc-950 light:bg-white border border-white/5 light:border-zinc-200 text-zinc-200 light:text-zinc-950 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-zinc-400 text-xs font-bold mb-1.5">E-mail (Opcional)</label>
+                  <label className="block text-zinc-400 light:text-zinc-500 text-xs font-bold mb-1.5">E-mail (Opcional)</label>
                   <input 
                     type="email" 
                     placeholder="cliente@email.com"
                     value={customerFormData.email}
                     onChange={e => setCustomerFormData(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
+                    className="w-full bg-zinc-950 light:bg-white border border-white/5 light:border-zinc-200 text-zinc-200 light:text-zinc-950 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
                   />
                 </div>
 
@@ -2629,7 +2696,7 @@ export default function App() {
                 </button>
               </form>
             </motion.div>
-          </div>
+          </motion.div>
         )}
 
         {/* SERVICES MANAGEMENT SLIDE MODAL (iOS STYLE AS SPECIFIED FOR SOMENTE 5 ICONES) */}
@@ -2879,6 +2946,71 @@ export default function App() {
                 >
                   Confirmar e Aplicar
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* GOAL (AJUSTAR META) MODAL */}
+        {showGoalModal && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/80 backdrop-blur-sm">
+            <div className="absolute inset-0" onClick={() => setShowGoalModal(false)} />
+            
+            <motion.div 
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              className="w-full max-w-md bg-zinc-900 light:bg-white border-t border-white/10 light:border-black/5 ios-sheet p-6 relative z-10"
+            >
+              {/* Drag Indicator */}
+              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5" onClick={() => setShowGoalModal(false)} />
+              
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-base font-black text-[var(--foreground)] flex items-center gap-2">
+                  <Target className="w-4 h-4 text-[#fd9602]" /> Ajustar Meta Mensal
+                </h3>
+                <button 
+                  onClick={() => setShowGoalModal(false)}
+                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 light:bg-zinc-100 border border-white/5 light:border-black/5"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-xs text-zinc-500 font-medium leading-relaxed">
+                  Defina um objetivo financeiro de faturamento ou saldo do mês para seu negócio. Isso ajuda a acompanhar a barra de progresso no painel inicial.
+                </p>
+
+                <div>
+                  <label className="block text-zinc-400 light:text-zinc-500 text-xs font-bold mb-1.5 uppercase tracking-wider">Valor Alvo (R$)</label>
+                  <input 
+                    type="number" 
+                    required
+                    placeholder="Ex: 5000"
+                    value={goalInput}
+                    onChange={e => setGoalInput(e.target.value)}
+                    className="w-full bg-zinc-950 light:bg-white border border-white/5 light:border-zinc-200 rounded-2xl px-4 py-3 text-sm text-zinc-200 light:text-zinc-950 focus:outline-none focus:border-[#fd9602]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowGoalModal(false)}
+                    className="bg-zinc-950 light:bg-zinc-100 border border-white/5 light:border-zinc-200 text-zinc-400 light:text-zinc-600 font-bold py-3.5 rounded-2xl text-xs active:scale-95 transition-transform"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={handleSaveGoal}
+                    className="bg-[#fd9602] hover:bg-[#e08502] text-zinc-950 font-black py-3.5 rounded-2xl text-xs active:scale-95 transition-transform shadow-lg shadow-[#fd9602]/10"
+                  >
+                    Salvar Meta
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
