@@ -202,3 +202,57 @@ body {
   border-color: rgba(0, 0, 0, 0.08) !important;
 }
 
+/* Scoped Light Mode Modal Overrides */
+.light .fixed.inset-0.z-50 .bg-zinc-900,
+.light .fixed.inset-0.z-50 .ios-sheet {
+  background-color: #ffffff !important;
+}
+
+.light .fixed.inset-0.z-50 .bg-zinc-950 {
+  background-color: #f4f4f5 !important;
+}
+
+.light .fixed.inset-0.z-50 .text-white,
+.light .fixed.inset-0.z-50 h3,
+.light .fixed.inset-0.z-50 h4,
+.light .fixed.inset-0.z-50 h5 {
+  color: #09090b !important;
+}
+
+.light .fixed.inset-0.z-50 .text-zinc-450,
+.light .fixed.inset-0.z-50 .text-zinc-400 {
+  color: #71717a !important;
+}
+
+.light .fixed.inset-0.z-50 .text-zinc-300,
+.light .fixed.inset-0.z-50 .text-zinc-200 {
+  color: #27272a !important;
+}
+
+.light .fixed.inset-0.z-50 .border-white\/10 {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.light .fixed.inset-0.z-50 .border-white\/5 {
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+.light .fixed.inset-0.z-50 input,
+.light .fixed.inset-0.z-50 select,
+.light .fixed.inset-0.z-50 textarea {
+  background-color: #f4f4f5 !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #09090b !important;
+}
+
+.light .fixed.inset-0.z-50 button:not(.btn-primary):not(.bg-emerald-500):not(.bg-red-500):not(.bg-gradient-to-r) {
+  background-color: #f4f4f5 !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #09090b !important;
+}
+
+.light .fixed.inset-0.z-50 .bg-zinc-950\/60,
+.light .fixed.inset-0.z-50 .bg-zinc-950\/40 {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
