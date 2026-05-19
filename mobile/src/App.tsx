@@ -860,7 +860,7 @@ export default function App() {
             </header>
 
             {/* TAB CONTAINER */}
-            <main className="flex-1 p-6 overflow-y-auto">
+            <main className="flex-1 p-6 pb-32 overflow-y-auto">
               {currentTab === 'home' && (
                 <div className="space-y-6">
                   {/* Greetings */}
@@ -1458,54 +1458,90 @@ export default function App() {
               )}
             </main>
 
-            {/* FLOATING TAB BAR */}
-            <nav className="fixed bottom-0 left-0 right-0 z-40 bg-zinc-950/80 backdrop-blur-lg border-t border-white/5 px-4 py-2 flex items-center justify-around">
+            {/* FLOATING TAB BAR (NUBANK STYLE) */}
+            <nav className="fixed bottom-6 left-4 right-4 z-40 bg-zinc-900/90 backdrop-blur-xl border border-white/10 px-4 py-3 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-around max-w-lg mx-auto">
               <button 
                 onClick={() => setCurrentTab('home')}
-                className={`flex flex-col items-center justify-center p-2 transition-all ${currentTab === 'home' ? 'text-[#fd9602] font-bold scale-105' : 'text-zinc-500'}`}
+                className={`relative flex flex-col items-center justify-center p-2 rounded-full transition-all ${currentTab === 'home' ? 'text-[#fd9602] font-bold scale-105' : 'text-zinc-500 hover:text-zinc-300'}`}
               >
                 <Scissors className="w-5 h-5" />
                 <span className="text-[9px] mt-1 font-bold">Painel</span>
+                {currentTab === 'home' && (
+                  <motion.div 
+                    layoutId="activeTabIndicator" 
+                    className="absolute -bottom-1.5 w-1 h-1 bg-[#fd9602] rounded-full" 
+                  />
+                )}
               </button>
 
               <button 
                 onClick={() => setCurrentTab('agenda')}
-                className={`flex flex-col items-center justify-center p-2 transition-all ${currentTab === 'agenda' ? 'text-[#fd9602] font-bold scale-105' : 'text-zinc-500'}`}
+                className={`relative flex flex-col items-center justify-center p-2 rounded-full transition-all ${currentTab === 'agenda' ? 'text-[#fd9602] font-bold scale-105' : 'text-zinc-500 hover:text-zinc-300'}`}
               >
                 <Calendar className="w-5 h-5" />
                 <span className="text-[9px] mt-1 font-bold">Agenda</span>
+                {currentTab === 'agenda' && (
+                  <motion.div 
+                    layoutId="activeTabIndicator" 
+                    className="absolute -bottom-1.5 w-1 h-1 bg-[#fd9602] rounded-full" 
+                  />
+                )}
               </button>
 
               <button 
                 onClick={() => setCurrentTab('finance')}
-                className={`flex flex-col items-center justify-center p-2 transition-all ${currentTab === 'finance' ? 'text-[#fd9602] font-bold scale-105' : 'text-zinc-500'}`}
+                className={`relative flex flex-col items-center justify-center p-2 rounded-full transition-all ${currentTab === 'finance' ? 'text-[#fd9602] font-bold scale-105' : 'text-zinc-500 hover:text-zinc-300'}`}
               >
                 <DollarSign className="w-5 h-5" />
                 <span className="text-[9px] mt-1 font-bold">Caixa</span>
+                {currentTab === 'finance' && (
+                  <motion.div 
+                    layoutId="activeTabIndicator" 
+                    className="absolute -bottom-1.5 w-1 h-1 bg-[#fd9602] rounded-full" 
+                  />
+                )}
               </button>
 
               <button 
                 onClick={() => setCurrentTab('customers')}
-                className={`flex flex-col items-center justify-center p-2 transition-all ${currentTab === 'customers' ? 'text-[#fd9602] font-bold scale-105' : 'text-zinc-500'}`}
+                className={`relative flex flex-col items-center justify-center p-2 rounded-full transition-all ${currentTab === 'customers' ? 'text-[#fd9602] font-bold scale-105' : 'text-zinc-500 hover:text-zinc-300'}`}
               >
                 <Users className="w-5 h-5" />
                 <span className="text-[9px] mt-1 font-bold">Clientes</span>
+                {currentTab === 'customers' && (
+                  <motion.div 
+                    layoutId="activeTabIndicator" 
+                    className="absolute -bottom-1.5 w-1 h-1 bg-[#fd9602] rounded-full" 
+                  />
+                )}
               </button>
 
               <button 
                 onClick={() => setCurrentTab('services')}
-                className={`flex flex-col items-center justify-center p-2 transition-all ${currentTab === 'services' ? 'text-[#fd9602] font-bold scale-105' : 'text-zinc-500'}`}
+                className={`relative flex flex-col items-center justify-center p-2 rounded-full transition-all ${currentTab === 'services' ? 'text-[#fd9602] font-bold scale-105' : 'text-zinc-500 hover:text-zinc-300'}`}
               >
                 <Tag className="w-5 h-5" />
                 <span className="text-[9px] mt-1 font-bold">Serviços</span>
+                {currentTab === 'services' && (
+                  <motion.div 
+                    layoutId="activeTabIndicator" 
+                    className="absolute -bottom-1.5 w-1 h-1 bg-[#fd9602] rounded-full" 
+                  />
+                )}
               </button>
 
               <button 
                 onClick={() => setCurrentTab('settings')}
-                className={`flex flex-col items-center justify-center p-2 transition-all ${currentTab === 'settings' ? 'text-[#fd9602] font-bold scale-105' : 'text-zinc-500'}`}
+                className={`relative flex flex-col items-center justify-center p-2 rounded-full transition-all ${currentTab === 'settings' ? 'text-[#fd9602] font-bold scale-105' : 'text-zinc-500 hover:text-zinc-300'}`}
               >
                 <Settings className="w-5 h-5" />
                 <span className="text-[9px] mt-1 font-bold">Ajustes</span>
+                {currentTab === 'settings' && (
+                  <motion.div 
+                    layoutId="activeTabIndicator" 
+                    className="absolute -bottom-1.5 w-1 h-1 bg-[#fd9602] rounded-full" 
+                  />
+                )}
               </button>
             </nav>
           </motion.div>
