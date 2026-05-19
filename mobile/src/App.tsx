@@ -824,48 +824,25 @@ export default function App() {
     }
   }
 
-  // BUGFIX: Paid / Concluido database trigger updates
+  // Uses RPC (SECURITY DEFINER function) to bypass RLS restrictions on agendamentos UPDATE
   async function updateAppointmentStatus(appId: string, newStatus: string) {
     if (!establishmentId) return
     setGlobalLoading(true)
     try {
-      // If status is PAGO, we update the status field of the appointment in database to CONCLUIDO
-      const dbStatus = newStatus === 'PAGO' ? 'CONCLUIDO' : newStatus
-
-      const { error } = await supabase
-        .from('agendamentos')
-        .update({ status: dbStatus })
-        .eq('id', appId)
+      const { data, error } = await supabase.rpc('atualizar_status_agendamento', {
+        p_agendamento_id: appId,
+        p_novo_status: newStatus
+      })
 
       if (error) throw error
 
-      // If status is PAGO / CONCLUIDO, we insert a payment record in pagamentos table to register faturamento
-      if (newStatus === 'PAGO' || dbStatus === 'CONCLUIDO') {
-        const app = allAppointments.find(a => a.id === appId)
-        if (app) {
-          // Check if payment already exists
-          const { data: existingPay } = await supabase
-            .from('pagamentos')
-            .select('id')
-            .eq('agendamento_id', appId)
-            .maybeSingle()
-
-          if (!existingPay) {
-            const { error: payError } = await supabase
-              .from('pagamentos')
-              .insert([{
-                agendamento_id: appId,
-                valor: app.totalPrice,
-                status: 'PAGO',
-                metodo: 'DINHEIRO_LOCAL',
-                pago_em: new Date().toISOString()
-              }])
-            if (payError) throw payError
-          }
-        }
+      // Check if the RPC returned a logical error (e.g., no permission)
+      if (data && data.error) {
+        throw new Error(data.error)
       }
 
-      toast.success(`Agendamento marcado como ${newStatus === 'PAGO' ? 'pago' : newStatus.toLowerCase()}!`)
+      const label = newStatus === 'PAGO' ? 'pago e concluído' : newStatus.toLowerCase()
+      toast.success(`Agendamento marcado como ${label}!`)
       refreshAllData(establishmentId)
     } catch (e: any) {
       toast.error('Erro ao atualizar agendamento: ' + e.message)

@@ -251,3 +251,56 @@ CREATE TRIGGER on_agendamento_concluido
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_agendamento_concluido();
 
+-- =============================================================
+-- RPC: atualizar_status_agendamento
+-- Bypassa RLS usando SECURITY DEFINER para evitar 400 no PATCH.
+-- Valida que o agendamento pertence ao estabelecimento do usuário
+-- antes de atualizar. Cria pagamento automaticamente se CONCLUIDO.
+-- =============================================================
+CREATE OR REPLACE FUNCTION public.atualizar_status_agendamento(
+  p_agendamento_id UUID,
+  p_novo_status TEXT
+)
+RETURNS JSON AS $$
+DECLARE
+  v_agendamento public.agendamentos%ROWTYPE;
+  v_db_status public.status_agendamento;
+  v_est_owner UUID;
+BEGIN
+  -- Map PAGO → CONCLUIDO (o enum não tem PAGO)
+  IF p_novo_status = 'PAGO' THEN
+    v_db_status := 'CONCLUIDO';
+  ELSE
+    v_db_status := p_novo_status::public.status_agendamento;
+  END IF;
+
+  -- Verifica se o agendamento pertence ao estabelecimento do usuário autenticado
+  SELECT a.*, e.proprietario_id INTO v_agendamento
+  FROM public.agendamentos a
+  JOIN public.estabelecimentos e ON e.id = a.estabelecimento_id
+  WHERE a.id = p_agendamento_id
+    AND e.proprietario_id = auth.uid();
+
+  IF NOT FOUND THEN
+    RETURN json_build_object('error', 'Agendamento não encontrado ou sem permissão');
+  END IF;
+
+  -- Atualiza o status
+  UPDATE public.agendamentos
+  SET status = v_db_status
+  WHERE id = p_agendamento_id;
+
+  -- Se marcado como CONCLUIDO/PAGO, cria registro de pagamento se não existir
+  IF v_db_status = 'CONCLUIDO' THEN
+    INSERT INTO public.pagamentos (agendamento_id, valor, metodo, status, pago_em)
+    SELECT p_agendamento_id, v_agendamento.preco_total, 'DINHEIRO_LOCAL', 'PAGO', NOW()
+    WHERE NOT EXISTS (
+      SELECT 1 FROM public.pagamentos WHERE agendamento_id = p_agendamento_id
+    );
+  END IF;
+
+  RETURN json_build_object('success', true, 'status', v_db_status::TEXT);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+
