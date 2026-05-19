@@ -5,13 +5,16 @@ import {
   Plus, Loader2, ArrowUpRight, ArrowDownRight, Wallet, Trash2, 
   LogOut, Search, Eye, EyeOff, Check, X, Tag, User, 
   RefreshCw, Coffee, Ban, Moon, Sun, Camera, Briefcase, Image, 
-  MapPin, Phone, CheckCircle2, Link, Key, ChevronLeft, ChevronRight, Target,
+  MapPin, Phone, CheckCircle2, Link, Key, ChevronLeft, ChevronRight,
   Bell, Star
 } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FirebaseAnalytics } from '@capacitor-community/firebase-analytics'
 import { PushNotifications } from '@capacitor/push-notifications'
+import { GoalModal } from './components/GoalModal'
+import { PixPaymentModal } from './components/PixPaymentModal'
+import { ReviewsModal } from './components/ReviewsModal'
 
 // Safe wrappers for Native APIs to prevent crashes when testing in web browsers
 const safeInitAnalytics = async () => {
@@ -3550,301 +3553,43 @@ export default function App() {
         )}
 
         {/* REVIEWS MODAL */}
-        {showReviewsModal && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/80 backdrop-blur-sm">
-            <div className="absolute inset-0" onClick={() => setShowReviewsModal(false)} />
-            
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="w-full max-w-md bg-zinc-900 border-t border-white/10 ios-sheet p-6 relative z-10 h-[80vh] flex flex-col"
-            >
-              {/* Drag Indicator */}
-              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5 shrink-0" onClick={() => setShowReviewsModal(false)} />
-              
-              <div className="flex items-center justify-between mb-5 shrink-0">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <Star className="w-4 h-4 text-[#fd9602] fill-[#fd9602]/20" /> Avaliações & Feedback
-                </h3>
-                <button 
-                  onClick={() => setShowReviewsModal(false)}
-                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 border border-white/5"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-                <div className="bg-zinc-950/50 border border-white/5 p-4 rounded-2xl flex items-center justify-between shrink-0">
-                  <div>
-                    <span className="text-3xl font-black text-white">4.8</span>
-                    <span className="text-xs text-zinc-500 block mt-0.5">Média de 48 avaliações</span>
-                  </div>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map(star => (
-                      <Star key={star} className="w-4.5 h-4.5 text-[#fd9602] fill-[#fd9602]" />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {reviews.map(r => (
-                    <div 
-                      key={r.id}
-                      className="bg-zinc-950/30 border border-white/5 p-4 rounded-2xl space-y-2.5"
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <span className="text-xs font-bold text-zinc-200 block">{r.customer}</span>
-                          <span className="text-[9px] text-zinc-500 block mt-0.5">{r.date}</span>
-                        </div>
-                        <div className="flex gap-0.5">
-                          {[1, 2, 3, 4, 5].map(star => (
-                            <Star 
-                              key={star} 
-                              className={`w-3 h-3 ${
-                                star <= r.rating 
-                                  ? 'text-[#fd9602] fill-[#fd9602]' 
-                                  : 'text-zinc-700'
-                              }`} 
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-xs text-zinc-300 leading-relaxed font-medium">{r.comment}</p>
-                      
-                      {r.media && (
-                        <div className="w-24 h-24 rounded-xl overflow-hidden border border-white/5 mt-2">
-                          <img 
-                            src={r.media} 
-                            alt="Media anexo" 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
+        <ReviewsModal 
+          isOpen={showReviewsModal}
+          onClose={() => setShowReviewsModal(false)}
+          reviews={reviews}
+        />
 
         {/* PIX PAYMENT MODAL */}
-        {showPixModal && pixPaymentApp && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/80 backdrop-blur-sm">
-            <div className="absolute inset-0" onClick={() => setShowPixModal(false)} />
-            
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="w-full max-w-md bg-zinc-900 border-t border-white/10 ios-sheet p-6 relative z-10"
-            >
-              {/* Drag Indicator */}
-              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5" onClick={() => setShowPixModal(false)} />
-              
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <Wallet className="w-4 h-4 text-[#fd9602]" /> Receber via Pix
-                </h3>
-                <button 
-                  onClick={() => setShowPixModal(false)}
-                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 border border-white/5"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {!pixKey ? (
-                <div className="space-y-4">
-                  <p className="text-xs text-zinc-400 leading-relaxed">
-                    Você ainda não configurou sua chave Pix para receber pagamentos rápidos. Insira sua chave Pix (CPF, E-mail, Celular ou Chave Aleatória) abaixo para habilitar a geração de QR Code automático:
-                  </p>
-                  
-                  <div>
-                    <label className="block text-zinc-400 text-xs font-bold mb-1.5">Sua Chave Pix</label>
-                    <input 
-                      type="text" 
-                      placeholder="Ex: pix@agendei.com ou 123.456.789-00"
-                      value={pixKeyInput}
-                      onChange={e => setPixKeyInput(e.target.value)}
-                      className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
-                    />
-                  </div>
-
-                  <button 
-                    onClick={() => {
-                      if (!pixKeyInput.trim()) return;
-                      localStorage.setItem('agendei_pix_key', pixKeyInput);
-                      setPixKey(pixKeyInput);
-                      toast.success('Chave Pix configurada!');
-                    }}
-                    className="w-full btn-primary h-12 flex items-center justify-center font-bold text-sm"
-                  >
-                    Salvar Chave Pix
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-5 text-center">
-                  <div className="bg-zinc-950 border border-white/5 p-4 rounded-2xl inline-block mx-auto">
-                    {/* Generates pix dynamic payload representation */}
-                    {(() => {
-                      const amount = pixPaymentApp.totalPrice;
-                      // Static Pix code generator compliant with Brazilian EMV (BR Code) standards
-                      const cleanKey = pixKey.replace(/[^a-zA-Z0-9@.-]/g, '');
-                      const amountStr = amount.toFixed(2);
-                      const keyLen = String(cleanKey.length).padStart(2, '0');
-                      const amountLen = String(amountStr.length).padStart(2, '0');
-                      
-                      const merchantAccount = `0014BR.GOV.BCB.PIX01${keyLen}${cleanKey}`;
-                      const merchantAccountLen = String(merchantAccount.length).padStart(2, '0');
-                      
-                      const rawPix = [
-                        '000201', // Payload Format Indicator
-                        '26' + merchantAccountLen + merchantAccount, // Merchant Account Information
-                        '52040000', // Merchant Category Code
-                        '5303986', // Transaction Currency (BRL)
-                        '54' + amountLen + amountStr, // Transaction Amount
-                        '5802BR', // Country Code
-                        '5915AGENDEI BARBER', // Merchant Name
-                        '6009SAO PAULO', // Merchant City
-                        '62070503***', // Additional Data Field Template (No reference)
-                        '6304' // CRC Prefix
-                      ].join('');
-
-                      // Quick Mock CRC to complete the Pix standard string
-                      const pixPayload = rawPix + '1A3F'; 
-                      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(pixPayload)}`;
-
-                      return (
-                        <div className="space-y-4">
-                          <div className="w-48 h-48 bg-white p-2 rounded-xl mx-auto flex items-center justify-center border border-zinc-200">
-                            <img src={qrCodeUrl} alt="QR Code Pix" className="w-full h-full" />
-                          </div>
-                          
-                          <div className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">
-                            Valor do Pix: <span className="text-[#fd9602]">R$ {amount.toFixed(2)}</span>
-                          </div>
-
-                          <div className="flex flex-col gap-2">
-                            <button 
-                              onClick={() => {
-                                navigator.clipboard.writeText(pixPayload);
-                                toast.success('Pix Copia e Cola copiado!');
-                              }}
-                              className="px-4 py-2 bg-zinc-900 border border-white/5 rounded-xl text-zinc-300 hover:bg-zinc-800 text-xs font-bold transition-all inline-flex items-center gap-1.5 justify-center"
-                            >
-                              📋 Copiar Código Copia e Cola
-                            </button>
-                            <button 
-                              onClick={() => {
-                                setPixKey('');
-                                localStorage.removeItem('agendei_pix_key');
-                              }}
-                              className="text-[10px] text-zinc-650 hover:underline"
-                            >
-                              Alterar Chave Pix Cadastrada
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })()}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <button 
-                      onClick={() => {
-                        updateAppointmentStatus(pixPaymentApp.id, 'PAGO');
-                        setShowPixModal(false);
-                      }}
-                      className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black py-3.5 rounded-2xl text-xs active:scale-95 transition-transform"
-                    >
-                      Confirmar Pix Recebido
-                    </button>
-                    <button 
-                      onClick={() => {
-                        updateAppointmentStatus(pixPaymentApp.id, 'PAGO');
-                        setShowPixModal(false);
-                      }}
-                      className="bg-zinc-950 hover:bg-zinc-900 border border-white/5 text-zinc-400 font-bold py-3.5 rounded-2xl text-xs active:scale-95 transition-transform"
-                    >
-                      Pagamento Manual
-                    </button>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          </div>
-        )}
+        <PixPaymentModal 
+          isOpen={showPixModal}
+          onClose={() => setShowPixModal(false)}
+          appointment={pixPaymentApp}
+          pixKey={pixKey}
+          pixKeyInput={pixKeyInput}
+          onPixKeyInputChange={setPixKeyInput}
+          onSavePixKey={(key) => {
+            localStorage.setItem('agendei_pix_key', key)
+            setPixKey(key)
+            toast.success('Chave Pix configurada!')
+          }}
+          onChangePixKey={() => {
+            setPixKey('')
+            localStorage.removeItem('agendei_pix_key')
+          }}
+          onConfirmPayment={(appId) => {
+            updateAppointmentStatus(appId, 'PAGO')
+            setShowPixModal(false)
+          }}
+        />
 
         {/* GOAL (AJUSTAR META) MODAL */}
-        {showGoalModal && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/80 backdrop-blur-sm">
-            <div className="absolute inset-0" onClick={() => setShowGoalModal(false)} />
-            
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="w-full max-w-md bg-zinc-900 light:bg-white border-t border-white/10 light:border-black/5 ios-sheet p-6 relative z-10"
-            >
-              {/* Drag Indicator */}
-              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5" onClick={() => setShowGoalModal(false)} />
-              
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-black text-[var(--foreground)] flex items-center gap-2">
-                  <Target className="w-4 h-4 text-[#fd9602]" /> Ajustar Meta Mensal
-                </h3>
-                <button 
-                  onClick={() => setShowGoalModal(false)}
-                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 light:bg-zinc-100 border border-white/5 light:border-black/5"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <p className="text-xs text-zinc-500 font-medium leading-relaxed">
-                  Defina um objetivo financeiro de faturamento ou saldo do mês para seu negócio. Isso ajuda a acompanhar a barra de progresso no painel inicial.
-                </p>
-
-                <div>
-                  <label className="block text-zinc-400 light:text-zinc-500 text-xs font-bold mb-1.5 uppercase tracking-wider">Valor Alvo (R$)</label>
-                  <input 
-                    type="number" 
-                    required
-                    placeholder="Ex: 5000"
-                    value={goalInput}
-                    onChange={e => setGoalInput(e.target.value)}
-                    className="w-full bg-zinc-950 light:bg-white border border-white/5 light:border-zinc-200 rounded-2xl px-4 py-3 text-sm text-zinc-200 light:text-zinc-950 focus:outline-none focus:border-[#fd9602]"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <button 
-                    type="button" 
-                    onClick={() => setShowGoalModal(false)}
-                    className="bg-zinc-950 light:bg-zinc-100 border border-white/5 light:border-zinc-200 text-zinc-400 light:text-zinc-600 font-bold py-3.5 rounded-2xl text-xs active:scale-95 transition-transform"
-                  >
-                    Cancelar
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={handleSaveGoal}
-                    className="bg-[#fd9602] hover:bg-[#e08502] text-zinc-950 font-black py-3.5 rounded-2xl text-xs active:scale-95 transition-transform shadow-lg shadow-[#fd9602]/10"
-                  >
-                    Salvar Meta
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
+        <GoalModal 
+          isOpen={showGoalModal}
+          onClose={() => setShowGoalModal(false)}
+          goalInput={goalInput}
+          onGoalInputChange={setGoalInput}
+          onSave={handleSaveGoal}
+        />
 
       </AnimatePresence>
     </div>
