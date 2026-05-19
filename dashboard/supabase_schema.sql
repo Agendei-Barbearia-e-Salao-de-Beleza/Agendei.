@@ -61,7 +61,9 @@ CREATE TABLE IF NOT EXISTS public.servicos (
     duracao_minutos INTEGER NOT NULL,
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     categoria CHARACTER VARYING,
-    tipo CHARACTER VARYING DEFAULT 'SERVICE'
+    tipo CHARACTER VARYING DEFAULT 'SERVICE',
+    imagem_url TEXT,
+    video_url TEXT
 );
 
 CREATE TABLE IF NOT EXISTS public.agendamentos (
@@ -233,12 +235,21 @@ CREATE TRIGGER on_auth_user_created
 -- Gatilho de Agendamento Concluído para Gerar Pagamento Automaticamente (Faturamento)
 CREATE OR REPLACE FUNCTION public.handle_agendamento_concluido()
 RETURNS TRIGGER AS $$
+DECLARE
+  v_metodo public.metodo_pagamento;
 BEGIN
   IF NEW.status = 'CONCLUIDO' AND (TG_OP = 'INSERT' OR OLD.status IS NULL OR OLD.status <> 'CONCLUIDO') THEN
     -- Garante que o registro de pagamento existe para contabilizar faturamento
     IF NOT EXISTS (SELECT 1 FROM public.pagamentos WHERE agendamento_id = NEW.id) THEN
+      -- Descobre o primeiro valor válido do enum metodo_pagamento de forma segura
+      SELECT enumlabel::public.metodo_pagamento INTO v_metodo
+      FROM pg_enum
+      WHERE enumtypid = 'public.metodo_pagamento'::regtype
+      ORDER BY enumsortorder
+      LIMIT 1;
+
       INSERT INTO public.pagamentos (agendamento_id, valor, metodo, status, pago_em)
-      VALUES (NEW.id, NEW.preco_total, 'DINHEIRO_LOCAL', 'PAGO', CURRENT_TIMESTAMP);
+      VALUES (NEW.id, NEW.preco_total, v_metodo, 'PAGO', CURRENT_TIMESTAMP);
     END IF;
   END IF;
   RETURN NEW;
@@ -310,6 +321,4 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 GRANT EXECUTE ON FUNCTION public.atualizar_status_agendamento TO authenticated;
-
-
 
