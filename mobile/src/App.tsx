@@ -4,12 +4,62 @@ import {
   Scissors, Calendar, DollarSign, Clock, Users, 
   Plus, Loader2, ArrowUpRight, ArrowDownRight, Wallet, Trash2, 
   LogOut, Search, Eye, EyeOff, Check, X, Tag, User, 
-  RefreshCw, Coffee, Ban, Moon, Sun, Camera, Briefcase, Image, 
-  MapPin, Phone, CheckCircle2, Link, Key, ChevronLeft, ChevronRight, Target,
+  RefreshCw, Coffee, Ban, Moon, Sun, Briefcase, 
+  MapPin, Phone, Link, Key, ChevronLeft, ChevronRight,
   Bell, Star
 } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
+import { FirebaseAnalytics } from '@capacitor-community/firebase-analytics'
+import { PushNotifications } from '@capacitor/push-notifications'
+import { GoalModal } from './components/GoalModal'
+import { PixPaymentModal } from './components/PixPaymentModal'
+import { ReviewsModal } from './components/ReviewsModal'
+import { ManagerDetailsModal } from './components/ManagerDetailsModal'
+import { BusinessDetailsModal } from './components/BusinessDetailsModal'
+import { SocialMediaModal } from './components/SocialMediaModal'
+import { AgendaPausesModal } from './components/AgendaPausesModal'
+import { ServiceListModal } from './components/ServiceListModal'
+import { ServiceFormModal } from './components/ServiceFormModal'
+import { ImageAdjustmentModal } from './components/ImageAdjustmentModal'
+import { NotificationsModal } from './components/NotificationsModal'
+import { CatalogPreviewModal } from './components/CatalogPreviewModal'
+
+// Safe wrappers for Native APIs to prevent crashes when testing in web browsers
+const safeInitAnalytics = async () => {
+  try {
+    await FirebaseAnalytics.setCollectionEnabled({ enabled: true })
+  } catch (e) {
+    console.warn('Firebase Analytics not supported in this environment.', e)
+  }
+}
+
+const safeLogEvent = async (name: string, params?: any) => {
+  try {
+    await FirebaseAnalytics.logEvent({ name, params })
+  } catch (e) {
+    console.warn('Firebase Analytics event log skipped:', name, e)
+  }
+}
+
+const safeSetCurrentScreen = async (screenName: string) => {
+  try {
+    await FirebaseAnalytics.setScreenName({ screenName, nameOverride: 'App' })
+  } catch (e) {
+    console.warn('Firebase Analytics screen view skipped:', screenName, e)
+  }
+}
+
+const safeRegisterPush = async () => {
+  try {
+    const result = await PushNotifications.requestPermissions()
+    if (result.receive === 'granted') {
+      await PushNotifications.register()
+    }
+  } catch (e) {
+    console.warn('Push Notifications not supported in this environment.', e)
+  }
+}
 
 interface Service {
   id: string
@@ -36,24 +86,7 @@ interface Customer {
   email?: string
 }
 
-// Unsplash Preset Avatars & Logos for beautiful manager choice
-const PRESET_AVATARS = [
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', // Female Stylish
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', // Male Modern
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80', // Female Smile
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80', // Male Elegant
-  'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80', // Casual Female
-  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80'  // Casual Male
-]
 
-const PRESET_LOGOS = [
-  'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=600&auto=format&fit=crop&q=80', // Classic Barbershop
-  'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600&auto=format&fit=crop&q=80', // Modern Hair Salon
-  'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600&auto=format&fit=crop&q=80', // Spa & Beauty Parlor
-  'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=600&auto=format&fit=crop&q=80', // Vintage Grooming Salon
-  'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600&auto=format&fit=crop&q=80', // Elegant Hair Styling Room
-  'https://images.unsplash.com/photo-1605497746444-ac9da58d7bfc?w=600&auto=format&fit=crop&q=80'  // Luxury Shave Barber
-]
 
 const VALID_DDDS = [
   11, 12, 13, 14, 15, 16, 17, 18, 19,
@@ -67,14 +100,7 @@ const VALID_DDDS = [
   91, 92, 93, 94, 95, 96, 97, 98, 99
 ]
 
-const formatBrazilianPhone = (value: string) => {
-  const digits = value.replace(/\D/g, '')
-  if (digits.length === 0) return ''
-  if (digits.length <= 2) return `(${digits}`
-  if (digits.length <= 6) return `(${digits.substring(0, 2)}) ${digits.substring(2)}`
-  if (digits.length <= 10) return `(${digits.substring(0, 2)}) ${digits.substring(2, 6)}-${digits.substring(6)}`
-  return `(${digits.substring(0, 2)}) ${digits.substring(2, 7)}-${digits.substring(7, 11)}`
-}
+
 
 export default function App() {
   const [authState, setAuthState] = useState<'loading' | 'login' | 'main'>('loading')
@@ -246,6 +272,10 @@ export default function App() {
   const [showCatalogModal, setShowCatalogModal] = useState(false)
   const [showReviewsModal, setShowReviewsModal] = useState(false)
   const [showPixModal, setShowPixModal] = useState(false)
+  const [showManagerModal, setShowManagerModal] = useState(false)
+  const [showBusinessModal, setShowBusinessModal] = useState(false)
+  const [showSocialModal, setShowSocialModal] = useState(false)
+  const [showPausesModal, setShowPausesModal] = useState(false)
   const [pixPaymentApp, setPixPaymentApp] = useState<Appointment | null>(null)
   const [pixKey, setPixKey] = useState(() => localStorage.getItem('agendei_pix_key') || '')
   const [pixKeyInput, setPixKeyInput] = useState('')
@@ -253,6 +283,68 @@ export default function App() {
   // Reactive lists (populated dynamically from database entries)
   const [notifications, setNotifications] = useState<{ id: string; title: string; description: string; time: string; unread: boolean; }[]>([])
   const [reviews, setReviews] = useState<{ id: string; customer: string; rating: number; comment: string; date: string; media?: string; }[]>([])
+
+  // Initialize Firebase Analytics & Register Push Notifications Listeners
+  useEffect(() => {
+    safeInitAnalytics()
+    safeSetCurrentScreen("Splash/Carregamento")
+
+    try {
+      // Listen to push notification callbacks
+      PushNotifications.addListener('registration', async token => {
+        console.log('FCM Token do aparelho:', token.value)
+        localStorage.setItem('agendei_fcm_token', token.value)
+        
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session?.user?.id) {
+            const { error } = await supabase
+              .from('usuarios')
+              .update({ firebase_token: token.value })
+              .eq('id', session.user.id)
+            if (error) console.error('Erro ao salvar token FCM no Supabase:', error)
+            else console.log('FCM Token salvo com sucesso no perfil do usuário no Supabase!')
+          }
+        } catch (e) {
+          console.error('Erro ao sincronizar token FCM recém-registrado:', e)
+        }
+      })
+
+      PushNotifications.addListener('pushNotificationReceived', notification => {
+        toast.success(`🔔 ${notification.title}\n${notification.body}`)
+      })
+
+      PushNotifications.addListener('pushNotificationActionPerformed', action => {
+        console.log('Notificação clicada:', action.notification)
+      })
+    } catch (err) {
+      console.warn('Native Push Notification listeners not active in web mode.')
+    }
+  }, [])
+
+  // Track Screen Changes with Analytics
+  useEffect(() => {
+    if (authState === 'main') {
+      const tabLabels: Record<string, string> = {
+        home: "Dashboard Principal",
+        agenda: "Agenda de Horários",
+        finance: "Painel Financeiro",
+        customers: "Lista de Clientes",
+        profile: "Perfil do Estabelecimento"
+      }
+      safeSetCurrentScreen(tabLabels[currentTab] || currentTab)
+    }
+  }, [currentTab, authState])
+
+  // Track Pix QR Code generation events on Firebase Analytics
+  useEffect(() => {
+    if (showPixModal && pixPaymentApp) {
+      safeLogEvent("pix_code_generated", {
+        value: pixPaymentApp.totalPrice,
+        currency: "BRL"
+      })
+    }
+  }, [showPixModal, pixPaymentApp])
 
   // Form States
   const [appFormData, setAppFormData] = useState({
@@ -292,7 +384,6 @@ export default function App() {
 
   // Search Filters
   const [customerSearch, setCustomerSearch] = useState('')
-  const [serviceSearch, setServiceSearch] = useState('')
 
   // Calculate if paused today
   const isPausedToday = useMemo(() => {
@@ -327,6 +418,20 @@ export default function App() {
         setUserName(session.user.user_metadata?.nome || 'Gerente')
         setAuthState('main')
         fetchEstablishmentData(session.user.id)
+        safeRegisterPush()
+        
+        // Sincroniza token FCM do localStorage se disponível
+        const savedToken = localStorage.getItem('agendei_fcm_token')
+        if (savedToken) {
+          supabase
+            .from('usuarios')
+            .update({ firebase_token: savedToken })
+            .eq('id', session.user.id)
+            .then(({ error }) => {
+              if (error) console.error('Erro ao sincronizar token salvo no Supabase:', error)
+              else console.log('Token FCM pré-existente sincronizado no Supabase!')
+            })
+        }
       } else {
         setAuthState('login')
       }
@@ -363,6 +468,20 @@ export default function App() {
         toast.success('Login realizado com sucesso!')
         setAuthState('main')
         fetchEstablishmentData(data.user.id)
+        safeRegisterPush()
+        
+        // Sincroniza token FCM do localStorage se disponível
+        const savedToken = localStorage.getItem('agendei_fcm_token')
+        if (savedToken) {
+          supabase
+            .from('usuarios')
+            .update({ firebase_token: savedToken })
+            .eq('id', data.user.id)
+            .then(({ error }) => {
+              if (error) console.error('Erro ao sincronizar token salvo no Supabase:', error)
+              else console.log('Token FCM pré-existente sincronizado no Supabase!')
+            })
+        }
       }
     } catch (error: any) {
       toast.error(error.message || 'Credenciais inválidas.')
@@ -1237,10 +1356,6 @@ export default function App() {
     return customers.filter(c => c.nome.toLowerCase().includes(customerSearch.toLowerCase()))
   }, [customers, customerSearch])
 
-  const filteredServices = useMemo(() => {
-    return services.filter(s => s.nome.toLowerCase().includes(serviceSearch.toLowerCase()))
-  }, [services, serviceSearch])
-
   const agendaAppointments = useMemo(() => {
     return allAppointments.filter(a => a.date === selectedDate)
   }, [allAppointments, selectedDate])
@@ -2072,336 +2187,149 @@ export default function App() {
                 </div>
               )}
 
-              {/* TAB 5: PERFIL (MERGES CUSTOM SETTINGS & ENTIRE DATABASE CONFIGS) */}
+              {/* TAB 5: PERFIL (REDESIGNED WITH CARDS ELEGANTES E NAVEGAÇÃO DE SUB-TELAS) */}
               {currentTab === 'profile' && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-2xl font-black text-white">Perfil do Estabelecimento</h2>
-                    <p className="text-zinc-500 text-sm">Gerencie dados do perfil e preferências do sistema.</p>
+                    <h2 className="text-2xl font-black text-white">Configurações</h2>
+                    <p className="text-zinc-500 text-sm">Gerencie o perfil do estabelecimento e preferências.</p>
                   </div>
 
-                  {/* Curved Glass Profile Form Card */}
-                  <div className="glass-card p-6 rounded-3xl space-y-5 bg-zinc-900/40 relative">
-                    <h3 className="text-sm font-black text-white flex items-center gap-1.5 uppercase tracking-wide">
-                      <User className="w-4 h-4 text-[#fd9602]" /> Detalhes do Gerente
-                    </h3>
+                  {/* Perfil Quick Overview Banner */}
+                  <div className="relative rounded-3xl overflow-hidden h-36 border border-white/5 flex items-end p-5 shrink-0 bg-cover bg-center" style={{ backgroundImage: `url(${establishmentLogo || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=600&auto=format&fit=crop&q=80'})` }}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/90 via-zinc-950/40 to-transparent" />
+                    <div className="relative z-10 flex items-center gap-3.5 w-full">
+                      {managerAvatar ? (
+                        <img src={managerAvatar} alt="Manager" className="w-12 h-12 rounded-full object-cover border-2 border-[#fd9602]" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-[#fd9602]/10 border-2 border-dashed border-[#fd9602]/30 flex items-center justify-center text-[#fd9602]">
+                          <User className="w-5 h-5" />
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="text-base font-black text-white">{establishmentData.nome}</h3>
+                        <p className="text-zinc-400 text-xs font-semibold">Gerente: {userName}</p>
+                      </div>
+                    </div>
+                  </div>
 
-                    {/* Preset Avatars Selector */}
-                    <div>
-                      <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-2">Foto do Gerente (Avatar)</label>
-                      <div className="flex items-center gap-4 mb-3">
-                        {managerAvatar ? (
-                          <img src={managerAvatar} alt="Avatar Preview" className="w-14 h-14 rounded-full object-cover border-2 border-[#fd9602]" />
-                        ) : (
-                          <div className="w-14 h-14 rounded-full bg-[#fd9602]/10 border-2 border-dashed border-[#fd9602]/30 flex items-center justify-center text-[#fd9602]">
-                            <Camera className="w-5 h-5" />
-                          </div>
-                        )}
-                        <div className="flex-1 flex flex-col gap-2">
-                          <input 
-                            type="text" 
-                            placeholder="Link da imagem..."
-                            value={managerAvatar || ''}
-                            onChange={e => setManagerAvatar(e.target.value)}
-                            className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-[#fd9602]"
-                          />
-                          <label className="bg-zinc-900 light:bg-white hover:bg-zinc-800 light:hover:bg-zinc-100 border border-[var(--border)] rounded-2xl py-2 px-4 text-center text-xs font-black text-[var(--foreground)] flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 transition-all shadow-sm">
-                            <Camera className="w-4 h-4 text-[#fd9602]" /> Importar e Ajustar Foto
-                            <input 
-                              type="file" 
-                              accept="image/*" 
-                              className="hidden" 
-                              onChange={e => handleImageSelect(e, 'avatar')}
-                            />
-                          </label>
+                  {/* Config Menu Grid */}
+                  <div className="space-y-3">
+                    {/* Card 1: Detalhes do Gerente */}
+                    <button 
+                      onClick={() => setShowManagerModal(true)}
+                      className="w-full flex items-center justify-between p-4 rounded-3xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-900/80 transition-all text-left active:scale-[0.99]"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-[#fd9602]/10 flex items-center justify-center">
+                          <User className="w-5 h-5 text-[#fd9602]" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-zinc-200">Detalhes do Gerente</h4>
+                          <p className="text-zinc-500 text-[10px] mt-0.5">Altere foto de perfil e nome do gerente</p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-6 gap-2">
-                        {PRESET_AVATARS.map((url, i) => (
-                          <button 
-                            key={i} 
-                            type="button"
-                            onClick={() => setManagerAvatar(url)}
-                            className={`rounded-full overflow-hidden h-9 w-9 border-2 ${managerAvatar === url ? 'border-[#fd9602] scale-105' : 'border-transparent'}`}
-                          >
-                            <img src={url} alt={`Avatar Preset ${i}`} className="w-full h-full object-cover" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                      <ChevronRight className="w-4 h-4 text-zinc-500" />
+                    </button>
 
-                    <div>
-                      <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1.5">Nome do Gerente</label>
-                      <input 
-                        type="text" 
-                        value={userName}
-                        onChange={e => setUserName(e.target.value)}
-                        className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Establishment settings */}
-                  <div className="glass-card p-6 rounded-3xl space-y-5 bg-zinc-900/40">
-                    <h3 className="text-sm font-black text-white flex items-center gap-1.5 uppercase tracking-wide">
-                      <Briefcase className="w-4 h-4 text-blue-500" /> Detalhes do Negócio
-                    </h3>
-
-                    {/* Preset Banner Selector */}
-                    <div>
-                      <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-2">Foto de Capa do Salão</label>
-                      <div className="flex items-center gap-4 mb-3">
-                        {establishmentLogo ? (
-                          <img src={establishmentLogo} alt="Logo Preview" className="w-14 h-10 rounded-xl object-cover border border-white/10" />
-                        ) : (
-                          <div className="w-14 h-10 rounded-xl bg-zinc-950 border border-dashed border-white/10 flex items-center justify-center text-zinc-600">
-                            <Image className="w-4 h-4" />
-                          </div>
-                        )}
-                        <div className="flex-1 flex flex-col gap-2">
-                          <input 
-                            type="text" 
-                            placeholder="Link do banner..."
-                            value={establishmentLogo || ''}
-                            onChange={e => setEstablishmentLogo(e.target.value)}
-                            className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-blue-500"
-                          />
-                          <label className="bg-zinc-900 light:bg-white hover:bg-zinc-800 light:hover:bg-zinc-100 border border-[var(--border)] rounded-2xl py-2 px-4 text-center text-xs font-black text-[var(--foreground)] flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 transition-all shadow-sm">
-                            <Image className="w-4 h-4 text-blue-500" /> Importar e Ajustar Banner
-                            <input 
-                              type="file" 
-                              accept="image/*" 
-                              className="hidden" 
-                              onChange={e => handleImageSelect(e, 'banner')}
-                            />
-                          </label>
+                    {/* Card 2: Detalhes do Negócio */}
+                    <button 
+                      onClick={() => setShowBusinessModal(true)}
+                      className="w-full flex items-center justify-between p-4 rounded-3xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-900/80 transition-all text-left active:scale-[0.99]"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-blue-500/10 flex items-center justify-center">
+                          <Briefcase className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-zinc-200">Detalhes do Negócio</h4>
+                          <p className="text-zinc-500 text-[10px] mt-0.5">Endereço comercial, telefones e logo</p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-6 gap-2">
-                        {PRESET_LOGOS.map((url, i) => (
-                          <button 
-                            key={i} 
-                            type="button"
-                            onClick={() => setEstablishmentLogo(url)}
-                            className={`rounded-xl overflow-hidden h-9 w-full border-2 ${establishmentLogo === url ? 'border-blue-500 scale-105' : 'border-transparent'}`}
-                          >
-                            <img src={url} alt={`Logo Preset ${i}`} className="w-full h-full object-cover" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                      <ChevronRight className="w-4 h-4 text-zinc-500" />
+                    </button>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="col-span-2">
-                        <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1.5">Nome Comercial</label>
-                        <input 
-                          type="text" 
-                          value={establishmentData.nome}
-                          onChange={e => setEstablishmentData((prev: any) => ({ ...prev, nome: e.target.value }))}
-                          className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500"
-                        />
+                    {/* Card 3: Redes Sociais */}
+                    <button 
+                      onClick={() => setShowSocialModal(true)}
+                      className="w-full flex items-center justify-between p-4 rounded-3xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-900/80 transition-all text-left active:scale-[0.99]"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-purple-500/10 flex items-center justify-center">
+                          <Link className="w-5 h-5 text-purple-500" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-zinc-200">Redes Sociais</h4>
+                          <p className="text-zinc-500 text-[10px] mt-0.5">Vincule Instagram, Facebook e TikTok</p>
+                        </div>
                       </div>
-                      
-                      <div>
-                        <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1.5">Telefone Comercial</label>
-                        <input 
-                          type="text" 
-                          placeholder="(11) 99999-9999"
-                          value={establishmentData.telefone}
-                          onChange={e => {
-                            const masked = formatBrazilianPhone(e.target.value)
-                            setEstablishmentData((prev: any) => ({ ...prev, telefone: masked }))
-                          }}
-                          className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
-                        />
-                      </div>
+                      <ChevronRight className="w-4 h-4 text-zinc-500" />
+                    </button>
 
-                      <div>
-                        <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1.5">WhatsApp Comercial</label>
-                        <input 
-                          type="text" 
-                          placeholder="(11) 99999-9999"
-                          value={establishmentData.whatsapp_url}
-                          onChange={e => {
-                            const masked = formatBrazilianPhone(e.target.value)
-                            setEstablishmentData((prev: any) => ({ ...prev, whatsapp_url: masked }))
-                          }}
-                          className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
-                        />
+                    {/* Card 4: Catálogo de Serviços */}
+                    <button 
+                      onClick={() => setShowServiceListModal(true)}
+                      className="w-full flex items-center justify-between p-4 rounded-3xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-900/80 transition-all text-left active:scale-[0.99]"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-orange-500/10 flex items-center justify-center">
+                          <Tag className="w-5 h-5 text-orange-500" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-zinc-200">Catálogo de Serviços</h4>
+                          <p className="text-zinc-500 text-[10px] mt-0.5">Cadastre, edite e altere os cortes</p>
+                        </div>
                       </div>
+                      <ChevronRight className="w-4 h-4 text-zinc-500" />
+                    </button>
 
-                      <div className="col-span-2">
-                        <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1.5">CEP</label>
-                        <input 
-                          type="text" 
-                          maxLength={9}
-                          placeholder="00000-000"
-                          onChange={async (e) => {
-                            const val = e.target.value.replace(/\D/g, '')
-                            if (val.length === 8) {
-                              try {
-                                const res = await fetch(`https://viacep.com.br/ws/${val}/json/`)
-                                const data = await res.json()
-                                if (!data.erro) {
-                                  const fullAddr = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`
-                                  setEstablishmentData((prev: any) => ({ ...prev, endereco: fullAddr }))
-                                  toast.success('Endereço auto-completado!')
-                                } else {
-                                  toast.error('CEP não encontrado.')
-                                }
-                              } catch (err) {
-                                toast.error('Erro ao buscar CEP.')
-                              }
-                            }
-                          }}
-                          className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
-                        />
+                    {/* Card 5: Bloqueios de Agenda */}
+                    <button 
+                      onClick={() => setShowPausesModal(true)}
+                      className="w-full flex items-center justify-between p-4 rounded-3xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-900/80 transition-all text-left active:scale-[0.99]"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-red-500/10 flex items-center justify-center">
+                          <Clock className="w-5 h-5 text-red-500" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-zinc-200">Bloqueios de Agenda</h4>
+                          <p className="text-zinc-500 text-[10px] mt-0.5">Veja e gerencie pausas agendadas</p>
+                        </div>
                       </div>
-
-                      <div className="col-span-2">
-                        <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1.5">Endereço Comercial</label>
-                        <input 
-                          type="text" 
-                          value={establishmentData.endereco}
-                          onChange={e => setEstablishmentData((prev: any) => ({ ...prev, endereco: e.target.value }))}
-                          className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
-                        />
-                      </div>
-                    </div>
+                      <ChevronRight className="w-4 h-4 text-zinc-500" />
+                    </button>
                   </div>
 
-                  {/* Social media connections */}
-                  <div className="glass-card p-6 rounded-3xl space-y-4 bg-zinc-900/40">
-                    <h3 className="text-sm font-black text-white flex items-center gap-1.5 uppercase tracking-wide">
-                      <Link className="w-4 h-4 text-purple-500" /> Redes Sociais
-                    </h3>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1">Link Instagram</label>
-                        <input 
-                          type="text" 
-                          placeholder="instagram.com/seu.salao"
-                          value={establishmentData.instagram_url}
-                          onChange={e => setEstablishmentData((prev: any) => ({ ...prev, instagram_url: e.target.value }))}
-                          className="w-full bg-zinc-950 border border-white/5 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-purple-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1">Link Facebook</label>
-                        <input 
-                          type="text" 
-                          placeholder="facebook.com/seu.salao"
-                          value={establishmentData.facebook_url}
-                          onChange={e => setEstablishmentData((prev: any) => ({ ...prev, facebook_url: e.target.value }))}
-                          className="w-full bg-zinc-950 border border-white/5 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-purple-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1">Link TikTok</label>
-                        <input 
-                          type="text" 
-                          placeholder="tiktok.com/@seu.salao"
-                          value={establishmentData.tiktok_url}
-                          onChange={e => setEstablishmentData((prev: any) => ({ ...prev, tiktok_url: e.target.value }))}
-                          className="w-full bg-zinc-950 border border-white/5 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-purple-500"
-                        />
-                      </div>
-
-                      <div className="flex items-end">
+                  {/* Curated Theme Switcher & Logout */}
+                  <div className="space-y-3 pt-2">
+                    <div className="glass-card p-4 rounded-3xl flex items-center justify-between bg-zinc-900/40">
+                      <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Aparência do Sistema</span>
+                      <div className="bg-zinc-950 p-1 rounded-2xl flex items-center border border-white/5 gap-1 relative w-36 h-10">
                         <button 
-                          onClick={handleSaveProfile}
-                          className="w-full btn-primary h-[34px] text-xs font-black flex items-center justify-center gap-1.5"
+                          onClick={() => setTheme('light')}
+                          className={`flex-1 flex items-center justify-center gap-1.5 h-full rounded-xl text-xs font-black relative z-10 transition-colors ${theme === 'light' ? 'text-zinc-950' : 'text-zinc-500'}`}
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5 text-zinc-950" /> Salvar Perfil
+                          <Sun className="w-3.5 h-3.5" /> Claro
                         </button>
+                        <button 
+                          onClick={() => setTheme('dark')}
+                          className={`flex-1 flex items-center justify-center gap-1.5 h-full rounded-xl text-xs font-black relative z-10 transition-colors ${theme === 'dark' ? 'text-[#fd9602]' : 'text-zinc-500'}`}
+                        >
+                          <Moon className="w-3.5 h-3.5" /> Escuro
+                        </button>
+                        <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-xl transition-all duration-300 ${theme === 'light' ? 'left-1 bg-[#fd9602]' : 'left-[calc(50%+2px)] bg-zinc-900 border border-white/10'}`} />
                       </div>
                     </div>
+
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full h-12 bg-red-500/10 hover:bg-red-500 border border-red-500/25 rounded-3xl text-red-500 hover:text-zinc-950 font-bold flex items-center justify-center gap-2 transition-all"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sair da Conta
+                    </button>
                   </div>
-
-                  {/* Tab Sub-modal trigger: Gerenciar Serviços */}
-                  <button 
-                    onClick={() => setShowServiceListModal(true)}
-                    className="w-full flex items-center justify-between p-4 rounded-3xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-900/80 transition-all text-left"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-11 h-11 rounded-2xl bg-orange-500/10 flex items-center justify-center">
-                        <Tag className="w-5 h-5 text-orange-500" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-black text-zinc-200">Catálogo de Serviços</h4>
-                        <p className="text-zinc-500 text-[10px] mt-0.5">Cadastre, edite e mude valores dos cortes</p>
-                      </div>
-                    </div>
-                    <Plus className="w-4 h-4 text-[#fd9602]" />
-                  </button>
-
-                  {/* Scheduled pauses (old settings) */}
-                  <div className="glass-card p-6 rounded-3xl space-y-4 bg-zinc-900/40">
-                    <h3 className="text-sm font-black text-white flex items-center gap-1.5">
-                      <Clock className="w-4 h-4 text-blue-500" /> Bloqueios de Agenda
-                    </h3>
-
-                    {pauses.length === 0 ? (
-                      <div className="bg-zinc-950/40 border border-white/5 p-5 rounded-2xl text-center text-zinc-500 text-xs font-semibold">
-                        Nenhum bloqueio programado
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {pauses.map(p => (
-                          <div 
-                            key={p.id}
-                            className="bg-zinc-950 border border-white/5 px-4 py-3 rounded-2xl flex items-center justify-between"
-                          >
-                            <div>
-                              <h4 className="text-xs font-bold text-zinc-300">Motivo: {p.motivo}</h4>
-                              <p className="text-zinc-500 text-[9px] mt-0.5">
-                                Data: {new Date(p.data + 'T00:00:00').toLocaleDateString('pt-BR')}
-                              </p>
-                            </div>
-                            <button 
-                              onClick={() => handleDeletePause(p.id)}
-                              className="px-2.5 py-1 text-[10px] font-black text-red-500 bg-red-500/10 border border-red-500/20 rounded-xl"
-                            >
-                              Desbloquear
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Curated Segmented Theme Switcher (Claro / Escuro) */}
-                  <div className="glass-card p-4 rounded-3xl flex items-center justify-between bg-zinc-900/40">
-                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Aparência do Sistema</span>
-                    <div className="bg-zinc-950 p-1 rounded-2xl flex items-center border border-white/5 gap-1 relative w-36 h-10">
-                      <button 
-                        onClick={() => setTheme('light')}
-                        className={`flex-1 flex items-center justify-center gap-1.5 h-full rounded-xl text-xs font-black relative z-10 transition-colors ${theme === 'light' ? 'text-zinc-950' : 'text-zinc-500'}`}
-                      >
-                        <Sun className="w-3.5 h-3.5" /> Claro
-                      </button>
-                      <button 
-                        onClick={() => setTheme('dark')}
-                        className={`flex-1 flex items-center justify-center gap-1.5 h-full rounded-xl text-xs font-black relative z-10 transition-colors ${theme === 'dark' ? 'text-[#fd9602]' : 'text-zinc-500'}`}
-                      >
-                        <Moon className="w-3.5 h-3.5" /> Escuro
-                      </button>
-
-                      <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-xl transition-all duration-300 ${theme === 'light' ? 'left-1 bg-[#fd9602]' : 'left-[calc(50%+2px)] bg-zinc-900 border border-white/10'}`} />
-                    </div>
-                  </div>
-
-                  {/* Log out */}
-                  <button 
-                    onClick={handleLogout}
-                    className="w-full h-12 bg-red-500/10 hover:bg-red-500 border border-red-500/25 rounded-3xl text-red-500 hover:text-zinc-950 font-bold flex items-center justify-center gap-2 transition-all mt-4"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sair da Conta
-                  </button>
                 </div>
               )}
             </main>
@@ -3041,722 +2969,152 @@ export default function App() {
           </motion.div>
         )}
 
-        {/* SERVICES MANAGEMENT SLIDE MODAL (iOS STYLE AS SPECIFIED FOR SOMENTE 5 ICONES) */}
-        {showServiceListModal && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/80 backdrop-blur-sm">
-            <div className="absolute inset-0" onClick={() => setShowServiceListModal(false)} />
-            
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="w-full max-w-md bg-zinc-900 border-t border-white/10 ios-sheet p-6 relative z-10 h-[85vh] flex flex-col"
-            >
-              {/* Drag Indicator */}
-              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5 shrink-0" onClick={() => setShowServiceListModal(false)} />
-              
-              <div className="flex items-center justify-between mb-5 shrink-0">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <Tag className="w-4 h-4 text-[#fd9602]" /> Tabela de Serviços
-                </h3>
-                <button 
-                  onClick={() => {
-                    setServiceFormData({ id: '', nome: '', preco: '', descricao: '', imagem_url: '', video_url: '' })
-                    setShowServiceModal(true)
-                  }}
-                  className="btn-primary py-1.5 px-3 text-xs flex items-center gap-1 shrink-0"
-                >
-                  <Plus className="w-3.5 h-3.5 text-zinc-950" /> Novo
-                </button>
-              </div>
+        {/* SERVICE LIST MODAL */}
+        <ServiceListModal 
+          isOpen={showServiceListModal}
+          onClose={() => setShowServiceListModal(false)}
+          services={services}
+          onNewClick={() => {
+            setServiceFormData({ id: '', nome: '', preco: '', descricao: '', imagem_url: '', video_url: '' })
+            setShowServiceModal(true)
+          }}
+          onEditClick={(s) => {
+            setServiceFormData({ 
+              id: s.id, 
+              nome: s.nome, 
+              preco: s.preco.toString(),
+              descricao: s.descricao || '',
+              imagem_url: s.imagem_url || '',
+              video_url: s.video_url || ''
+            })
+            setShowServiceModal(true)
+          }}
+          onDeleteClick={handleDeleteService}
+        />
 
-              {/* Search box inside modal */}
-              <div className="relative mb-4 shrink-0">
-                <input 
-                  type="text"
-                  placeholder="Pesquisar serviço..."
-                  value={serviceSearch}
-                  onChange={e => setServiceSearch(e.target.value)}
-                  className="w-full bg-zinc-950 border border-white/5 rounded-2xl pl-11 pr-4 py-2.5 text-xs focus:outline-none focus:border-[#fd9602]"
-                />
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 w-3.5 h-3.5" />
-              </div>
+        {/* SERVICE FORM MODAL */}
+        <ServiceFormModal 
+          isOpen={showServiceModal}
+          onClose={() => setShowServiceModal(false)}
+          serviceFormData={serviceFormData}
+          onServiceFormDataChange={setServiceFormData}
+          onSubmit={handleSaveService}
+        />
 
-              {/* Services List Scroll Area */}
-              <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
-                {filteredServices.length === 0 ? (
-                  <div className="bg-zinc-950/40 border border-white/5 p-8 rounded-2xl text-center text-zinc-500 text-xs">
-                    Nenhum serviço cadastrado
-                  </div>
-                ) : (
-                  filteredServices.map(s => (
-                    <div 
-                      key={s.id}
-                      className="bg-zinc-950 border border-white/5 p-4 rounded-2xl flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center shrink-0">
-                          <Tag className="w-4 h-4 text-[#fd9602]" />
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-zinc-200">{s.nome}</h4>
-                          <span className="text-[11px] font-extrabold text-[#fd9602]">R$ {s.preco.toFixed(2)}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <button 
-                          onClick={() => {
-                            setServiceFormData({ 
-                              id: s.id, 
-                              nome: s.nome, 
-                              preco: s.preco.toString(),
-                              descricao: s.descricao || '',
-                              imagem_url: s.imagem_url || '',
-                              video_url: s.video_url || ''
-                            })
-                            setShowServiceModal(true)
-                          }}
-                          className="px-2.5 py-1.5 rounded-xl bg-zinc-900 border border-white/5 hover:bg-zinc-800 text-zinc-400 text-[10px] font-bold"
-                        >
-                          Editar
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteService(s.id)}
-                          className="p-1.5 rounded-xl bg-zinc-900 border border-white/5 hover:bg-zinc-800 text-zinc-650 hover:text-red-500 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-
-        {/* DETAILED SERVICE ADD/EDIT POPUP */}
-        {showServiceModal && (
-          <div className="fixed inset-0 z-[60] flex items-end justify-center bg-zinc-950/80 backdrop-blur-sm">
-            <div className="absolute inset-0" onClick={() => setShowServiceModal(false)} />
-            
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="w-full max-w-md bg-zinc-900 border-t border-white/10 ios-sheet p-6 relative z-10"
-            >
-              {/* Drag Indicator */}
-              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5" onClick={() => setShowServiceModal(false)} />
-              
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <Tag className="w-4 h-4 text-[#fd9602]" /> 
-                  {serviceFormData.id ? 'Ajustar Serviço' : 'Novo Serviço'}
-                </h3>
-                <button 
-                  onClick={() => setShowServiceModal(false)}
-                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 border border-white/5"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <form onSubmit={handleSaveService} className="space-y-4">
-                <div>
-                  <label className="block text-zinc-400 text-xs font-bold mb-1.5">Nome do Serviço</label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="Ex: Corte Degradê, Barboterapia..."
-                    value={serviceFormData.nome}
-                    onChange={e => setServiceFormData(prev => ({ ...prev, nome: e.target.value }))}
-                    className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-zinc-400 text-xs font-bold mb-1.5">Valor Unitário (R$)</label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="0,00"
-                    value={serviceFormData.preco}
-                    onChange={e => setServiceFormData(prev => ({ ...prev, preco: e.target.value }))}
-                    className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-zinc-400 text-xs font-bold mb-1.5">Descrição do Serviço</label>
-                  <textarea 
-                    placeholder="Descreva o que está incluído no serviço..."
-                    value={serviceFormData.descricao}
-                    onChange={e => setServiceFormData(prev => ({ ...prev, descricao: e.target.value }))}
-                    className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602] h-20 resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-zinc-400 text-xs font-bold mb-1.5">URL da Imagem Demonstrativa</label>
-                  <input 
-                    type="text" 
-                    placeholder="https://exemplo.com/imagem.jpg"
-                    value={serviceFormData.imagem_url}
-                    onChange={e => setServiceFormData(prev => ({ ...prev, imagem_url: e.target.value }))}
-                    className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-zinc-400 text-xs font-bold mb-1.5">URL do Vídeo Demonstrativo (YouTube/MP4)</label>
-                  <input 
-                    type="text" 
-                    placeholder="https://exemplo.com/video.mp4"
-                    value={serviceFormData.video_url}
-                    onChange={e => setServiceFormData(prev => ({ ...prev, video_url: e.target.value }))}
-                    className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
-                  />
-                </div>
-
-                <button 
-                  type="submit" 
-                  className="w-full btn-primary h-12 flex items-center justify-center font-bold text-sm mt-6 shadow-lg shadow-[#fd9602]/10"
-                >
-                  Salvar Serviço
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-
-        {/* NATIVE DEVICE IMAGE ADJUSTMENT MODAL (ZOOM & ROTATION WITH PREVIEW) */}
-        {imageToAdjust && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-md">
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-sm bg-zinc-900 border border-white/10 rounded-[32px] p-6 shadow-2xl space-y-6"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <Camera className="w-4 h-4 text-[#fd9602]" /> Ajustar Imagem
-                </h3>
-                <button 
-                  onClick={() => setImageToAdjust(null)}
-                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 border border-white/5"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Viewport Frame preview (Circle for profile, Rectangle for Banner) */}
-              <div className="flex flex-col items-center justify-center bg-zinc-950/60 border border-white/5 p-4 rounded-3xl">
-                <div 
-                  className={`overflow-hidden border-2 border-dashed border-white/20 bg-zinc-950 flex items-center justify-center relative ${
-                    adjustType === 'avatar' 
-                      ? 'w-[200px] h-[200px] rounded-full' 
-                      : 'w-[280px] h-[140px] rounded-2xl'
-                  }`}
-                >
-                  <img 
-                    src={imageToAdjust} 
-                    alt="Adjustment Preview" 
-                    style={{ 
-                      transform: `scale(${zoom}) rotate(${rotation}deg)`, 
-                      transition: 'transform 0.05s ease-out' 
-                    }}
-                    className="w-full h-full object-cover pointer-events-none"
-                  />
-                </div>
-                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mt-3">
-                  Visualização da foto {adjustType === 'avatar' ? 'de Perfil' : 'do Estabelecimento'}
-                </p>
-              </div>
-
-              {/* Slider Controls */}
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-zinc-400 font-bold">Zoom (Escala): {zoom.toFixed(2)}x</span>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="1" 
-                    max="3" 
-                    step="0.05"
-                    value={zoom}
-                    onChange={e => setZoom(parseFloat(e.target.value))}
-                    className="w-full accent-[#fd9602]"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-zinc-400 font-bold">Girar (Rotação): {rotation}°</span>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="-180" 
-                    max="180" 
-                    step="1"
-                    value={rotation}
-                    onChange={e => setRotation(parseInt(e.target.value))}
-                    className="w-full accent-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <button 
-                  type="button" 
-                  onClick={() => setImageToAdjust(null)}
-                  className="bg-zinc-950 hover:bg-zinc-900 border border-white/5 text-zinc-400 font-bold py-3.5 rounded-2xl text-xs active:scale-95 transition-transform"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  type="button" 
-                  onClick={handleSaveAdjustedImage}
-                  className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black py-3.5 rounded-2xl text-xs active:scale-95 transition-transform shadow-lg shadow-emerald-500/10"
-                >
-                  Confirmar e Aplicar
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
+        {/* IMAGE ADJUSTMENT MODAL */}
+        <ImageAdjustmentModal 
+          imageToAdjust={imageToAdjust}
+          adjustType={adjustType}
+          zoom={zoom}
+          onZoomChange={setZoom}
+          rotation={rotation}
+          onRotationChange={setRotation}
+          onClose={() => setImageToAdjust(null)}
+          onConfirm={handleSaveAdjustedImage}
+        />
 
         {/* NOTIFICATIONS MODAL */}
-        {showNotificationsModal && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/80 backdrop-blur-sm">
-            <div className="absolute inset-0" onClick={() => setShowNotificationsModal(false)} />
-            
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="w-full max-w-md bg-zinc-900 border-t border-white/10 ios-sheet p-6 relative z-10 h-[70vh] flex flex-col"
-            >
-              {/* Drag Indicator */}
-              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5 shrink-0" onClick={() => setShowNotificationsModal(false)} />
-              
-              <div className="flex items-center justify-between mb-5 shrink-0">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-[#fd9602]" /> Notificações
-                </h3>
-                <button 
-                  onClick={() => setShowNotificationsModal(false)}
-                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 border border-white/5"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+        <NotificationsModal 
+          isOpen={showNotificationsModal}
+          onClose={() => setShowNotificationsModal(false)}
+          notifications={notifications}
+        />
 
-              <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                {notifications.map(n => (
-                  <div 
-                    key={n.id}
-                    className={`p-4 rounded-2xl border transition-all ${
-                      n.unread 
-                        ? 'bg-[#fd9602]/5 border-[#fd9602]/15 shadow-sm shadow-[#fd9602]/5' 
-                        : 'bg-zinc-950/40 border-white/5'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <h4 className="text-xs font-bold text-zinc-100 flex items-center gap-1.5">
-                        {n.unread && <span className="w-1.5 h-1.5 rounded-full bg-[#fd9602] shrink-0" />}
-                        {n.title}
-                      </h4>
-                      <span className="text-[9px] text-zinc-500 font-medium">{n.time}</span>
-                    </div>
-                    <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">{n.description}</p>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          </div>
-        )}
+        {/* CATALOG PREVIEW MODAL */}
+        <CatalogPreviewModal 
+          isOpen={showCatalogModal}
+          onClose={() => setShowCatalogModal(false)}
+          services={services}
+        />
 
-        {/* CATALOG MODAL */}
-        {showCatalogModal && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/80 backdrop-blur-sm">
-            <div className="absolute inset-0" onClick={() => setShowCatalogModal(false)} />
-            
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="w-full max-w-md bg-zinc-900 border-t border-white/10 ios-sheet p-6 relative z-10 h-[80vh] flex flex-col"
-            >
-              {/* Drag Indicator */}
-              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5 shrink-0" onClick={() => setShowCatalogModal(false)} />
-              
-              <div className="flex items-center justify-between mb-5 shrink-0">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <Tag className="w-4 h-4 text-[#fd9602]" /> Catálogo do Estabelecimento
-                </h3>
-                <button 
-                  onClick={() => setShowCatalogModal(false)}
-                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 border border-white/5"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-                {services.length === 0 ? (
-                  <div className="text-center py-10 text-zinc-500 text-xs">
-                    Nenhum serviço cadastrado no catálogo.
-                  </div>
-                ) : (
-                  services.map(s => (
-                    <div 
-                      key={s.id}
-                      className="bg-zinc-950 border border-white/5 rounded-2xl overflow-hidden"
-                    >
-                      {s.imagem_url && (
-                        <div className="h-32 w-full relative overflow-hidden">
-                          <img 
-                            src={s.imagem_url} 
-                            alt={s.nome}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-                      
-                      <div className="p-4 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-bold text-zinc-100">{s.nome}</h4>
-                          <span className="text-xs font-black text-[#fd9602]">R$ {s.preco.toFixed(2)}</span>
-                        </div>
-                        
-                        {s.descricao && (
-                          <p className="text-xs text-zinc-400 leading-relaxed">{s.descricao}</p>
-                        )}
-                        
-                        {s.video_url && (
-                          <a 
-                            href={s.video_url} 
-                            target="_blank" 
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-[10px] font-bold text-[#fd9602] hover:underline"
-                          >
-                            ▶ Ver Vídeo Demonstrativo
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-
-        {/* REVIEWS MODAL */}
-        {showReviewsModal && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/80 backdrop-blur-sm">
-            <div className="absolute inset-0" onClick={() => setShowReviewsModal(false)} />
-            
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="w-full max-w-md bg-zinc-900 border-t border-white/10 ios-sheet p-6 relative z-10 h-[80vh] flex flex-col"
-            >
-              {/* Drag Indicator */}
-              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5 shrink-0" onClick={() => setShowReviewsModal(false)} />
-              
-              <div className="flex items-center justify-between mb-5 shrink-0">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <Star className="w-4 h-4 text-[#fd9602] fill-[#fd9602]/20" /> Avaliações & Feedback
-                </h3>
-                <button 
-                  onClick={() => setShowReviewsModal(false)}
-                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 border border-white/5"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-                <div className="bg-zinc-950/50 border border-white/5 p-4 rounded-2xl flex items-center justify-between shrink-0">
-                  <div>
-                    <span className="text-3xl font-black text-white">4.8</span>
-                    <span className="text-xs text-zinc-500 block mt-0.5">Média de 48 avaliações</span>
-                  </div>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map(star => (
-                      <Star key={star} className="w-4.5 h-4.5 text-[#fd9602] fill-[#fd9602]" />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {reviews.map(r => (
-                    <div 
-                      key={r.id}
-                      className="bg-zinc-950/30 border border-white/5 p-4 rounded-2xl space-y-2.5"
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <span className="text-xs font-bold text-zinc-200 block">{r.customer}</span>
-                          <span className="text-[9px] text-zinc-500 block mt-0.5">{r.date}</span>
-                        </div>
-                        <div className="flex gap-0.5">
-                          {[1, 2, 3, 4, 5].map(star => (
-                            <Star 
-                              key={star} 
-                              className={`w-3 h-3 ${
-                                star <= r.rating 
-                                  ? 'text-[#fd9602] fill-[#fd9602]' 
-                                  : 'text-zinc-700'
-                              }`} 
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-xs text-zinc-300 leading-relaxed font-medium">{r.comment}</p>
-                      
-                      {r.media && (
-                        <div className="w-24 h-24 rounded-xl overflow-hidden border border-white/5 mt-2">
-                          <img 
-                            src={r.media} 
-                            alt="Media anexo" 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
+        {/* REVIEWS MODAL */}        {/* REVIEWS MODAL */}
+        <ReviewsModal 
+          isOpen={showReviewsModal}
+          onClose={() => setShowReviewsModal(false)}
+          reviews={reviews}
+        />
 
         {/* PIX PAYMENT MODAL */}
-        {showPixModal && pixPaymentApp && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/80 backdrop-blur-sm">
-            <div className="absolute inset-0" onClick={() => setShowPixModal(false)} />
-            
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="w-full max-w-md bg-zinc-900 border-t border-white/10 ios-sheet p-6 relative z-10"
-            >
-              {/* Drag Indicator */}
-              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5" onClick={() => setShowPixModal(false)} />
-              
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <Wallet className="w-4 h-4 text-[#fd9602]" /> Receber via Pix
-                </h3>
-                <button 
-                  onClick={() => setShowPixModal(false)}
-                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 border border-white/5"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {!pixKey ? (
-                <div className="space-y-4">
-                  <p className="text-xs text-zinc-400 leading-relaxed">
-                    Você ainda não configurou sua chave Pix para receber pagamentos rápidos. Insira sua chave Pix (CPF, E-mail, Celular ou Chave Aleatória) abaixo para habilitar a geração de QR Code automático:
-                  </p>
-                  
-                  <div>
-                    <label className="block text-zinc-400 text-xs font-bold mb-1.5">Sua Chave Pix</label>
-                    <input 
-                      type="text" 
-                      placeholder="Ex: pix@agendei.com ou 123.456.789-00"
-                      value={pixKeyInput}
-                      onChange={e => setPixKeyInput(e.target.value)}
-                      className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
-                    />
-                  </div>
-
-                  <button 
-                    onClick={() => {
-                      if (!pixKeyInput.trim()) return;
-                      localStorage.setItem('agendei_pix_key', pixKeyInput);
-                      setPixKey(pixKeyInput);
-                      toast.success('Chave Pix configurada!');
-                    }}
-                    className="w-full btn-primary h-12 flex items-center justify-center font-bold text-sm"
-                  >
-                    Salvar Chave Pix
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-5 text-center">
-                  <div className="bg-zinc-950 border border-white/5 p-4 rounded-2xl inline-block mx-auto">
-                    {/* Generates pix dynamic payload representation */}
-                    {(() => {
-                      const amount = pixPaymentApp.totalPrice;
-                      // Static Pix code generator compliant with Brazilian EMV (BR Code) standards
-                      const cleanKey = pixKey.replace(/[^a-zA-Z0-9@.-]/g, '');
-                      const amountStr = amount.toFixed(2);
-                      const keyLen = String(cleanKey.length).padStart(2, '0');
-                      const amountLen = String(amountStr.length).padStart(2, '0');
-                      
-                      const merchantAccount = `0014BR.GOV.BCB.PIX01${keyLen}${cleanKey}`;
-                      const merchantAccountLen = String(merchantAccount.length).padStart(2, '0');
-                      
-                      const rawPix = [
-                        '000201', // Payload Format Indicator
-                        '26' + merchantAccountLen + merchantAccount, // Merchant Account Information
-                        '52040000', // Merchant Category Code
-                        '5303986', // Transaction Currency (BRL)
-                        '54' + amountLen + amountStr, // Transaction Amount
-                        '5802BR', // Country Code
-                        '5915AGENDEI BARBER', // Merchant Name
-                        '6009SAO PAULO', // Merchant City
-                        '62070503***', // Additional Data Field Template (No reference)
-                        '6304' // CRC Prefix
-                      ].join('');
-
-                      // Quick Mock CRC to complete the Pix standard string
-                      const pixPayload = rawPix + '1A3F'; 
-                      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(pixPayload)}`;
-
-                      return (
-                        <div className="space-y-4">
-                          <div className="w-48 h-48 bg-white p-2 rounded-xl mx-auto flex items-center justify-center border border-zinc-200">
-                            <img src={qrCodeUrl} alt="QR Code Pix" className="w-full h-full" />
-                          </div>
-                          
-                          <div className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">
-                            Valor do Pix: <span className="text-[#fd9602]">R$ {amount.toFixed(2)}</span>
-                          </div>
-
-                          <div className="flex flex-col gap-2">
-                            <button 
-                              onClick={() => {
-                                navigator.clipboard.writeText(pixPayload);
-                                toast.success('Pix Copia e Cola copiado!');
-                              }}
-                              className="px-4 py-2 bg-zinc-900 border border-white/5 rounded-xl text-zinc-300 hover:bg-zinc-800 text-xs font-bold transition-all inline-flex items-center gap-1.5 justify-center"
-                            >
-                              📋 Copiar Código Copia e Cola
-                            </button>
-                            <button 
-                              onClick={() => {
-                                setPixKey('');
-                                localStorage.removeItem('agendei_pix_key');
-                              }}
-                              className="text-[10px] text-zinc-650 hover:underline"
-                            >
-                              Alterar Chave Pix Cadastrada
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })()}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <button 
-                      onClick={() => {
-                        updateAppointmentStatus(pixPaymentApp.id, 'PAGO');
-                        setShowPixModal(false);
-                      }}
-                      className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black py-3.5 rounded-2xl text-xs active:scale-95 transition-transform"
-                    >
-                      Confirmar Pix Recebido
-                    </button>
-                    <button 
-                      onClick={() => {
-                        updateAppointmentStatus(pixPaymentApp.id, 'PAGO');
-                        setShowPixModal(false);
-                      }}
-                      className="bg-zinc-950 hover:bg-zinc-900 border border-white/5 text-zinc-400 font-bold py-3.5 rounded-2xl text-xs active:scale-95 transition-transform"
-                    >
-                      Pagamento Manual
-                    </button>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          </div>
-        )}
+        <PixPaymentModal 
+          isOpen={showPixModal}
+          onClose={() => setShowPixModal(false)}
+          appointment={pixPaymentApp}
+          pixKey={pixKey}
+          pixKeyInput={pixKeyInput}
+          onPixKeyInputChange={setPixKeyInput}
+          onSavePixKey={(key) => {
+            localStorage.setItem('agendei_pix_key', key)
+            setPixKey(key)
+            toast.success('Chave Pix configurada!')
+          }}
+          onChangePixKey={() => {
+            setPixKey('')
+            localStorage.removeItem('agendei_pix_key')
+          }}
+          onConfirmPayment={(appId) => {
+            updateAppointmentStatus(appId, 'PAGO')
+            setShowPixModal(false)
+          }}
+        />
 
         {/* GOAL (AJUSTAR META) MODAL */}
-        {showGoalModal && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/80 backdrop-blur-sm">
-            <div className="absolute inset-0" onClick={() => setShowGoalModal(false)} />
-            
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="w-full max-w-md bg-zinc-900 light:bg-white border-t border-white/10 light:border-black/5 ios-sheet p-6 relative z-10"
-            >
-              {/* Drag Indicator */}
-              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5" onClick={() => setShowGoalModal(false)} />
-              
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-black text-[var(--foreground)] flex items-center gap-2">
-                  <Target className="w-4 h-4 text-[#fd9602]" /> Ajustar Meta Mensal
-                </h3>
-                <button 
-                  onClick={() => setShowGoalModal(false)}
-                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 light:bg-zinc-100 border border-white/5 light:border-black/5"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+        <GoalModal 
+          isOpen={showGoalModal}
+          onClose={() => setShowGoalModal(false)}
+          goalInput={goalInput}
+          onGoalInputChange={setGoalInput}
+          onSave={handleSaveGoal}
+        />
 
-              <div className="space-y-4">
-                <p className="text-xs text-zinc-500 font-medium leading-relaxed">
-                  Defina um objetivo financeiro de faturamento ou saldo do mês para seu negócio. Isso ajuda a acompanhar a barra de progresso no painel inicial.
-                </p>
+        {/* MANAGER DETAILS MODAL */}
+        <ManagerDetailsModal 
+          isOpen={showManagerModal}
+          onClose={() => setShowManagerModal(false)}
+          userName={userName}
+          onUserNameChange={setUserName}
+          managerAvatar={managerAvatar || ''}
+          onManagerAvatarChange={setManagerAvatar}
+          onImageSelect={handleImageSelect}
+          onSave={() => {
+            handleSaveProfile()
+            setShowManagerModal(false)
+          }}
+        />
 
-                <div>
-                  <label className="block text-zinc-400 light:text-zinc-500 text-xs font-bold mb-1.5 uppercase tracking-wider">Valor Alvo (R$)</label>
-                  <input 
-                    type="number" 
-                    required
-                    placeholder="Ex: 5000"
-                    value={goalInput}
-                    onChange={e => setGoalInput(e.target.value)}
-                    className="w-full bg-zinc-950 light:bg-white border border-white/5 light:border-zinc-200 rounded-2xl px-4 py-3 text-sm text-zinc-200 light:text-zinc-950 focus:outline-none focus:border-[#fd9602]"
-                  />
-                </div>
+        {/* BUSINESS DETAILS MODAL */}
+        <BusinessDetailsModal 
+          isOpen={showBusinessModal}
+          onClose={() => setShowBusinessModal(false)}
+          establishmentLogo={establishmentLogo || ''}
+          onEstablishmentLogoChange={setEstablishmentLogo}
+          onImageSelect={handleImageSelect}
+          establishmentData={establishmentData}
+          onEstablishmentDataChange={setEstablishmentData}
+          onSave={() => {
+            handleSaveProfile()
+            setShowBusinessModal(false)
+          }}
+        />
 
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <button 
-                    type="button" 
-                    onClick={() => setShowGoalModal(false)}
-                    className="bg-zinc-950 light:bg-zinc-100 border border-white/5 light:border-zinc-200 text-zinc-400 light:text-zinc-600 font-bold py-3.5 rounded-2xl text-xs active:scale-95 transition-transform"
-                  >
-                    Cancelar
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={handleSaveGoal}
-                    className="bg-[#fd9602] hover:bg-[#e08502] text-zinc-950 font-black py-3.5 rounded-2xl text-xs active:scale-95 transition-transform shadow-lg shadow-[#fd9602]/10"
-                  >
-                    Salvar Meta
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
+        {/* SOCIAL MEDIA MODAL */}
+        <SocialMediaModal 
+          isOpen={showSocialModal}
+          onClose={() => setShowSocialModal(false)}
+          establishmentData={establishmentData}
+          onEstablishmentDataChange={setEstablishmentData}
+          onSave={() => {
+            handleSaveProfile()
+            setShowSocialModal(false)
+          }}
+        />
+
+        {/* AGENDA PAUSES MODAL */}
+        <AgendaPausesModal 
+          isOpen={showPausesModal}
+          onClose={() => setShowPausesModal(false)}
+          pauses={pauses}
+          onDeletePause={handleDeletePause}
+        />
 
       </AnimatePresence>
     </div>
