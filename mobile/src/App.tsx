@@ -2352,38 +2352,72 @@ export default function App() {
             </main>
 
             {/* REDESIGNED FLOATING PILL TAB BAR (EXACTLY 5 ICON-ONLY BUTTONS) */}
-            <nav className="fixed bottom-6 left-4 right-4 z-40 glass-card px-4 py-3.5 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.35)] flex items-center justify-around max-w-lg mx-auto transition-all duration-300">
+            <nav className={`fixed bottom-6 left-4 right-4 z-40 px-4 py-3.5 rounded-full flex items-center justify-around max-w-lg mx-auto transition-all duration-300 ${
+              theme === 'light' 
+                ? 'bg-white border border-zinc-200/80 shadow-[0_15px_40px_rgba(0,0,0,0.08)]' 
+                : 'glass-card border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.35)]'
+            }`}>
               <button 
                 onClick={() => setCurrentTab('home')}
-                className={`relative flex items-center justify-center p-2.5 rounded-full transition-all ${currentTab === 'home' ? 'text-[#fd9602] font-black scale-110' : 'text-zinc-500 hover:text-zinc-300 active:scale-95'}`}
+                className={`relative flex items-center justify-center p-2.5 rounded-full transition-all ${
+                  currentTab === 'home' 
+                    ? 'text-[#fd9602] font-black scale-110' 
+                    : theme === 'light'
+                      ? 'text-zinc-400 hover:text-zinc-700 active:scale-95'
+                      : 'text-zinc-500 hover:text-zinc-300 active:scale-95'
+                }`}
               >
                 <Scissors className="w-6 h-6" />
               </button>
 
               <button 
                 onClick={() => setCurrentTab('agenda')}
-                className={`relative flex items-center justify-center p-2.5 rounded-full transition-all ${currentTab === 'agenda' ? 'text-[#fd9602] font-black scale-110' : 'text-zinc-500 hover:text-zinc-300 active:scale-95'}`}
+                className={`relative flex items-center justify-center p-2.5 rounded-full transition-all ${
+                  currentTab === 'agenda' 
+                    ? 'text-[#fd9602] font-black scale-110' 
+                    : theme === 'light'
+                      ? 'text-zinc-400 hover:text-zinc-700 active:scale-95'
+                      : 'text-zinc-500 hover:text-zinc-300 active:scale-95'
+                }`}
               >
                 <Calendar className="w-6 h-6" />
               </button>
 
               <button 
                 onClick={() => setCurrentTab('finance')}
-                className={`relative flex items-center justify-center p-2.5 rounded-full transition-all ${currentTab === 'finance' ? 'text-[#fd9602] font-black scale-110' : 'text-zinc-500 hover:text-zinc-300 active:scale-95'}`}
+                className={`relative flex items-center justify-center p-2.5 rounded-full transition-all ${
+                  currentTab === 'finance' 
+                    ? 'text-[#fd9602] font-black scale-110' 
+                    : theme === 'light'
+                      ? 'text-zinc-400 hover:text-zinc-700 active:scale-95'
+                      : 'text-zinc-500 hover:text-zinc-300 active:scale-95'
+                }`}
               >
                 <DollarSign className="w-6 h-6" />
               </button>
 
               <button 
                 onClick={() => setCurrentTab('customers')}
-                className={`relative flex items-center justify-center p-2.5 rounded-full transition-all ${currentTab === 'customers' ? 'text-[#fd9602] font-black scale-110' : 'text-zinc-500 hover:text-zinc-300 active:scale-95'}`}
+                className={`relative flex items-center justify-center p-2.5 rounded-full transition-all ${
+                  currentTab === 'customers' 
+                    ? 'text-[#fd9602] font-black scale-110' 
+                    : theme === 'light'
+                      ? 'text-zinc-400 hover:text-zinc-700 active:scale-95'
+                      : 'text-zinc-500 hover:text-zinc-300 active:scale-95'
+                }`}
               >
                 <Users className="w-6 h-6" />
               </button>
 
               <button 
                 onClick={() => setCurrentTab('profile')}
-                className={`relative flex items-center justify-center p-2.5 rounded-full transition-all ${currentTab === 'profile' ? 'text-[#fd9602] font-black scale-110' : 'text-zinc-500 hover:text-zinc-300 active:scale-95'}`}
+                className={`relative flex items-center justify-center p-2.5 rounded-full transition-all ${
+                  currentTab === 'profile' 
+                    ? 'text-[#fd9602] font-black scale-110' 
+                    : theme === 'light'
+                      ? 'text-zinc-400 hover:text-zinc-700 active:scale-95'
+                      : 'text-zinc-500 hover:text-zinc-300 active:scale-95'
+                }`}
               >
                 <User className="w-6 h-6" />
               </button>
