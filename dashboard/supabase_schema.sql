@@ -1,4 +1,4 @@
--- Esquema Completo Agendei (Produção) - v2 com Metas e Despesas
+-- Esquema Completo Agendei (Produção) - sincronizado com o banco real
 
 -- Extensões
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -6,6 +6,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Enums
 DO $$ BEGIN
     CREATE TYPE public.perfil_usuario AS ENUM ('CLIENTE', 'ADMIN');
+    CREATE TYPE public.genero_usuario AS ENUM ('MASCULINO', 'FEMININO', 'OUTRO');
     CREATE TYPE public.tipo_estabelecimento AS ENUM ('BARBEARIA', 'SALÃO', 'ESTÉTICA', 'OUTROS');
     CREATE TYPE public.status_agendamento AS ENUM ('SOLICITADO', 'APROVADO', 'CONCLUIDO', 'CANCELADO');
     CREATE TYPE public.status_pagamento AS ENUM ('PENDENTE', 'PAGO', 'CANCELADO');
@@ -17,58 +18,69 @@ END $$;
 -- Tabelas
 CREATE TABLE IF NOT EXISTS public.usuarios (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    nome VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE,
-    telefone VARCHAR(20),
-    avatar_url TEXT,
+    nome CHARACTER VARYING NOT NULL,
+    email CHARACTER VARYING NOT NULL UNIQUE,
+    senha_hash TEXT,
+    social_id CHARACTER VARYING,
+    telefone CHARACTER VARYING,
+    genero public.genero_usuario DEFAULT 'OUTRO',
     perfil public.perfil_usuario NOT NULL DEFAULT 'CLIENTE',
-    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    firebase_token TEXT,
+    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    avatar_url TEXT
 );
 
 CREATE TABLE IF NOT EXISTS public.estabelecimentos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    proprietario_id UUID REFERENCES public.usuarios(id) ON DELETE CASCADE,
-    nome VARCHAR(255) NOT NULL,
-    tipo public.tipo_estabelecimento NOT NULL DEFAULT 'BARBEARIA',
-    logo_url TEXT,
+    proprietario_id UUID NOT NULL REFERENCES public.usuarios(id),
+    nome CHARACTER VARYING NOT NULL,
+    tipo public.tipo_estabelecimento NOT NULL,
+    especialidades JSONB,
     endereco TEXT,
-    telefone_comercial VARCHAR(20),
+    telefone CHARACTER VARYING,
+    whatsapp CHARACTER VARYING,
+    avaliacao NUMERIC DEFAULT 0.0,
+    horario_funcionamento JSONB,
+    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     instagram_url TEXT,
     facebook_url TEXT,
     whatsapp_url TEXT,
     tiktok_url TEXT,
     notificacao_lembretes BOOLEAN DEFAULT true,
     notificacao_financeiro BOOLEAN DEFAULT false,
-    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    logo_url TEXT
 );
 
 CREATE TABLE IF NOT EXISTS public.servicos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    estabelecimento_id UUID REFERENCES public.estabelecimentos(id) ON DELETE CASCADE,
-    nome VARCHAR(255) NOT NULL,
+    estabelecimento_id UUID NOT NULL REFERENCES public.estabelecimentos(id),
+    nome CHARACTER VARYING NOT NULL,
     descricao TEXT,
-    preco DECIMAL(10,2) NOT NULL,
+    preco NUMERIC NOT NULL,
+    preco_desconto NUMERIC,
     duracao_minutos INTEGER NOT NULL,
-    categoria VARCHAR(50),
-    tipo VARCHAR(20) DEFAULT 'SERVICE',
-    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    categoria CHARACTER VARYING,
+    tipo CHARACTER VARYING DEFAULT 'SERVICE'
 );
 
 CREATE TABLE IF NOT EXISTS public.agendamentos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    cliente_id UUID REFERENCES public.usuarios(id) ON DELETE CASCADE,
-    estabelecimento_id UUID REFERENCES public.estabelecimentos(id) ON DELETE CASCADE,
+    cliente_id UUID NOT NULL REFERENCES public.usuarios(id),
+    estabelecimento_id UUID NOT NULL REFERENCES public.estabelecimentos(id),
     servicos JSONB NOT NULL,
-    preco_total DECIMAL(10,2) NOT NULL,
+    preco_total NUMERIC NOT NULL,
     data_hora TIMESTAMP WITH TIME ZONE NOT NULL,
     status public.status_agendamento DEFAULT 'SOLICITADO',
+    para_convidado BOOLEAN DEFAULT false,
+    nome_convidado CHARACTER VARYING,
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS public.pagamentos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    agendamento_id UUID REFERENCES public.agendamentos(id) ON DELETE CASCADE,
-    valor DECIMAL(10,2) NOT NULL,
+    agendamento_id UUID NOT NULL REFERENCES public.agendamentos(id),
+    valor NUMERIC NOT NULL,
     metodo public.metodo_pagamento NOT NULL,
     status public.status_pagamento DEFAULT 'PENDENTE',
     pago_em TIMESTAMP WITH TIME ZONE,
@@ -77,28 +89,29 @@ CREATE TABLE IF NOT EXISTS public.pagamentos (
 
 CREATE TABLE IF NOT EXISTS public.indisponibilidades (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    estabelecimento_id UUID REFERENCES public.estabelecimentos(id) ON DELETE CASCADE,
+    estabelecimento_id UUID REFERENCES public.estabelecimentos(id),
     data DATE NOT NULL,
-    hora_inicio TIME,
-    hora_fim TIME,
+    hora_inicio TIME WITHOUT TIME ZONE,
+    hora_fim TIME WITHOUT TIME ZONE,
     motivo TEXT,
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS public.clientes_estabelecimentos (
-    cliente_id UUID REFERENCES public.usuarios(id) ON DELETE CASCADE,
-    estabelecimento_id UUID REFERENCES public.estabelecimentos(id) ON DELETE CASCADE,
+    cliente_id UUID NOT NULL REFERENCES public.usuarios(id),
+    estabelecimento_id UUID NOT NULL REFERENCES public.estabelecimentos(id),
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (cliente_id, estabelecimento_id)
+    CONSTRAINT clientes_estabelecimentos_pkey PRIMARY KEY (cliente_id, estabelecimento_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.despesas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    estabelecimento_id UUID REFERENCES public.estabelecimentos(id) ON DELETE CASCADE,
+    estabelecimento_id UUID REFERENCES public.estabelecimentos(id),
     descricao TEXT NOT NULL,
-    valor DECIMAL(10,2) NOT NULL,
+    valor NUMERIC NOT NULL,
     data DATE DEFAULT CURRENT_DATE,
-    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    categoria CHARACTER VARYING
 );
 
 CREATE TABLE IF NOT EXISTS public.metas (
