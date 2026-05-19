@@ -9,9 +9,23 @@
   --foreground: #fafafa;
   --card: #111113;
   --card-foreground: #fafafa;
-  --border: #202023;
+  --border: rgba(255, 255, 255, 0.08);
   --accent: #fd9602; /* Vibrant Agendei Yellow/Orange */
   --muted: #71717a;
+  --card-bg-glass: rgba(255, 255, 255, 0.03);
+  --modal-bg-glass: rgba(9, 9, 11, 0.9);
+}
+
+.light {
+  --background: #f4f4f5;
+  --foreground: #09090b;
+  --card: #ffffff;
+  --card-foreground: #09090b;
+  --border: rgba(0, 0, 0, 0.08);
+  --accent: #fd9602;
+  --muted: #71717a;
+  --card-bg-glass: rgba(255, 255, 255, 0.7);
+  --modal-bg-glass: rgba(255, 255, 255, 0.95);
 }
 
 body {
@@ -24,34 +38,36 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Glassmorphism */
 .glass-card {
-  background: rgba(255, 255, 255, 0.03) !important;
+  background: var(--card-bg-glass) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid var(--border) !important;
+  transition: all 0.3s ease;
 }
 
 .glass-modal {
-  background: rgba(9, 9, 11, 0.9) !important;
+  background: var(--modal-bg-glass) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid var(--border) !important;
 }
 
 .btn-primary {
   background-color: var(--accent) !important;
   color: #000000 !important;
   font-weight: 700 !important;
-  border-radius: 12px !important;
+  border-radius: 14px !important;
   padding: 0.75rem 1.5rem !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 0.5rem !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
   border: none !important;
   cursor: pointer !important;
 }
@@ -60,6 +76,11 @@ body {
   filter: brightness(1.1) !important;
   transform: translateY(-2px) !important;
   box-shadow: 0 10px 20px -3px rgba(253, 150, 2, 0.4) !important;
+}
+
+.btn-primary:active {
+  transform: translateY(0px) !important;
+  filter: brightness(0.95) !important;
 }
 
 /* Chrome, Safari, Edge, Opera scrollbar */
@@ -88,3 +109,88 @@ body {
 .transition-smooth {
   transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
 }
+
+/* iOS bottom sheet modal styling */
+.ios-sheet {
+  border-top-left-radius: 30px;
+  border-top-right-radius: 30px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Light Theme Global Overrides for safe contrast */
+.light {
+  background-color: #f4f4f5 !important;
+  color: #09090b !important;
+}
+
+.light body {
+  background-color: #f4f4f5 !important;
+  color: #09090b !important;
+}
+
+.light .text-white {
+  color: #09090b !important;
+}
+
+.light .text-zinc-100 {
+  color: #1f2937 !important;
+}
+
+.light .text-zinc-200 {
+  color: #1f2937 !important;
+}
+
+.light .text-zinc-300 {
+  color: #374151 !important;
+}
+
+.light .text-zinc-400 {
+  color: #4b5563 !important;
+}
+
+.light .text-zinc-500 {
+  color: #6b7280 !important;
+}
+
+.light .bg-zinc-950 {
+  background-color: #f4f4f5 !important;
+}
+
+.light .dark\:bg-zinc-950 {
+  background-color: #f4f4f5 !important;
+}
+
+.light .bg-zinc-900\/95 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.light .bg-zinc-900\/40 {
+  background-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.light .bg-zinc-900\/30 {
+  background-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.light .bg-zinc-900\/50 {
+  background-color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.light .border-white\/5 {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.light .border-white\/10 {
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+.light .glass-card {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04) !important;
+}
+
+.light .glass-modal {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08) !important;
+}
+

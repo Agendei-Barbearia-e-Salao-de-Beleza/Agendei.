@@ -9,6 +9,27 @@ import { supabase } from "@/lib/supabase";
 import { QRCodeSVG } from "qrcode.react";
 import { ImageCropModal } from "@/components/modals/ImageCropModal";
 
+const VALID_DDDS = [
+  11, 12, 13, 14, 15, 16, 17, 18, 19,
+  21, 22, 24, 27, 28,
+  31, 32, 33, 34, 35, 37, 38,
+  41, 42, 43, 44, 45, 46, 47, 48, 49,
+  51, 53, 54, 55,
+  61, 62, 63, 64, 65, 66, 67, 68, 69,
+  71, 73, 74, 75, 77, 79,
+  81, 82, 83, 84, 85, 86, 87, 88, 89,
+  91, 92, 93, 94, 95, 96, 97, 98, 99
+];
+
+const formatBrazilianPhone = (value: string) => {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 0) return "";
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.substring(0, 2)}) ${digits.substring(2)}`;
+  if (digits.length <= 10) return `(${digits.substring(0, 2)}) ${digits.substring(2, 6)}-${digits.substring(6)}`;
+  return `(${digits.substring(0, 2)}) ${digits.substring(2, 7)}-${digits.substring(7, 11)}`;
+};
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("perfil");
   const { theme, setTheme } = useTheme();
@@ -178,6 +199,38 @@ export default function SettingsPage() {
   const handleSaveProfile = async () => {
     setSavingProfile(true);
     try {
+      // Validate Telephone DDD
+      const telDigits = profile.telefone.replace(/\D/g, "");
+      if (telDigits.length > 0) {
+        if (telDigits.length < 10 || telDigits.length > 11) {
+          toast.error("Telefone Comercial deve ter 10 ou 11 dígitos.");
+          setSavingProfile(false);
+          return;
+        }
+        const ddd = parseInt(telDigits.substring(0, 2), 10);
+        if (!VALID_DDDS.includes(ddd)) {
+          toast.error(`DDD (${ddd}) do Telefone Comercial é inválido.`);
+          setSavingProfile(false);
+          return;
+        }
+      }
+
+      // Validate WhatsApp DDD
+      const waDigits = profile.whatsapp_url.replace(/\D/g, "");
+      if (waDigits.length > 0 && waDigits.includes("/")) {
+        // Skip URL structures, but if it is entered as a phone number, validate it!
+      } else if (waDigits.length > 0 && waDigits.length <= 15) {
+        const waClean = waDigits.replace(/\D/g, "");
+        if (waClean.length >= 10 && waClean.length <= 11) {
+          const ddd = parseInt(waClean.substring(0, 2), 10);
+          if (!VALID_DDDS.includes(ddd)) {
+            toast.error(`DDD (${ddd}) do WhatsApp é inválido.`);
+            setSavingProfile(false);
+            return;
+          }
+        }
+      }
+
       if (profile.id) {
         const { error: estError } = await supabase.from('estabelecimentos').update({
           nome: profile.nome,
@@ -378,12 +431,50 @@ export default function SettingsPage() {
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Telefone Comercial</label>
-                                            <input value={profile.telefone} onChange={e => setProfile({...profile, telefone: e.target.value})} type="text" placeholder="(11) 99999-8888" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                            <input 
+                                                value={profile.telefone} 
+                                                onChange={e => {
+                                                    const masked = formatBrazilianPhone(e.target.value);
+                                                    setProfile({...profile, telefone: masked});
+                                                }} 
+                                                type="text" 
+                                                placeholder="(11) 99999-8888" 
+                                                className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" 
+                                            />
                                         </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Endereco Completo</label>
-                                        <input value={profile.endereco} onChange={e => setProfile({...profile, endereco: e.target.value})} type="text" placeholder="Rua das Belezas, 123" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">CEP (Auto-completar)</label>
+                                            <input 
+                                                maxLength={9}
+                                                type="text" 
+                                                placeholder="00000-000" 
+                                                onChange={async (e) => {
+                                                    const val = e.target.value.replace(/\D/g, "");
+                                                    if (val.length === 8) {
+                                                        try {
+                                                            const res = await fetch(`https://viacep.com.br/ws/${val}/json/`);
+                                                            const data = await res.json();
+                                                            if (!data.erro) {
+                                                                const fullAddr = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`;
+                                                                setProfile(prev => ({ ...prev, endereco: fullAddr }));
+                                                                toast.success("Endereço auto-completado!");
+                                                            } else {
+                                                                toast.error("CEP não encontrado.");
+                                                            }
+                                                        } catch (err) {
+                                                            toast.error("Erro ao buscar CEP.");
+                                                        }
+                                                    }
+                                                }}
+                                                className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" 
+                                            />
+                                        </div>
+                                        <div className="space-y-2 md:col-span-2">
+                                            <label className="text-sm font-medium text-zinc-500 uppercase tracking-widest text-[10px]">Endereco Completo</label>
+                                            <input value={profile.endereco} onChange={e => setProfile({...profile, endereco: e.target.value})} type="text" placeholder="Rua das Belezas, 123" className="w-full bg-zinc-950 light:bg-white border border-zinc-800 light:border-zinc-200 rounded-xl px-4 py-3 text-zinc-100 light:text-zinc-950 focus:ring-2 focus:ring-[#fd9602]/50 outline-none transition-all" />
+                                        </div>
                                     </div>
                                 </div>
 

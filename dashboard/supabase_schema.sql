@@ -122,6 +122,9 @@ ALTER TABLE public.metas ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Ver próprio perfil" ON public.usuarios;
 CREATE POLICY "Ver próprio perfil" ON public.usuarios FOR SELECT USING (id = auth.uid());
 
+DROP POLICY IF EXISTS "Atualizar próprio perfil" ON public.usuarios;
+CREATE POLICY "Atualizar próprio perfil" ON public.usuarios FOR UPDATE USING (id = auth.uid());
+
 DROP POLICY IF EXISTS "Admins veem seus clientes" ON public.usuarios;
 CREATE POLICY "Admins veem seus clientes" ON public.usuarios FOR SELECT USING (
     EXISTS (SELECT 1 FROM public.clientes_estabelecimentos ce JOIN public.estabelecimentos e ON ce.estabelecimento_id = e.id WHERE ce.cliente_id = usuarios.id AND e.proprietario_id = auth.uid())

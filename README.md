@@ -1,13 +1,14 @@
 # Agendei. 🪒💇‍♂️
 
-**Agendei.** é uma plataforma completa de agendamento e gestão para barbearias e salões de beleza, desenvolvida como projeto acadêmico com foco em elegância, performance e simplicidade.
+**Agendei.** é uma plataforma completa de agendamento e gestão para barbearias, cabeleireiros e centros de estética unissex, desenvolvida como projeto acadêmico com foco em elegância, performance e simplicidade.
 
 ## 🚀 Tecnologias
 
 ### Frontend Mobile
-- **Linguagem:** Kotlin
-- **UI Framework:** Jetpack Compose (Material Design 3)
-- **Arquitetura:** MVVM
+- **Linguagem:** TypeScript
+- **UI Framework:** React, Vite & TailwindCSS
+- **Animações:** Framer Motion (Transições Fluidas Estilo iOS)
+- **Runtime Nativo:** Capacitor (iOS & Android)
 
 ### Backend
 - **Linguagem:** Java 21+
@@ -34,7 +35,7 @@
 
 ```text
 Agendei/
-├── mobile/             # Aplicativo Android nativo (Kotlin)
+├── mobile/             # Aplicativo mobile híbrido (React/TypeScript & Capacitor)
 ├── backend/            # API RESTful (Java/Spring Boot)
 ├── dashboard/          # Painel administrativo web (TypeScript/Next.js)
 ├── spec/               # Spec Driven Development (SDD)
