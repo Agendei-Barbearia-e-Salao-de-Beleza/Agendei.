@@ -198,6 +198,15 @@ export default function DashboardOverview() {
       return acc + pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0);
     }, 0) || 0;
 
+    const { data: extrasData } = await supabase
+      .from('receitas_extras')
+      .select('valor')
+      .eq('estabelecimento_id', estId)
+      .gte('data', startOfMonth.toISOString().split('T')[0]);
+
+    const extrasIncome = extrasData?.reduce((acc: number, curr: any) => acc + Number(curr.valor), 0) || 0;
+    const grossRevenue = totalRevenue + extrasIncome;
+
     const { data: expenses } = await supabase
       .from('despesas')
       .select('valor')
@@ -242,16 +251,16 @@ export default function DashboardOverview() {
 
     const clientTrend = calcTrend(clientCount || 0, lastClientCount || 0);
     const appTrend = calcTrend(monthAppCount || 0, lastMonthAppCount || 0);
-    const revTrend = calcTrend(totalRevenue, lastTotalRevenue);
+    const revTrend = calcTrend(grossRevenue, lastTotalRevenue);
 
     setStats(prev => [
       { ...prev[0], value: (clientCount || 0).toString(), trend: clientTrend },
       { ...prev[1], value: (monthAppCount || 0).toString(), trend: appTrend },
-      { ...prev[2], value: `R$ ${(totalRevenue - totalExpense).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, label: "Saldo Mensal", trend: revTrend },
-      { ...prev[3], value: `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, label: "Receita Bruta", trend: revTrend }
+      { ...prev[2], value: `R$ ${(grossRevenue - totalExpense).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, label: "Saldo Mensal", trend: revTrend },
+      { ...prev[3], value: `R$ ${grossRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, label: "Receita Bruta", trend: revTrend }
     ]);
 
-    setWeeklyGoal(prev => ({ ...prev, current: totalRevenue }));
+    setWeeklyGoal(prev => ({ ...prev, current: grossRevenue }));
   }
 
   async function fetchTodayAppointments(estId: string) {

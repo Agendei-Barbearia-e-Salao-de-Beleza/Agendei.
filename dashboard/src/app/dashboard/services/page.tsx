@@ -22,7 +22,9 @@ export default function ServicesPage() {
     duration: "",
     category: "CABELO",
     description: "",
-    type: "SERVICE"
+    type: "SERVICE",
+    imagem_url: "",
+    video_url: ""
   });
 
   useEffect(() => {
@@ -40,10 +42,10 @@ export default function ServicesPage() {
       }
 
       const { data: estData, error: estError } = await supabase
-        .from('estabelecimentos')
-        .select('id')
-        .eq('proprietario_id', user.id)
-        .single();
+         .from('estabelecimentos')
+         .select('id')
+         .eq('proprietario_id', user.id)
+         .single();
 
       if (estError || !estData) {
         toast.error("Erro ao localizar seu estabelecimento.");
@@ -91,7 +93,9 @@ export default function ServicesPage() {
         duration: service.duracao_minutos.toString(),
         category: service.categoria || "CABELO",
         description: service.descricao || "",
-        type: service.tipo || "SERVICE"
+        type: service.tipo || "SERVICE",
+        imagem_url: service.imagem_url || "",
+        video_url: service.video_url || ""
       });
     } else {
       setEditingService(null);
@@ -101,7 +105,9 @@ export default function ServicesPage() {
         duration: "",
         category: activeTab === "PLAN" ? "PLAN" : "CABELO",
         description: "",
-        type: activeTab === "PLAN" ? "PLAN" : "SERVICE"
+        type: activeTab === "PLAN" ? "PLAN" : "SERVICE",
+        imagem_url: "",
+        video_url: ""
       });
     }
     setIsModalOpen(true);
@@ -118,6 +124,8 @@ export default function ServicesPage() {
       categoria: formData.category,
       descricao: formData.description,
       tipo: formData.type,
+      imagem_url: formData.imagem_url,
+      video_url: formData.video_url,
       estabelecimento_id: establishmentId
     };
 
@@ -259,6 +267,22 @@ export default function ServicesPage() {
                 </div>
 
                 <div className="space-y-6">
+                  {item.imagem_url && (
+                    <div className="w-full h-40 rounded-2xl overflow-hidden relative">
+                      <img src={item.imagem_url} alt={item.nome} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      {item.video_url && (
+                        <a 
+                          href={item.video_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="absolute bottom-3 right-3 bg-zinc-950/80 hover:bg-zinc-950 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-white/10 flex items-center gap-1 transition-all cursor-pointer"
+                        >
+                          ▶ Assistir Vídeo
+                        </a>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between">
                     <div className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-[#fd9602]/10 text-[#fd9602] uppercase tracking-widest border border-[#fd9602]/20">
                       {item.tipo === "PLAN" ? <Sparkles size={10} className="mr-1.5" /> : null}
@@ -368,6 +392,28 @@ export default function ServicesPage() {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Descreva as vantagens..."
               className="w-full bg-zinc-100/50 dark:bg-zinc-800/50 border border-subtle dark:border-zinc-800 rounded-2xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20 resize-none"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Imagem do Serviço (URL)</label>
+            <input 
+              type="url" 
+              value={formData.imagem_url}
+              onChange={(e) => setFormData({ ...formData, imagem_url: e.target.value })}
+              placeholder="https://exemplo.com/imagem.jpg (links externos aceitos)"
+              className="w-full bg-zinc-100/50 dark:bg-zinc-800/50 border border-subtle dark:border-zinc-800 rounded-2xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Vídeo Demonstrativo (URL)</label>
+            <input 
+              type="url" 
+              value={formData.video_url}
+              onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
+              placeholder="https://exemplo.com/video.mp4 ou link do YouTube"
+              className="w-full bg-zinc-100/50 dark:bg-zinc-800/50 border border-subtle dark:border-zinc-800 rounded-2xl px-4 py-4 text-title dark:text-white outline-none focus:ring-2 focus:ring-[#fd9602]/20"
             />
           </div>
 
