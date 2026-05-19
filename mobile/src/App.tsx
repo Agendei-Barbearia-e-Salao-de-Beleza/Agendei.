@@ -12,6 +12,7 @@ import { Toaster, toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FirebaseAnalytics } from '@capacitor-community/firebase-analytics'
 import { PushNotifications } from '@capacitor/push-notifications'
+import { StatusBar, Style } from '@capacitor/status-bar'
 import { GoalModal } from './components/GoalModal'
 import { PixPaymentModal } from './components/PixPaymentModal'
 import { ReviewsModal } from './components/ReviewsModal'
@@ -400,9 +401,25 @@ export default function App() {
     if (theme === 'light') {
       document.documentElement.classList.add('light')
       document.documentElement.classList.remove('dark')
+      
+      // Controla cor e ícones da barra de status nativa
+      try {
+        StatusBar.setStyle({ style: Style.Light })
+        StatusBar.setBackgroundColor({ color: '#f4f4f5' })
+      } catch (e) {
+        console.warn('StatusBar control skipped in web view:', e)
+      }
     } else {
       document.documentElement.classList.add('dark')
       document.documentElement.classList.remove('light')
+      
+      // Controla cor e ícones da barra de status nativa
+      try {
+        StatusBar.setStyle({ style: Style.Dark })
+        StatusBar.setBackgroundColor({ color: '#09090b' })
+      } catch (e) {
+        console.warn('StatusBar control skipped in web view:', e)
+      }
     }
   }, [theme])
 
@@ -2196,7 +2213,7 @@ export default function App() {
                   </div>
 
                   {/* Perfil Quick Overview Banner */}
-                  <div className="relative rounded-3xl overflow-hidden h-36 border border-white/5 flex items-end p-5 shrink-0 bg-cover bg-center" style={{ backgroundImage: `url(${establishmentLogo || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=600&auto=format&fit=crop&q=80'})` }}>
+                  <div className={`relative rounded-3xl overflow-hidden h-36 flex items-end p-5 shrink-0 bg-cover bg-center ${theme === 'light' ? '' : 'border border-white/5'}`} style={{ backgroundImage: `url(${establishmentLogo || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=600&auto=format&fit=crop&q=80'})` }}>
                     <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/90 via-zinc-950/40 to-transparent" />
                     <div className="relative z-10 flex items-center gap-3.5 w-full">
                       {managerAvatar ? (
@@ -2207,8 +2224,8 @@ export default function App() {
                         </div>
                       )}
                       <div>
-                        <h3 className="text-base font-black text-white">{establishmentData.nome}</h3>
-                        <p className="text-zinc-400 text-xs font-semibold">Gerente: {userName}</p>
+                        <h3 className="text-base font-black profile-banner-text">{establishmentData.nome}</h3>
+                        <p className="text-xs font-semibold profile-banner-text-muted">Gerente: {userName}</p>
                       </div>
                     </div>
                   </div>

@@ -196,10 +196,11 @@ body {
 
 /* Force solid white tabbar in light mode */
 .light nav.fixed {
-  background-color: #ffffff !important;
+  background: #ffffff !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06) !important;
 }
 
 /* Scoped Light Mode Modal Overrides */
@@ -299,3 +300,12 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
+
+
+/* Profile Banner text absolute white override */
+.profile-banner-text {
+  color: #ffffff !important;
+}
+.profile-banner-text-muted {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
