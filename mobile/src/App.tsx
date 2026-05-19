@@ -2213,7 +2213,7 @@ export default function App() {
                   </div>
 
                   {/* Perfil Quick Overview Banner */}
-                  <div className={`relative rounded-3xl overflow-hidden h-36 flex items-end p-5 shrink-0 bg-cover bg-center ${theme === 'light' ? '' : 'border border-white/5'}`} style={{ backgroundImage: `url(${establishmentLogo || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=600&auto=format&fit=crop&q=80'})` }}>
+                  <div className="relative rounded-3xl overflow-hidden h-36 flex items-end p-5 shrink-0 bg-cover bg-center" style={{ backgroundImage: `url(${establishmentLogo || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=600&auto=format&fit=crop&q=80'})`, border: theme === 'light' ? 'none' : '1px solid rgba(255, 255, 255, 0.05)' }}>
                     <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/90 via-zinc-950/40 to-transparent" />
                     <div className="relative z-10 flex items-center gap-3.5 w-full">
                       {managerAvatar ? (
@@ -2224,8 +2224,8 @@ export default function App() {
                         </div>
                       )}
                       <div>
-                        <h3 className="text-base font-black profile-banner-text">{establishmentData.nome}</h3>
-                        <p className="text-xs font-semibold profile-banner-text-muted">Gerente: {userName}</p>
+                        <h3 className="text-base font-black text-white" style={{ color: '#ffffff' }}>{establishmentData.nome}</h3>
+                        <p className="text-xs font-semibold text-zinc-300" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>Gerente: {userName}</p>
                       </div>
                     </div>
                   </div>
@@ -2352,19 +2352,13 @@ export default function App() {
             </main>
 
             {/* REDESIGNED FLOATING PILL TAB BAR (EXACTLY 5 ICON-ONLY BUTTONS) */}
-            <nav className={`fixed bottom-6 left-4 right-4 z-40 px-4 py-3.5 rounded-full flex items-center justify-around max-w-lg mx-auto transition-all duration-300 ${
-              theme === 'light' 
-                ? 'bg-white border border-zinc-200/80 shadow-[0_15px_40px_rgba(0,0,0,0.08)]' 
-                : 'glass-card border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.35)]'
-            }`}>
+            <nav className="fixed bottom-6 left-4 right-4 z-40 glass-card px-4 py-3.5 rounded-full flex items-center justify-around max-w-lg mx-auto transition-all duration-300">
               <button 
                 onClick={() => setCurrentTab('home')}
                 className={`relative flex items-center justify-center p-2.5 rounded-full transition-all ${
                   currentTab === 'home' 
                     ? 'text-[#fd9602] font-black scale-110' 
-                    : theme === 'light'
-                      ? 'text-zinc-400 hover:text-zinc-700 active:scale-95'
-                      : 'text-zinc-500 hover:text-zinc-300 active:scale-95'
+                    : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 active:scale-95'
                 }`}
               >
                 <Scissors className="w-6 h-6" />
@@ -2375,9 +2369,7 @@ export default function App() {
                 className={`relative flex items-center justify-center p-2.5 rounded-full transition-all ${
                   currentTab === 'agenda' 
                     ? 'text-[#fd9602] font-black scale-110' 
-                    : theme === 'light'
-                      ? 'text-zinc-400 hover:text-zinc-700 active:scale-95'
-                      : 'text-zinc-500 hover:text-zinc-300 active:scale-95'
+                    : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 active:scale-95'
                 }`}
               >
                 <Calendar className="w-6 h-6" />
@@ -2388,9 +2380,7 @@ export default function App() {
                 className={`relative flex items-center justify-center p-2.5 rounded-full transition-all ${
                   currentTab === 'finance' 
                     ? 'text-[#fd9602] font-black scale-110' 
-                    : theme === 'light'
-                      ? 'text-zinc-400 hover:text-zinc-700 active:scale-95'
-                      : 'text-zinc-500 hover:text-zinc-300 active:scale-95'
+                    : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 active:scale-95'
                 }`}
               >
                 <DollarSign className="w-6 h-6" />
@@ -2401,9 +2391,7 @@ export default function App() {
                 className={`relative flex items-center justify-center p-2.5 rounded-full transition-all ${
                   currentTab === 'customers' 
                     ? 'text-[#fd9602] font-black scale-110' 
-                    : theme === 'light'
-                      ? 'text-zinc-400 hover:text-zinc-700 active:scale-95'
-                      : 'text-zinc-500 hover:text-zinc-300 active:scale-95'
+                    : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 active:scale-95'
                 }`}
               >
                 <Users className="w-6 h-6" />
@@ -2414,9 +2402,7 @@ export default function App() {
                 className={`relative flex items-center justify-center p-2.5 rounded-full transition-all ${
                   currentTab === 'profile' 
                     ? 'text-[#fd9602] font-black scale-110' 
-                    : theme === 'light'
-                      ? 'text-zinc-400 hover:text-zinc-700 active:scale-95'
-                      : 'text-zinc-500 hover:text-zinc-300 active:scale-95'
+                    : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 active:scale-95'
                 }`}
               >
                 <User className="w-6 h-6" />
