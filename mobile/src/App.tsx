@@ -4,8 +4,8 @@ import {
   Scissors, Calendar, DollarSign, Clock, Users, 
   Plus, Loader2, ArrowUpRight, ArrowDownRight, Wallet, Trash2, 
   LogOut, Search, Eye, EyeOff, Check, X, Tag, User, 
-  RefreshCw, Coffee, Ban, Moon, Sun, Camera, Briefcase, Image, 
-  MapPin, Phone, CheckCircle2, Link, Key, ChevronLeft, ChevronRight,
+  RefreshCw, Coffee, Ban, Moon, Sun, Briefcase, Camera, 
+  MapPin, Phone, Link, Key, ChevronLeft, ChevronRight,
   Bell, Star
 } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
@@ -15,6 +15,10 @@ import { PushNotifications } from '@capacitor/push-notifications'
 import { GoalModal } from './components/GoalModal'
 import { PixPaymentModal } from './components/PixPaymentModal'
 import { ReviewsModal } from './components/ReviewsModal'
+import { ManagerDetailsModal } from './components/ManagerDetailsModal'
+import { BusinessDetailsModal } from './components/BusinessDetailsModal'
+import { SocialMediaModal } from './components/SocialMediaModal'
+import { AgendaPausesModal } from './components/AgendaPausesModal'
 
 // Safe wrappers for Native APIs to prevent crashes when testing in web browsers
 const safeInitAnalytics = async () => {
@@ -77,24 +81,7 @@ interface Customer {
   email?: string
 }
 
-// Unsplash Preset Avatars & Logos for beautiful manager choice
-const PRESET_AVATARS = [
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', // Female Stylish
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', // Male Modern
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80', // Female Smile
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80', // Male Elegant
-  'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80', // Casual Female
-  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80'  // Casual Male
-]
 
-const PRESET_LOGOS = [
-  'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=600&auto=format&fit=crop&q=80', // Classic Barbershop
-  'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600&auto=format&fit=crop&q=80', // Modern Hair Salon
-  'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600&auto=format&fit=crop&q=80', // Spa & Beauty Parlor
-  'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=600&auto=format&fit=crop&q=80', // Vintage Grooming Salon
-  'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600&auto=format&fit=crop&q=80', // Elegant Hair Styling Room
-  'https://images.unsplash.com/photo-1605497746444-ac9da58d7bfc?w=600&auto=format&fit=crop&q=80'  // Luxury Shave Barber
-]
 
 const VALID_DDDS = [
   11, 12, 13, 14, 15, 16, 17, 18, 19,
@@ -108,14 +95,7 @@ const VALID_DDDS = [
   91, 92, 93, 94, 95, 96, 97, 98, 99
 ]
 
-const formatBrazilianPhone = (value: string) => {
-  const digits = value.replace(/\D/g, '')
-  if (digits.length === 0) return ''
-  if (digits.length <= 2) return `(${digits}`
-  if (digits.length <= 6) return `(${digits.substring(0, 2)}) ${digits.substring(2)}`
-  if (digits.length <= 10) return `(${digits.substring(0, 2)}) ${digits.substring(2, 6)}-${digits.substring(6)}`
-  return `(${digits.substring(0, 2)}) ${digits.substring(2, 7)}-${digits.substring(7, 11)}`
-}
+
 
 export default function App() {
   const [authState, setAuthState] = useState<'loading' | 'login' | 'main'>('loading')
@@ -287,6 +267,10 @@ export default function App() {
   const [showCatalogModal, setShowCatalogModal] = useState(false)
   const [showReviewsModal, setShowReviewsModal] = useState(false)
   const [showPixModal, setShowPixModal] = useState(false)
+  const [showManagerModal, setShowManagerModal] = useState(false)
+  const [showBusinessModal, setShowBusinessModal] = useState(false)
+  const [showSocialModal, setShowSocialModal] = useState(false)
+  const [showPausesModal, setShowPausesModal] = useState(false)
   const [pixPaymentApp, setPixPaymentApp] = useState<Appointment | null>(null)
   const [pixKey, setPixKey] = useState(() => localStorage.getItem('agendei_pix_key') || '')
   const [pixKeyInput, setPixKeyInput] = useState('')
@@ -2163,336 +2147,149 @@ export default function App() {
                 </div>
               )}
 
-              {/* TAB 5: PERFIL (MERGES CUSTOM SETTINGS & ENTIRE DATABASE CONFIGS) */}
+              {/* TAB 5: PERFIL (REDESIGNED WITH CARDS ELEGANTES E NAVEGAÇÃO DE SUB-TELAS) */}
               {currentTab === 'profile' && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-2xl font-black text-white">Perfil do Estabelecimento</h2>
-                    <p className="text-zinc-500 text-sm">Gerencie dados do perfil e preferências do sistema.</p>
+                    <h2 className="text-2xl font-black text-white">Configurações</h2>
+                    <p className="text-zinc-500 text-sm">Gerencie o perfil do estabelecimento e preferências.</p>
                   </div>
 
-                  {/* Curved Glass Profile Form Card */}
-                  <div className="glass-card p-6 rounded-3xl space-y-5 bg-zinc-900/40 relative">
-                    <h3 className="text-sm font-black text-white flex items-center gap-1.5 uppercase tracking-wide">
-                      <User className="w-4 h-4 text-[#fd9602]" /> Detalhes do Gerente
-                    </h3>
+                  {/* Perfil Quick Overview Banner */}
+                  <div className="relative rounded-3xl overflow-hidden h-36 border border-white/5 flex items-end p-5 shrink-0 bg-cover bg-center" style={{ backgroundImage: `url(${establishmentLogo || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=600&auto=format&fit=crop&q=80'})` }}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/90 via-zinc-950/40 to-transparent" />
+                    <div className="relative z-10 flex items-center gap-3.5 w-full">
+                      {managerAvatar ? (
+                        <img src={managerAvatar} alt="Manager" className="w-12 h-12 rounded-full object-cover border-2 border-[#fd9602]" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-[#fd9602]/10 border-2 border-dashed border-[#fd9602]/30 flex items-center justify-center text-[#fd9602]">
+                          <User className="w-5 h-5" />
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="text-base font-black text-white">{establishmentData.nome}</h3>
+                        <p className="text-zinc-400 text-xs font-semibold">Gerente: {userName}</p>
+                      </div>
+                    </div>
+                  </div>
 
-                    {/* Preset Avatars Selector */}
-                    <div>
-                      <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-2">Foto do Gerente (Avatar)</label>
-                      <div className="flex items-center gap-4 mb-3">
-                        {managerAvatar ? (
-                          <img src={managerAvatar} alt="Avatar Preview" className="w-14 h-14 rounded-full object-cover border-2 border-[#fd9602]" />
-                        ) : (
-                          <div className="w-14 h-14 rounded-full bg-[#fd9602]/10 border-2 border-dashed border-[#fd9602]/30 flex items-center justify-center text-[#fd9602]">
-                            <Camera className="w-5 h-5" />
-                          </div>
-                        )}
-                        <div className="flex-1 flex flex-col gap-2">
-                          <input 
-                            type="text" 
-                            placeholder="Link da imagem..."
-                            value={managerAvatar || ''}
-                            onChange={e => setManagerAvatar(e.target.value)}
-                            className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-[#fd9602]"
-                          />
-                          <label className="bg-zinc-900 light:bg-white hover:bg-zinc-800 light:hover:bg-zinc-100 border border-[var(--border)] rounded-2xl py-2 px-4 text-center text-xs font-black text-[var(--foreground)] flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 transition-all shadow-sm">
-                            <Camera className="w-4 h-4 text-[#fd9602]" /> Importar e Ajustar Foto
-                            <input 
-                              type="file" 
-                              accept="image/*" 
-                              className="hidden" 
-                              onChange={e => handleImageSelect(e, 'avatar')}
-                            />
-                          </label>
+                  {/* Config Menu Grid */}
+                  <div className="space-y-3">
+                    {/* Card 1: Detalhes do Gerente */}
+                    <button 
+                      onClick={() => setShowManagerModal(true)}
+                      className="w-full flex items-center justify-between p-4 rounded-3xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-900/80 transition-all text-left active:scale-[0.99]"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-[#fd9602]/10 flex items-center justify-center">
+                          <User className="w-5 h-5 text-[#fd9602]" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-zinc-200">Detalhes do Gerente</h4>
+                          <p className="text-zinc-500 text-[10px] mt-0.5">Altere foto de perfil e nome do gerente</p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-6 gap-2">
-                        {PRESET_AVATARS.map((url, i) => (
-                          <button 
-                            key={i} 
-                            type="button"
-                            onClick={() => setManagerAvatar(url)}
-                            className={`rounded-full overflow-hidden h-9 w-9 border-2 ${managerAvatar === url ? 'border-[#fd9602] scale-105' : 'border-transparent'}`}
-                          >
-                            <img src={url} alt={`Avatar Preset ${i}`} className="w-full h-full object-cover" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                      <ChevronRight className="w-4 h-4 text-zinc-500" />
+                    </button>
 
-                    <div>
-                      <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1.5">Nome do Gerente</label>
-                      <input 
-                        type="text" 
-                        value={userName}
-                        onChange={e => setUserName(e.target.value)}
-                        className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Establishment settings */}
-                  <div className="glass-card p-6 rounded-3xl space-y-5 bg-zinc-900/40">
-                    <h3 className="text-sm font-black text-white flex items-center gap-1.5 uppercase tracking-wide">
-                      <Briefcase className="w-4 h-4 text-blue-500" /> Detalhes do Negócio
-                    </h3>
-
-                    {/* Preset Banner Selector */}
-                    <div>
-                      <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-2">Foto de Capa do Salão</label>
-                      <div className="flex items-center gap-4 mb-3">
-                        {establishmentLogo ? (
-                          <img src={establishmentLogo} alt="Logo Preview" className="w-14 h-10 rounded-xl object-cover border border-white/10" />
-                        ) : (
-                          <div className="w-14 h-10 rounded-xl bg-zinc-950 border border-dashed border-white/10 flex items-center justify-center text-zinc-600">
-                            <Image className="w-4 h-4" />
-                          </div>
-                        )}
-                        <div className="flex-1 flex flex-col gap-2">
-                          <input 
-                            type="text" 
-                            placeholder="Link do banner..."
-                            value={establishmentLogo || ''}
-                            onChange={e => setEstablishmentLogo(e.target.value)}
-                            className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-blue-500"
-                          />
-                          <label className="bg-zinc-900 light:bg-white hover:bg-zinc-800 light:hover:bg-zinc-100 border border-[var(--border)] rounded-2xl py-2 px-4 text-center text-xs font-black text-[var(--foreground)] flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 transition-all shadow-sm">
-                            <Image className="w-4 h-4 text-blue-500" /> Importar e Ajustar Banner
-                            <input 
-                              type="file" 
-                              accept="image/*" 
-                              className="hidden" 
-                              onChange={e => handleImageSelect(e, 'banner')}
-                            />
-                          </label>
+                    {/* Card 2: Detalhes do Negócio */}
+                    <button 
+                      onClick={() => setShowBusinessModal(true)}
+                      className="w-full flex items-center justify-between p-4 rounded-3xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-900/80 transition-all text-left active:scale-[0.99]"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-blue-500/10 flex items-center justify-center">
+                          <Briefcase className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-zinc-200">Detalhes do Negócio</h4>
+                          <p className="text-zinc-500 text-[10px] mt-0.5">Endereço comercial, telefones e logo</p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-6 gap-2">
-                        {PRESET_LOGOS.map((url, i) => (
-                          <button 
-                            key={i} 
-                            type="button"
-                            onClick={() => setEstablishmentLogo(url)}
-                            className={`rounded-xl overflow-hidden h-9 w-full border-2 ${establishmentLogo === url ? 'border-blue-500 scale-105' : 'border-transparent'}`}
-                          >
-                            <img src={url} alt={`Logo Preset ${i}`} className="w-full h-full object-cover" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                      <ChevronRight className="w-4 h-4 text-zinc-500" />
+                    </button>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="col-span-2">
-                        <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1.5">Nome Comercial</label>
-                        <input 
-                          type="text" 
-                          value={establishmentData.nome}
-                          onChange={e => setEstablishmentData((prev: any) => ({ ...prev, nome: e.target.value }))}
-                          className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500"
-                        />
+                    {/* Card 3: Redes Sociais */}
+                    <button 
+                      onClick={() => setShowSocialModal(true)}
+                      className="w-full flex items-center justify-between p-4 rounded-3xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-900/80 transition-all text-left active:scale-[0.99]"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-purple-500/10 flex items-center justify-center">
+                          <Link className="w-5 h-5 text-purple-500" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-zinc-200">Redes Sociais</h4>
+                          <p className="text-zinc-500 text-[10px] mt-0.5">Vincule Instagram, Facebook e TikTok</p>
+                        </div>
                       </div>
-                      
-                      <div>
-                        <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1.5">Telefone Comercial</label>
-                        <input 
-                          type="text" 
-                          placeholder="(11) 99999-9999"
-                          value={establishmentData.telefone}
-                          onChange={e => {
-                            const masked = formatBrazilianPhone(e.target.value)
-                            setEstablishmentData((prev: any) => ({ ...prev, telefone: masked }))
-                          }}
-                          className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
-                        />
-                      </div>
+                      <ChevronRight className="w-4 h-4 text-zinc-500" />
+                    </button>
 
-                      <div>
-                        <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1.5">WhatsApp Comercial</label>
-                        <input 
-                          type="text" 
-                          placeholder="(11) 99999-9999"
-                          value={establishmentData.whatsapp_url}
-                          onChange={e => {
-                            const masked = formatBrazilianPhone(e.target.value)
-                            setEstablishmentData((prev: any) => ({ ...prev, whatsapp_url: masked }))
-                          }}
-                          className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
-                        />
+                    {/* Card 4: Catálogo de Serviços */}
+                    <button 
+                      onClick={() => setShowServiceListModal(true)}
+                      className="w-full flex items-center justify-between p-4 rounded-3xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-900/80 transition-all text-left active:scale-[0.99]"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-orange-500/10 flex items-center justify-center">
+                          <Tag className="w-5 h-5 text-orange-500" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-zinc-200">Catálogo de Serviços</h4>
+                          <p className="text-zinc-500 text-[10px] mt-0.5">Cadastre, edite e altere os cortes</p>
+                        </div>
                       </div>
+                      <ChevronRight className="w-4 h-4 text-zinc-500" />
+                    </button>
 
-                      <div className="col-span-2">
-                        <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1.5">CEP</label>
-                        <input 
-                          type="text" 
-                          maxLength={9}
-                          placeholder="00000-000"
-                          onChange={async (e) => {
-                            const val = e.target.value.replace(/\D/g, '')
-                            if (val.length === 8) {
-                              try {
-                                const res = await fetch(`https://viacep.com.br/ws/${val}/json/`)
-                                const data = await res.json()
-                                if (!data.erro) {
-                                  const fullAddr = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`
-                                  setEstablishmentData((prev: any) => ({ ...prev, endereco: fullAddr }))
-                                  toast.success('Endereço auto-completado!')
-                                } else {
-                                  toast.error('CEP não encontrado.')
-                                }
-                              } catch (err) {
-                                toast.error('Erro ao buscar CEP.')
-                              }
-                            }
-                          }}
-                          className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
-                        />
+                    {/* Card 5: Bloqueios de Agenda */}
+                    <button 
+                      onClick={() => setShowPausesModal(true)}
+                      className="w-full flex items-center justify-between p-4 rounded-3xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-900/80 transition-all text-left active:scale-[0.99]"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-red-500/10 flex items-center justify-center">
+                          <Clock className="w-5 h-5 text-red-500" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-zinc-200">Bloqueios de Agenda</h4>
+                          <p className="text-zinc-500 text-[10px] mt-0.5">Veja e gerencie pausas agendadas</p>
+                        </div>
                       </div>
-
-                      <div className="col-span-2">
-                        <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1.5">Endereço Comercial</label>
-                        <input 
-                          type="text" 
-                          value={establishmentData.endereco}
-                          onChange={e => setEstablishmentData((prev: any) => ({ ...prev, endereco: e.target.value }))}
-                          className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
-                        />
-                      </div>
-                    </div>
+                      <ChevronRight className="w-4 h-4 text-zinc-500" />
+                    </button>
                   </div>
 
-                  {/* Social media connections */}
-                  <div className="glass-card p-6 rounded-3xl space-y-4 bg-zinc-900/40">
-                    <h3 className="text-sm font-black text-white flex items-center gap-1.5 uppercase tracking-wide">
-                      <Link className="w-4 h-4 text-purple-500" /> Redes Sociais
-                    </h3>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1">Link Instagram</label>
-                        <input 
-                          type="text" 
-                          placeholder="instagram.com/seu.salao"
-                          value={establishmentData.instagram_url}
-                          onChange={e => setEstablishmentData((prev: any) => ({ ...prev, instagram_url: e.target.value }))}
-                          className="w-full bg-zinc-950 border border-white/5 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-purple-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1">Link Facebook</label>
-                        <input 
-                          type="text" 
-                          placeholder="facebook.com/seu.salao"
-                          value={establishmentData.facebook_url}
-                          onChange={e => setEstablishmentData((prev: any) => ({ ...prev, facebook_url: e.target.value }))}
-                          className="w-full bg-zinc-950 border border-white/5 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-purple-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-1">Link TikTok</label>
-                        <input 
-                          type="text" 
-                          placeholder="tiktok.com/@seu.salao"
-                          value={establishmentData.tiktok_url}
-                          onChange={e => setEstablishmentData((prev: any) => ({ ...prev, tiktok_url: e.target.value }))}
-                          className="w-full bg-zinc-950 border border-white/5 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-purple-500"
-                        />
-                      </div>
-
-                      <div className="flex items-end">
+                  {/* Curated Theme Switcher & Logout */}
+                  <div className="space-y-3 pt-2">
+                    <div className="glass-card p-4 rounded-3xl flex items-center justify-between bg-zinc-900/40">
+                      <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Aparência do Sistema</span>
+                      <div className="bg-zinc-950 p-1 rounded-2xl flex items-center border border-white/5 gap-1 relative w-36 h-10">
                         <button 
-                          onClick={handleSaveProfile}
-                          className="w-full btn-primary h-[34px] text-xs font-black flex items-center justify-center gap-1.5"
+                          onClick={() => setTheme('light')}
+                          className={`flex-1 flex items-center justify-center gap-1.5 h-full rounded-xl text-xs font-black relative z-10 transition-colors ${theme === 'light' ? 'text-zinc-950' : 'text-zinc-500'}`}
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5 text-zinc-950" /> Salvar Perfil
+                          <Sun className="w-3.5 h-3.5" /> Claro
                         </button>
+                        <button 
+                          onClick={() => setTheme('dark')}
+                          className={`flex-1 flex items-center justify-center gap-1.5 h-full rounded-xl text-xs font-black relative z-10 transition-colors ${theme === 'dark' ? 'text-[#fd9602]' : 'text-zinc-500'}`}
+                        >
+                          <Moon className="w-3.5 h-3.5" /> Escuro
+                        </button>
+                        <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-xl transition-all duration-300 ${theme === 'light' ? 'left-1 bg-[#fd9602]' : 'left-[calc(50%+2px)] bg-zinc-900 border border-white/10'}`} />
                       </div>
                     </div>
+
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full h-12 bg-red-500/10 hover:bg-red-500 border border-red-500/25 rounded-3xl text-red-500 hover:text-zinc-950 font-bold flex items-center justify-center gap-2 transition-all"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sair da Conta
+                    </button>
                   </div>
-
-                  {/* Tab Sub-modal trigger: Gerenciar Serviços */}
-                  <button 
-                    onClick={() => setShowServiceListModal(true)}
-                    className="w-full flex items-center justify-between p-4 rounded-3xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-900/80 transition-all text-left"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-11 h-11 rounded-2xl bg-orange-500/10 flex items-center justify-center">
-                        <Tag className="w-5 h-5 text-orange-500" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-black text-zinc-200">Catálogo de Serviços</h4>
-                        <p className="text-zinc-500 text-[10px] mt-0.5">Cadastre, edite e mude valores dos cortes</p>
-                      </div>
-                    </div>
-                    <Plus className="w-4 h-4 text-[#fd9602]" />
-                  </button>
-
-                  {/* Scheduled pauses (old settings) */}
-                  <div className="glass-card p-6 rounded-3xl space-y-4 bg-zinc-900/40">
-                    <h3 className="text-sm font-black text-white flex items-center gap-1.5">
-                      <Clock className="w-4 h-4 text-blue-500" /> Bloqueios de Agenda
-                    </h3>
-
-                    {pauses.length === 0 ? (
-                      <div className="bg-zinc-950/40 border border-white/5 p-5 rounded-2xl text-center text-zinc-500 text-xs font-semibold">
-                        Nenhum bloqueio programado
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {pauses.map(p => (
-                          <div 
-                            key={p.id}
-                            className="bg-zinc-950 border border-white/5 px-4 py-3 rounded-2xl flex items-center justify-between"
-                          >
-                            <div>
-                              <h4 className="text-xs font-bold text-zinc-300">Motivo: {p.motivo}</h4>
-                              <p className="text-zinc-500 text-[9px] mt-0.5">
-                                Data: {new Date(p.data + 'T00:00:00').toLocaleDateString('pt-BR')}
-                              </p>
-                            </div>
-                            <button 
-                              onClick={() => handleDeletePause(p.id)}
-                              className="px-2.5 py-1 text-[10px] font-black text-red-500 bg-red-500/10 border border-red-500/20 rounded-xl"
-                            >
-                              Desbloquear
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Curated Segmented Theme Switcher (Claro / Escuro) */}
-                  <div className="glass-card p-4 rounded-3xl flex items-center justify-between bg-zinc-900/40">
-                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Aparência do Sistema</span>
-                    <div className="bg-zinc-950 p-1 rounded-2xl flex items-center border border-white/5 gap-1 relative w-36 h-10">
-                      <button 
-                        onClick={() => setTheme('light')}
-                        className={`flex-1 flex items-center justify-center gap-1.5 h-full rounded-xl text-xs font-black relative z-10 transition-colors ${theme === 'light' ? 'text-zinc-950' : 'text-zinc-500'}`}
-                      >
-                        <Sun className="w-3.5 h-3.5" /> Claro
-                      </button>
-                      <button 
-                        onClick={() => setTheme('dark')}
-                        className={`flex-1 flex items-center justify-center gap-1.5 h-full rounded-xl text-xs font-black relative z-10 transition-colors ${theme === 'dark' ? 'text-[#fd9602]' : 'text-zinc-500'}`}
-                      >
-                        <Moon className="w-3.5 h-3.5" /> Escuro
-                      </button>
-
-                      <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-xl transition-all duration-300 ${theme === 'light' ? 'left-1 bg-[#fd9602]' : 'left-[calc(50%+2px)] bg-zinc-900 border border-white/10'}`} />
-                    </div>
-                  </div>
-
-                  {/* Log out */}
-                  <button 
-                    onClick={handleLogout}
-                    className="w-full h-12 bg-red-500/10 hover:bg-red-500 border border-red-500/25 rounded-3xl text-red-500 hover:text-zinc-950 font-bold flex items-center justify-center gap-2 transition-all mt-4"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sair da Conta
-                  </button>
                 </div>
               )}
             </main>
@@ -3589,6 +3386,56 @@ export default function App() {
           goalInput={goalInput}
           onGoalInputChange={setGoalInput}
           onSave={handleSaveGoal}
+        />
+
+        {/* MANAGER DETAILS MODAL */}
+        <ManagerDetailsModal 
+          isOpen={showManagerModal}
+          onClose={() => setShowManagerModal(false)}
+          userName={userName}
+          onUserNameChange={setUserName}
+          managerAvatar={managerAvatar || ''}
+          onManagerAvatarChange={setManagerAvatar}
+          onImageSelect={handleImageSelect}
+          onSave={() => {
+            handleSaveProfile()
+            setShowManagerModal(false)
+          }}
+        />
+
+        {/* BUSINESS DETAILS MODAL */}
+        <BusinessDetailsModal 
+          isOpen={showBusinessModal}
+          onClose={() => setShowBusinessModal(false)}
+          establishmentLogo={establishmentLogo || ''}
+          onEstablishmentLogoChange={setEstablishmentLogo}
+          onImageSelect={handleImageSelect}
+          establishmentData={establishmentData}
+          onEstablishmentDataChange={setEstablishmentData}
+          onSave={() => {
+            handleSaveProfile()
+            setShowBusinessModal(false)
+          }}
+        />
+
+        {/* SOCIAL MEDIA MODAL */}
+        <SocialMediaModal 
+          isOpen={showSocialModal}
+          onClose={() => setShowSocialModal(false)}
+          establishmentData={establishmentData}
+          onEstablishmentDataChange={setEstablishmentData}
+          onSave={() => {
+            handleSaveProfile()
+            setShowSocialModal(false)
+          }}
+        />
+
+        {/* AGENDA PAUSES MODAL */}
+        <AgendaPausesModal 
+          isOpen={showPausesModal}
+          onClose={() => setShowPausesModal(false)}
+          pauses={pauses}
+          onDeletePause={handleDeletePause}
         />
 
       </AnimatePresence>
