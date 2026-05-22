@@ -10,6 +10,8 @@
 /backend/build/
 /dashboard/.next/
 /dashboard/out/
+/saas/.next/
+/saas/scratch/
 /mobile/app/build/
 /mobile/build/
 .gradle/

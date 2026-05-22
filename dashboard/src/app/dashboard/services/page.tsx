@@ -14,6 +14,7 @@ export default function ServicesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<any>(null);
+  const [viewingService, setViewingService] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"ALL" | "SERVICE" | "PLAN">("ALL");
 
   const [formData, setFormData] = useState({
@@ -247,19 +248,20 @@ export default function ServicesPage() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className={`glass-card p-8 rounded-[2rem] hover:border-[#fd9602]/30 transition-all group relative overflow-hidden shadow-sm ${
+                onClick={() => setViewingService(item)}
+                className={`glass-card p-8 rounded-[2rem] hover:border-[#fd9602]/30 transition-all group relative overflow-hidden shadow-sm cursor-pointer ${
                   item.tipo === "PLAN" ? "ring-2 ring-[#fd9602]/20" : ""
                 }`}
               >
                 <div className="absolute top-6 right-6 flex gap-2 z-20">
                   <button 
-                    onClick={() => handleOpenModal(item)}
+                    onClick={(e) => { e.stopPropagation(); handleOpenModal(item); }}
                     className="p-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-[#fd9602]/15 text-zinc-650 dark:text-zinc-400 hover:text-[#fd9602] rounded-xl transition-all cursor-pointer border border-subtle dark:border-zinc-700 shadow-sm"
                   >
                     <Edit2 size={14} />
                   </button>
                   <button 
-                    onClick={() => handleDelete(item.id)}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
                     className="p-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-red-500/15 text-zinc-650 dark:text-zinc-400 hover:text-red-500 rounded-xl transition-all cursor-pointer border border-subtle dark:border-zinc-700 shadow-sm"
                   >
                     <Trash2 size={14} />
@@ -267,9 +269,9 @@ export default function ServicesPage() {
                 </div>
 
                 <div className="space-y-6">
-                  {item.imagem_url && (
-                    <div className="w-full h-44 rounded-[20px] overflow-hidden relative bg-zinc-900 border border-subtle dark:border-zinc-800">
-                      {(() => {
+                  <div className="w-full h-44 rounded-[20px] overflow-hidden relative bg-zinc-100 dark:bg-zinc-900 border border-subtle dark:border-zinc-800/80 shadow-inner group-hover:border-[#fd9602]/20 transition-all">
+                    {item.imagem_url ? (
+                      (() => {
                         const imgs = item.imagem_url.split('||').filter(Boolean);
                         if (imgs.length === 0) return null;
                         return (
@@ -279,24 +281,41 @@ export default function ServicesPage() {
                                 key={idx}
                                 src={img} 
                                 alt={`${item.nome} ${idx}`}
-                                className="w-full h-full object-cover shrink-0 snap-center"
+                                className="w-full h-full object-cover shrink-0 snap-center transition-transform duration-500 group-hover:scale-105"
                               />
                             ))}
                           </div>
                         );
-                      })()}
-                      {item.video_url && (
-                        <a 
-                          href={item.video_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="absolute bottom-3 right-3 bg-zinc-950/80 hover:bg-zinc-950 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-white/10 flex items-center gap-1.5 transition-all cursor-pointer z-10"
-                        >
-                          <Play size={10} className="fill-current" /> Assistir Vídeo
-                        </a>
-                      )}
-                    </div>
-                  )}
+                      })()
+                    ) : (
+                      /* Premium category-based placeholder with dynamic HSL gradient and icons */
+                      <div className={`w-full h-full flex flex-col items-center justify-center gap-3 transition-colors ${
+                        item.tipo === "PLAN" 
+                          ? "bg-gradient-to-br from-[#fd9602]/10 via-[#fd9602]/5 to-zinc-950/20" 
+                          : "bg-gradient-to-br from-zinc-100 to-zinc-200/50 dark:from-zinc-900 dark:to-zinc-950"
+                      }`}>
+                        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-850 border border-subtle dark:border-zinc-800 text-[#fd9602] shadow-sm transition-transform duration-300 group-hover:scale-110">
+                          {item.categoria === "CABELO" && <Sparkles className="w-8 h-8" />}
+                          {item.categoria === "BARBA" && <Tag className="w-8 h-8" />}
+                          {item.categoria === "COMBO" && <Layers className="w-8 h-8" />}
+                          {item.categoria === "PLAN" && <Sparkles className="w-8 h-8" />}
+                          {!(["CABELO", "BARBA", "COMBO", "PLAN"].includes(item.categoria)) && <Layers className="w-8 h-8" />}
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Sem Foto Cadastrada</span>
+                      </div>
+                    )}
+                    {item.video_url && (
+                      <a 
+                        href={item.video_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute bottom-3 right-3 bg-zinc-950/80 hover:bg-zinc-950 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-white/10 flex items-center gap-1.5 transition-all cursor-pointer z-10"
+                      >
+                        <Play size={10} className="fill-current" /> Assistir Vídeo
+                      </a>
+                    )}
+                  </div>
 
                   <div className="flex items-center justify-between">
                     <div className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-[#fd9602]/10 text-[#fd9602] uppercase tracking-widest border border-[#fd9602]/20">
@@ -523,6 +542,130 @@ export default function ServicesPage() {
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (editingService ? "Salvar Alterações" : "Cadastrar Agora")}
           </button>
         </form>
+      </Modal>
+
+      {/* View Details Modal */}
+      <Modal
+        isOpen={!!viewingService}
+        onClose={() => setViewingService(null)}
+        title="Detalhes do Catálogo"
+      >
+        {viewingService && (
+          <div className="space-y-6 pb-2">
+            {/* Media Area (Carrossel ou Placeholder + Video Player Embutido) */}
+            <div className="w-full rounded-[24px] overflow-hidden border border-subtle dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-950 relative">
+              {viewingService.imagem_url ? (
+                <div className="w-full h-64 flex overflow-x-auto snap-x snap-mandatory scrollbar-none scroll-smooth">
+                  {viewingService.imagem_url.split('||').filter(Boolean).map((img: string, idx: number) => (
+                    <img 
+                      key={idx}
+                      src={img} 
+                      alt={`${viewingService.nome} ${idx}`}
+                      className="w-full h-full object-cover shrink-0 snap-center"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="w-full h-64 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-zinc-50 to-zinc-150 dark:from-zinc-900 dark:to-zinc-950">
+                  <div className="p-5 rounded-3xl bg-white dark:bg-zinc-850 border border-subtle dark:border-zinc-800 text-[#fd9602] shadow-sm">
+                    {viewingService.categoria === "CABELO" && <Sparkles className="w-10 h-10" />}
+                    {viewingService.categoria === "BARBA" && <Tag className="w-10 h-10" />}
+                    {viewingService.categoria === "COMBO" && <Layers className="w-10 h-10" />}
+                    {viewingService.categoria === "PLAN" && <Sparkles className="w-10 h-10" />}
+                    {!(["CABELO", "BARBA", "COMBO", "PLAN"].includes(viewingService.categoria)) && <Layers className="w-10 h-10" />}
+                  </div>
+                  <span className="text-xs font-bold tracking-wider text-zinc-500">Sem Foto Cadastrada</span>
+                </div>
+              )}
+            </div>
+
+            {/* Video embed if present */}
+            {viewingService.video_url && (
+              <div className="space-y-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#fd9602]">Vídeo Demonstrativo</span>
+                <div className="w-full h-48 rounded-2xl overflow-hidden border border-subtle dark:border-zinc-800 bg-zinc-950 flex items-center justify-center relative">
+                  {viewingService.video_url.includes('youtube.com') || viewingService.video_url.includes('youtu.be') ? (
+                    (() => {
+                      const ytId = viewingService.video_url.split('v=')[1] || viewingService.video_url.split('/').pop();
+                      return (
+                        <iframe 
+                          src={`https://www.youtube.com/embed/${ytId}`} 
+                          className="w-full h-full border-none"
+                          allowFullScreen
+                          title="Vídeo do Serviço"
+                        />
+                      );
+                    })()
+                  ) : (
+                    <video 
+                      src={viewingService.video_url} 
+                      controls 
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Header info */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black bg-[#fd9602]/10 text-[#fd9602] uppercase tracking-widest border border-[#fd9602]/20">
+                  {viewingService.tipo === "PLAN" ? <Sparkles size={10} className="mr-1.5" /> : null}
+                  {viewingService.categoria}
+                </span>
+                <div className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 font-bold text-xs">
+                  <Clock className="w-4 h-4 text-zinc-400" />
+                  <span>{viewingService.tipo === "PLAN" ? `${viewingService.duracao_minutos} dias` : `${viewingService.duracao_minutos} minutos`}</span>
+                </div>
+              </div>
+              <h3 className="text-2xl font-black text-zinc-900 dark:text-white leading-tight tracking-tight">
+                {viewingService.nome}
+              </h3>
+            </div>
+
+            {/* Price with giant styling */}
+            <div className="flex items-center justify-between p-5 rounded-2xl bg-zinc-50 dark:bg-zinc-900/50 border border-subtle dark:border-zinc-800">
+              <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Investimento</span>
+              <span className="text-3xl font-black text-[#fd9602]">
+                R$ {viewingService.preco.toFixed(2).replace('.', ',')}
+              </span>
+            </div>
+
+            {/* Description card */}
+            <div className="space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Sobre o Serviço / Plano</span>
+              <p className="text-sm text-zinc-650 dark:text-zinc-350 leading-relaxed font-medium bg-zinc-50/50 dark:bg-zinc-900/20 p-5 rounded-2xl border border-subtle dark:border-zinc-800 max-h-40 overflow-y-auto whitespace-pre-wrap">
+                {viewingService.descricao || "Nenhuma descrição fornecida."}
+              </p>
+            </div>
+
+            {/* Actions button */}
+            <div className="flex gap-3 pt-2">
+              <button 
+                onClick={() => { setEditingService(viewingService); setFormData({
+                  name: viewingService.nome,
+                  price: viewingService.preco.toString().replace('.', ','),
+                  duration: viewingService.duracao_minutos.toString(),
+                  category: viewingService.categoria || "CABELO",
+                  description: viewingService.descricao || "",
+                  type: viewingService.tipo || "SERVICE",
+                  imagem_url: viewingService.imagem_url || "",
+                  video_url: viewingService.video_url || ""
+                }); setViewingService(null); setIsModalOpen(true); }}
+                className="flex-1 bg-zinc-100 hover:bg-[#fd9602]/15 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:text-[#fd9602] border border-subtle dark:border-zinc-700 h-12 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Edit2 size={14} /> Editar Item
+              </button>
+              <button 
+                onClick={() => setViewingService(null)}
+                className="flex-1 btn-primary h-12 text-xs"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

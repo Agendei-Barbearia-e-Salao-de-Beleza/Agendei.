@@ -2487,19 +2487,28 @@ export default function App() {
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="w-full max-w-md bg-zinc-900 border-t border-white/10 ios-sheet p-6 relative z-10"
+              transition={{ type: 'spring', damping: 38, stiffness: 380 }}
+              className={`w-full max-w-md border-t ios-sheet p-6 relative z-10 ${
+                theme === 'dark' ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-950'
+              }`}
             >
               {/* Drag Indicator */}
-              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5" onClick={() => setShowDetailsModal(false)} />
+              <div 
+                className={`w-12 h-1.5 rounded-full mx-auto mb-5 cursor-pointer transition-colors ${
+                  theme === 'dark' ? 'bg-zinc-700/60 hover:bg-zinc-600' : 'bg-zinc-300 hover:bg-zinc-400'
+                }`} 
+                onClick={() => setShowDetailsModal(false)} 
+              />
               
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
+                <h3 className={`text-base font-black flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>
                   <Clock className="w-4 h-4 text-[#fd9602]" /> Detalhes do Horário
                 </h3>
                 <button 
                   onClick={() => setShowDetailsModal(false)}
-                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 border border-white/5"
+                  className={`p-1.5 rounded-full border transition-all ${
+                    theme === 'dark' ? 'text-zinc-500 hover:text-zinc-300 bg-zinc-950 border-white/5' : 'text-zinc-400 hover:text-zinc-600 bg-zinc-50 border-zinc-200'
+                  }`}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -2507,22 +2516,35 @@ export default function App() {
 
               <div className="space-y-4">
                 {/* Client detail card */}
-                <div className="bg-zinc-950/60 border border-white/5 p-4 rounded-2xl space-y-2">
+                <div className={`border p-4 rounded-2xl space-y-2 transition-colors ${
+                  theme === 'dark' ? 'bg-zinc-950/60 border-white/5' : 'bg-zinc-50 border-zinc-200'
+                }`}>
                   <span className="text-[10px] text-zinc-500 font-extrabold uppercase tracking-wider block">Cliente</span>
-                  <span className="text-base font-black text-white block">{selectedApp.customer}</span>
-                  <span className="text-xs text-zinc-400 font-medium block">Data: {new Date(selectedApp.date + 'T00:00:00').toLocaleDateString('pt-BR')} • {selectedApp.time}</span>
+                  <span className={`text-base font-black block ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>{selectedApp.customer}</span>
+                  <span className={`text-xs font-medium block ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-650'}`}>
+                    Data: {new Date(selectedApp.date + 'T00:00:00').toLocaleDateString('pt-BR')} • {selectedApp.time}
+                  </span>
                 </div>
 
                 {/* Services list detail */}
-                <div className="bg-zinc-950/60 border border-white/5 p-4 rounded-2xl space-y-3">
+                <div className={`border p-4 rounded-2xl space-y-3 transition-colors ${
+                  theme === 'dark' ? 'bg-zinc-950/60 border-white/5' : 'bg-zinc-50 border-zinc-200'
+                }`}>
                   <span className="text-[10px] text-zinc-500 font-extrabold uppercase tracking-wider block">Serviços Contratados</span>
                   {selectedApp.services.map((s, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-xs font-bold text-zinc-300 border-b border-white/5 last:border-b-0 pb-2 last:pb-0">
+                    <div 
+                      key={idx} 
+                      className={`flex justify-between items-center text-xs font-bold border-b pb-2 last:pb-0 ${
+                        theme === 'dark' ? 'text-zinc-300 border-white/5' : 'text-zinc-600 border-zinc-150'
+                      }`}
+                    >
                       <span>{s.nome}</span>
                       <span className="text-[#fd9602]">R$ {s.preco.toFixed(2)}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between items-center border-t border-white/10 pt-2 font-black text-sm text-white">
+                  <div className={`flex justify-between items-center border-t pt-2 font-black text-sm ${
+                    theme === 'dark' ? 'text-white border-white/10' : 'text-zinc-950 border-zinc-200'
+                  }`}>
                     <span>Valor Total</span>
                     <span className="text-[#fd9602]">R$ {selectedApp.totalPrice.toFixed(2)}</span>
                   </div>
@@ -2546,7 +2568,9 @@ export default function App() {
                           updateAppointmentStatus(selectedApp.id, 'CANCELADO')
                           setShowDetailsModal(false)
                         }}
-                        className="flex-1 h-12 bg-zinc-800 hover:bg-zinc-700 text-red-500 font-black rounded-2xl border border-white/5 flex items-center justify-center gap-1.5 text-xs uppercase"
+                        className={`flex-1 h-12 font-black rounded-2xl border flex items-center justify-center gap-1.5 text-xs uppercase transition-all ${
+                          theme === 'dark' ? 'bg-zinc-800 hover:bg-zinc-700 text-red-500 border-white/5' : 'bg-red-50 hover:bg-red-100 text-red-650 border-red-200'
+                        }`}
                       >
                         <X className="w-4 h-4 text-red-500" /> Cancelar
                       </button>
@@ -2571,7 +2595,9 @@ export default function App() {
                           updateAppointmentStatus(selectedApp.id, 'CANCELADO')
                           setShowDetailsModal(false)
                         }}
-                        className="h-12 w-12 bg-zinc-850 hover:bg-zinc-800 text-red-500 border border-white/5 rounded-2xl flex items-center justify-center"
+                        className={`h-12 w-12 border rounded-2xl flex items-center justify-center transition-all ${
+                          theme === 'dark' ? 'bg-zinc-850 hover:bg-zinc-800 text-red-500 border-white/5' : 'bg-red-50 hover:bg-red-100 text-red-600 border-red-200'
+                        }`}
                       >
                         <X className="w-5 h-5 text-red-500" />
                       </button>
@@ -2579,7 +2605,9 @@ export default function App() {
                   )}
 
                   {(selectedApp.status === 'CONCLUIDO' || selectedApp.status === 'CANCELADO') && (
-                    <div className="w-full text-center py-2 bg-zinc-950 border border-white/5 rounded-2xl font-black text-xs uppercase tracking-wider text-zinc-500">
+                    <div className={`w-full text-center py-2 border rounded-2xl font-black text-xs uppercase tracking-wider ${
+                      theme === 'dark' ? 'bg-zinc-950 border-white/5 text-zinc-500' : 'bg-zinc-100 border-zinc-200 text-zinc-400'
+                    }`}>
                       Horário Finalizado ({selectedApp.status === 'CONCLUIDO' ? 'Pago' : 'Cancelado'})
                     </div>
                   )}
@@ -2609,19 +2637,28 @@ export default function App() {
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="w-full max-w-md bg-zinc-900 border-t border-white/10 ios-sheet p-6 relative z-10 max-h-[85vh] overflow-y-auto"
+              transition={{ type: 'spring', damping: 38, stiffness: 380 }}
+              className={`w-full max-w-md border-t ios-sheet p-6 relative z-10 max-h-[85vh] overflow-y-auto ${
+                theme === 'dark' ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-950'
+              }`}
             >
               {/* Drag Indicator */}
-              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5" onClick={() => setShowAppModal(false)} />
+              <div 
+                className={`w-12 h-1.5 rounded-full mx-auto mb-5 cursor-pointer transition-colors ${
+                  theme === 'dark' ? 'bg-zinc-700/60 hover:bg-zinc-600' : 'bg-zinc-300 hover:bg-zinc-400'
+                }`} 
+                onClick={() => setShowAppModal(false)} 
+              />
               
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
+                <h3 className={`text-base font-black flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>
                   <Plus className="w-4 h-4 text-[#fd9602]" /> Novo Agendamento
                 </h3>
                 <button 
                   onClick={() => setShowAppModal(false)}
-                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 border border-white/5"
+                  className={`p-1.5 rounded-full border transition-all ${
+                    theme === 'dark' ? 'text-zinc-500 hover:text-zinc-300 bg-zinc-950 border-white/5' : 'text-zinc-400 hover:text-zinc-600 bg-zinc-50 border-zinc-200'
+                  }`}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -2629,44 +2666,58 @@ export default function App() {
 
               <form onSubmit={handleCreateAppointment} className="space-y-4">
                 <div>
-                  <label className="block text-zinc-400 text-xs font-bold mb-1.5">Nome do Cliente</label>
+                  <label className={`block text-xs font-bold mb-1.5 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                    Nome do Cliente
+                  </label>
                   <input 
                     type="text" 
                     required
                     placeholder="Nome do cliente completo"
                     value={appFormData.customerName}
                     onChange={e => setAppFormData(prev => ({ ...prev, customerName: e.target.value }))}
-                    className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
+                    className={`w-full border rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602] transition-colors ${
+                      theme === 'dark' ? 'bg-zinc-950 border-white/5 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-950'
+                    }`}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-zinc-400 text-xs font-bold mb-1.5">Horário</label>
+                    <label className={`block text-xs font-bold mb-1.5 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                      Horário
+                    </label>
                     <input 
                       type="time" 
                       required
                       value={appFormData.time}
                       onChange={e => setAppFormData(prev => ({ ...prev, time: e.target.value }))}
-                      className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
+                      className={`w-full border rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602] transition-colors ${
+                        theme === 'dark' ? 'bg-zinc-950 border-white/5 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-950'
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-zinc-400 text-xs font-bold mb-1.5">Data</label>
+                    <label className={`block text-xs font-bold mb-1.5 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                      Data
+                    </label>
                     <input 
                       type="date" 
                       required
                       value={appFormData.date}
                       onChange={e => setAppFormData(prev => ({ ...prev, date: e.target.value }))}
-                      className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602]"
+                      className={`w-full border rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#fd9602] transition-colors ${
+                        theme === 'dark' ? 'bg-zinc-950 border-white/5 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-950'
+                      }`}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-zinc-400 text-xs font-bold mb-2">Selecione os Serviços</label>
+                  <label className={`block text-xs font-bold mb-2 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                    Selecione os Serviços
+                  </label>
                   {services.length === 0 ? (
-                    <p className="text-[10px] text-zinc-600">Nenhum serviço cadastrado.</p>
+                    <p className="text-[10px] text-zinc-500">Nenhum serviço cadastrado.</p>
                   ) : (
                     <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto">
                       {services.map(s => {
@@ -2682,7 +2733,11 @@ export default function App() {
                                 setAppFormData(prev => ({ ...prev, selectedServiceIds: [...prev.selectedServiceIds, s.id] }))
                               }
                             }}
-                            className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all ${isSelected ? 'bg-[#fd9602]/10 border-[#fd9602] text-[#fd9602]' : 'bg-zinc-950 border-white/5 text-zinc-400'}`}
+                            className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all ${
+                              isSelected 
+                                ? 'bg-[#fd9602]/10 border-[#fd9602] text-[#fd9602]' 
+                                : (theme === 'dark' ? 'bg-zinc-950 border-white/5 text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-zinc-600')
+                            }`}
                           >
                             <span className="text-xs font-black truncate">{s.nome}</span>
                             <span className="text-[10px] font-black shrink-0">R${s.preco}</span>
@@ -2713,19 +2768,28 @@ export default function App() {
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="w-full max-w-md bg-zinc-900 border-t border-white/10 ios-sheet p-6 relative z-10"
+              transition={{ type: 'spring', damping: 38, stiffness: 380 }}
+              className={`w-full max-w-md border-t ios-sheet p-6 relative z-10 ${
+                theme === 'dark' ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-950'
+              }`}
             >
               {/* Drag Indicator */}
-              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5" onClick={() => setShowExpenseModal(false)} />
+              <div 
+                className={`w-12 h-1.5 rounded-full mx-auto mb-5 cursor-pointer transition-colors ${
+                  theme === 'dark' ? 'bg-zinc-700/60 hover:bg-zinc-600' : 'bg-zinc-300 hover:bg-zinc-400'
+                }`} 
+                onClick={() => setShowExpenseModal(false)} 
+              />
               
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
+                <h3 className={`text-base font-black flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>
                   <DollarSign className="w-4 h-4 text-red-500" /> Registrar Saída Financeira
                 </h3>
                 <button 
                   onClick={() => setShowExpenseModal(false)}
-                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 border border-white/5"
+                  className={`p-1.5 rounded-full border transition-all ${
+                    theme === 'dark' ? 'text-zinc-500 hover:text-zinc-300 bg-zinc-950 border-white/5' : 'text-zinc-400 hover:text-zinc-600 bg-zinc-50 border-zinc-200'
+                  }`}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -2733,47 +2797,63 @@ export default function App() {
 
               <form onSubmit={handleCreateExpense} className="space-y-4">
                 <div>
-                  <label className="block text-zinc-400 text-xs font-bold mb-1.5">Descrição da Saída</label>
+                  <label className={`block text-xs font-bold mb-1.5 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                    Descrição da Saída
+                  </label>
                   <input 
                     type="text" 
                     required
                     placeholder="Ex: Aluguel, Compra de Shampoos, Conta de Luz..."
                     value={expenseFormData.description}
                     onChange={e => setExpenseFormData(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-red-500"
+                    className={`w-full border rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-colors ${
+                      theme === 'dark' ? 'bg-zinc-950 border-white/5 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-950'
+                    }`}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-zinc-400 text-xs font-bold mb-1.5">Valor Unitário (R$)</label>
+                    <label className={`block text-xs font-bold mb-1.5 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                      Valor Unitário (R$)
+                    </label>
                     <input 
                       type="text" 
                       required
                       placeholder="0,00"
                       value={expenseFormData.value}
                       onChange={e => setExpenseFormData(prev => ({ ...prev, value: e.target.value }))}
-                      className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-red-500"
+                      className={`w-full border rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-colors ${
+                        theme === 'dark' ? 'bg-zinc-950 border-white/5 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-950'
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-zinc-400 text-xs font-bold mb-1.5">Data</label>
+                    <label className={`block text-xs font-bold mb-1.5 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                      Data
+                    </label>
                     <input 
                       type="date" 
                       required
                       value={expenseFormData.date}
                       onChange={e => setExpenseFormData(prev => ({ ...prev, date: e.target.value }))}
-                      className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-red-500"
+                      className={`w-full border rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-colors ${
+                        theme === 'dark' ? 'bg-zinc-950 border-white/5 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-950'
+                      }`}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-zinc-400 text-xs font-bold mb-1.5">Categoria</label>
+                  <label className={`block text-xs font-bold mb-1.5 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                    Categoria
+                  </label>
                   <select 
                     value={expenseFormData.category}
                     onChange={e => setExpenseFormData(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 text-zinc-400"
+                    className={`w-full border rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-colors cursor-pointer ${
+                      theme === 'dark' ? 'bg-zinc-950 border-white/5 text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-zinc-700'
+                    }`}
                   >
                     <option value="Suprimentos">Suprimentos</option>
                     <option value="Serviços Públicos">Serviços Públicos (Luz/Água)</option>
@@ -2804,19 +2884,28 @@ export default function App() {
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="w-full max-w-md bg-zinc-900 border-t border-white/10 ios-sheet p-6 relative z-10"
+              transition={{ type: 'spring', damping: 38, stiffness: 380 }}
+              className={`w-full max-w-md border-t ios-sheet p-6 relative z-10 ${
+                theme === 'dark' ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-950'
+              }`}
             >
               {/* Drag Indicator */}
-              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5" onClick={() => setShowIncomeModal(false)} />
+              <div 
+                className={`w-12 h-1.5 rounded-full mx-auto mb-5 cursor-pointer transition-colors ${
+                  theme === 'dark' ? 'bg-zinc-700/60 hover:bg-zinc-600' : 'bg-zinc-300 hover:bg-zinc-400'
+                }`} 
+                onClick={() => setShowIncomeModal(false)} 
+              />
               
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
+                <h3 className={`text-base font-black flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>
                   <ArrowUpRight className="w-4 h-4 text-emerald-400" /> Registrar Entrada Manual
                 </h3>
                 <button 
                   onClick={() => setShowIncomeModal(false)}
-                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 border border-white/5"
+                  className={`p-1.5 rounded-full border transition-all ${
+                    theme === 'dark' ? 'text-zinc-500 hover:text-zinc-300 bg-zinc-950 border-white/5' : 'text-zinc-400 hover:text-zinc-600 bg-zinc-50 border-zinc-200'
+                  }`}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -2824,47 +2913,63 @@ export default function App() {
 
               <form onSubmit={handleCreateIncome} className="space-y-4">
                 <div>
-                  <label className="block text-zinc-400 text-xs font-bold mb-1.5">Descrição da Entrada</label>
+                  <label className={`block text-xs font-bold mb-1.5 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                    Descrição da Entrada
+                  </label>
                   <input 
                     type="text" 
                     required
                     placeholder="Ex: Venda de produto, Gorjeta, Serviço avulso..."
                     value={incomeFormData.description}
                     onChange={e => setIncomeFormData(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500"
+                    className={`w-full border rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-colors ${
+                      theme === 'dark' ? 'bg-zinc-950 border-white/5 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-950'
+                    }`}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-zinc-400 text-xs font-bold mb-1.5">Valor (R$)</label>
+                    <label className={`block text-xs font-bold mb-1.5 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                      Valor (R$)
+                    </label>
                     <input 
                       type="text" 
                       required
                       placeholder="0,00"
                       value={incomeFormData.value}
                       onChange={e => setIncomeFormData(prev => ({ ...prev, value: e.target.value }))}
-                      className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500"
+                      className={`w-full border rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-colors ${
+                        theme === 'dark' ? 'bg-zinc-950 border-white/5 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-950'
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-zinc-400 text-xs font-bold mb-1.5">Data</label>
+                    <label className={`block text-xs font-bold mb-1.5 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                      Data
+                    </label>
                     <input 
                       type="date" 
                       required
                       value={incomeFormData.date}
                       onChange={e => setIncomeFormData(prev => ({ ...prev, date: e.target.value }))}
-                      className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500"
+                      className={`w-full border rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-colors ${
+                        theme === 'dark' ? 'bg-zinc-950 border-white/5 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-950'
+                      }`}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-zinc-400 text-xs font-bold mb-1.5">Categoria</label>
+                  <label className={`block text-xs font-bold mb-1.5 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                    Categoria
+                  </label>
                   <select 
                     value={incomeFormData.category}
                     onChange={e => setIncomeFormData(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 text-zinc-400"
+                    className={`w-full border rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer ${
+                      theme === 'dark' ? 'bg-zinc-950 border-white/5 text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-zinc-700'
+                    }`}
                   >
                     <option value="Outros">Outros</option>
                     <option value="Venda de Produto">Venda de Produto</option>
@@ -2894,19 +2999,28 @@ export default function App() {
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="w-full max-w-md bg-zinc-900 border-t border-white/10 ios-sheet p-6 relative z-10"
+              transition={{ type: 'spring', damping: 38, stiffness: 380 }}
+              className={`w-full max-w-md border-t ios-sheet p-6 relative z-10 ${
+                theme === 'dark' ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-950'
+              }`}
             >
               {/* Drag Indicator */}
-              <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5" onClick={() => setShowPauseModal(false)} />
+              <div 
+                className={`w-12 h-1.5 rounded-full mx-auto mb-5 cursor-pointer transition-colors ${
+                  theme === 'dark' ? 'bg-zinc-700/60 hover:bg-zinc-600' : 'bg-zinc-300 hover:bg-zinc-400'
+                }`} 
+                onClick={() => setShowPauseModal(false)} 
+              />
               
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
+                <h3 className={`text-base font-black flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>
                   <Clock className="w-4 h-4 text-blue-500" /> Pausar Agenda / Folga
                 </h3>
                 <button 
                   onClick={() => setShowPauseModal(false)}
-                  className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 border border-white/5"
+                  className={`p-1.5 rounded-full border transition-all ${
+                    theme === 'dark' ? 'text-zinc-500 hover:text-zinc-300 bg-zinc-950 border-white/5' : 'text-zinc-400 hover:text-zinc-600 bg-zinc-50 border-zinc-200'
+                  }`}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -2914,25 +3028,33 @@ export default function App() {
 
               <form onSubmit={handleCreatePause} className="space-y-4">
                 <div>
-                  <label className="block text-zinc-400 text-xs font-bold mb-1.5">Motivo da Pausa</label>
+                  <label className={`block text-xs font-bold mb-1.5 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                    Motivo da Pausa
+                  </label>
                   <input 
                     type="text" 
                     required
                     placeholder="Ex: Almoço prolongado, Manutenção interna..."
                     value={pauseFormData.reason}
                     onChange={e => setPauseFormData(prev => ({ ...prev, reason: e.target.value }))}
-                    className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500"
+                    className={`w-full border rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors ${
+                      theme === 'dark' ? 'bg-zinc-950 border-white/5 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-950'
+                    }`}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-zinc-400 text-xs font-bold mb-1.5">Data do Bloqueio</label>
+                  <label className={`block text-xs font-bold mb-1.5 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                    Data do Bloqueio
+                  </label>
                   <input 
                     type="date" 
                     required
                     value={pauseFormData.date}
                     onChange={e => setPauseFormData(prev => ({ ...prev, date: e.target.value }))}
-                    className="w-full bg-zinc-950 border border-white/5 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500"
+                    className={`w-full border rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors ${
+                      theme === 'dark' ? 'bg-zinc-950 border-white/5 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-950'
+                    }`}
                   />
                 </div>
 
@@ -3072,11 +3194,12 @@ export default function App() {
           services={services}
         />
 
-        {/* REVIEWS MODAL */}        {/* REVIEWS MODAL */}
+        {/* REVIEWS MODAL */}
         <ReviewsModal 
           isOpen={showReviewsModal}
           onClose={() => setShowReviewsModal(false)}
           reviews={reviews}
+          theme={theme}
         />
 
         {/* PIX PAYMENT MODAL */}

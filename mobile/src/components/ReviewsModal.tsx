@@ -15,12 +15,14 @@ interface ReviewsModalProps {
   isOpen: boolean
   onClose: () => void
   reviews: Review[]
+  theme?: 'light' | 'dark'
 }
 
 export const ReviewsModal: React.FC<ReviewsModalProps> = ({
   isOpen,
   onClose,
-  reviews
+  reviews,
+  theme = 'dark'
 }) => {
   if (!isOpen) return null
 
@@ -37,28 +39,39 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-        className="w-full max-w-md bg-zinc-900 border-t border-white/10 ios-sheet p-6 relative z-10 h-[80vh] flex flex-col"
+        transition={{ type: 'spring', damping: 38, stiffness: 380 }}
+        className={`w-full max-w-md border-t ios-sheet p-6 relative z-10 h-[80vh] flex flex-col transition-colors ${
+          theme === 'dark' ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-950'
+        }`}
       >
         {/* Drag Indicator */}
-        <div className="w-12 h-1.5 bg-zinc-700/60 rounded-full mx-auto mb-5 shrink-0" onClick={onClose} />
+        <div 
+          className={`w-12 h-1.5 rounded-full mx-auto mb-5 shrink-0 cursor-pointer transition-colors ${
+            theme === 'dark' ? 'bg-zinc-700/60 hover:bg-zinc-600' : 'bg-zinc-300 hover:bg-zinc-400'
+          }`} 
+          onClick={onClose} 
+        />
         
         <div className="flex items-center justify-between mb-5 shrink-0">
-          <h3 className="text-base font-black text-white flex items-center gap-2">
+          <h3 className={`text-base font-black flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>
             <Star className="w-4 h-4 text-[#fd9602] fill-[#fd9602]/20" /> Avaliações & Feedback
           </h3>
           <button 
             onClick={onClose}
-            className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-full bg-zinc-950 border border-white/5"
+            className={`p-1.5 rounded-full border transition-all ${
+              theme === 'dark' ? 'text-zinc-500 hover:text-zinc-300 bg-zinc-950 border-white/5' : 'text-zinc-400 hover:text-zinc-650 bg-zinc-50 border-zinc-200'
+            }`}
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-          <div className="bg-zinc-950/50 border border-white/5 p-4 rounded-2xl flex items-center justify-between shrink-0">
+          <div className={`border p-4 rounded-2xl flex items-center justify-between shrink-0 transition-colors ${
+            theme === 'dark' ? 'bg-zinc-950/50 border-white/5' : 'bg-zinc-50 border-zinc-200'
+          }`}>
             <div>
-              <span className="text-3xl font-black text-white">{averageRating}</span>
+              <span className={`text-3xl font-black ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>{averageRating}</span>
               <span className="text-xs text-zinc-500 block mt-0.5">Média de {reviews.length} avaliações</span>
             </div>
             <div className="flex gap-1">
@@ -75,11 +88,13 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
               reviews.map(r => (
                 <div 
                   key={r.id}
-                  className="bg-zinc-950/30 border border-white/5 p-4 rounded-2xl space-y-2.5"
+                  className={`border p-4 rounded-2xl space-y-2.5 transition-colors ${
+                    theme === 'dark' ? 'bg-zinc-950/30 border-white/5' : 'bg-zinc-50 border-zinc-150/80'
+                  }`}
                 >
                   <div className="flex justify-between items-center">
                     <div>
-                      <span className="text-xs font-bold text-zinc-200 block">{r.customer}</span>
+                      <span className={`text-xs font-bold block ${theme === 'dark' ? 'text-zinc-200' : 'text-zinc-800'}`}>{r.customer}</span>
                       <span className="text-[9px] text-zinc-500 block mt-0.5">{r.date}</span>
                     </div>
                     <div className="flex gap-0.5">
@@ -95,10 +110,10 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
                       ))}
                     </div>
                   </div>
-                  <p className="text-xs text-zinc-300 leading-relaxed font-medium">{r.comment}</p>
+                  <p className={`text-xs leading-relaxed font-medium ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-600'}`}>{r.comment}</p>
                   
                   {r.media && (
-                    <div className="w-24 h-24 rounded-xl overflow-hidden border border-white/5 mt-2">
+                    <div className={`w-24 h-24 rounded-xl overflow-hidden border mt-2 ${theme === 'dark' ? 'border-white/5' : 'border-zinc-200'}`}>
                       <img 
                         src={r.media} 
                         alt="Media anexo" 

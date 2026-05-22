@@ -17,6 +17,7 @@ export const metadata: Metadata = {
 };
 
 import { ThemeProvider } from "@/components/ThemeProvider";
+import MobileBlocker from "@/components/MobileBlocker";
 
 export default function RootLayout({
   children,
@@ -31,6 +32,7 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <FirebaseAnalytics />
           </Suspense>
+          <MobileBlocker />
           {children}
           <SpeedInsights />
         </ThemeProvider>
