@@ -1,0 +1,891 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Users, Calendar, DollarSign, Clock,
+  MoreHorizontal, TrendingUp, ChevronRight,
+  Eye, Coffee, Ban, Tag, Plus, Loader2, CheckCircle2,
+  CalendarDays, Trash2, ArrowUpRight, ArrowDownRight,
+  Sparkles, Rocket, PartyPopper, ChevronLeft, CheckCircle, X, User, PlusCircle
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { Tooltip } from "@/components/Tooltip";
+import { Modal } from "@/components/Modal";
+import { DayPicker } from "react-day-picker";
+import { CustomDatePicker, CustomTimePicker } from "@/components/Pickers";
+import "react-day-picker/dist/style.css";
+import "@/styles/calendar.css";
+import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
+import { DashboardCards } from "@/components/dashboard/DashboardCards";
+import { QuickActions } from "@/components/dashboard/QuickActions";
+import { AppointmentModal } from "@/components/modals/AppointmentModal";
+import { ExpenseModal } from "@/components/modals/ExpenseModal";
+import { PauseModal } from "@/components/modals/PauseModal";
+
+interface Service {
+  id: string;
+  nome: string;
+  preco: number;
+}
+
+
+
+export default function DashboardOverview() {
+  const [loading, setLoading] = useState(true);
+  const [establishmentId, setEstablishmentId] = useState<string | null>(null);
+  const [stats, setStats] = useState([
+    { label: "Clientes Totais", value: "0", icon: Users, color: "text-blue-500", bg: "bg-blue-500/10", trend: "0%", href: "/dashboard/customers" },
+    { label: "Agendamentos/Mês", value: "0", icon: Calendar, color: "text-[#fd9602]", bg: "bg-[#fd9602]/10", trend: "0%", href: "/dashboard/appointments" },
+    { label: "Receita Mensal", value: "R$ 0,00", icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-500/10", trend: "0%", href: "/dashboard/finance" },
+    { label: "Taxa de Retorno", value: "0%", icon: TrendingUp, color: "text-purple-500", bg: "bg-purple-500/10", trend: "0%", href: "/dashboard/finance" },
+  ]);
+  const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
+  const [userName, setUserName] = useState("");
+  
+  // Dashboard UI State
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [selectedApp, setSelectedApp] = useState<any>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  
+  // Onboarding Logic
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+
+  // New Appointment Logic
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [appLoading, setAppLoading] = useState(false);
+  const [availableServices, setAvailableServices] = useState<Service[]>([]);
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+  const [serviceSearch, setServiceSearch] = useState("");
+  const [appFormData, setAppFormData] = useState({
+    customer: "",
+    time: "10:00",
+    date: new Date().toISOString().split('T')[0]
+  });
+
+  // Pause Logic
+  const [isPaused, setIsPaused] = useState(false);
+  const [showPauseModal, setShowPauseModal] = useState(false);
+  const [pauseLoading, setPauseLoading] = useState(false);
+  const [selectedDays, setSelectedDays] = useState<Date[]>([]);
+  const [pauseReason, setPauseReason] = useState("");
+  const [allPauses, setAllPauses] = useState<any[]>([]);
+
+  // Expenses Logic
+  const [showExpensesModal, setShowExpensesModal] = useState(false);
+  const [expenseLoading, setExpenseLoading] = useState(false);
+  const [expenseData, setExpenseData] = useState({ description: "", value: "", category: "Outros", date: new Date().toISOString().split('T')[0] });
+
+  // Goals Logic
+  const [showGoalsModal, setShowGoalsModal] = useState(false);
+  const [goalLoading, setGoalLoading] = useState(false);
+  const [weeklyGoal, setWeeklyGoal] = useState({ current: 0, target: 12000 });
+  const [goalInput, setGoalInput] = useState("");
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  async function checkOnboarding(estId?: string) {
+    const completed = localStorage.getItem('agendei_onboarding_completed');
+    if (completed) return;
+
+    // Se tivermos o ID do estabelecimento, verificamos se ele já tem serviços
+    if (estId) {
+      const { count } = await supabase
+        .from('servicos')
+        .select('id', { count: 'exact', head: true })
+        .eq('estabelecimento_id', estId);
+      
+      // Se já tem serviços, ele não é um "primeiro usuário"
+      if (count && count > 0) {
+        localStorage.setItem('agendei_onboarding_completed', 'true');
+        return;
+      }
+    }
+
+    setTimeout(() => setShowOnboarding(true), 800);
+  }
+
+  async function fetchDashboardData() {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      setUserName(user.user_metadata?.nome || "Matheus Lucindo");
+
+      const { data: estData } = await supabase
+        .from('estabelecimentos')
+        .select('id')
+        .eq('proprietario_id', user.id)
+        .single();
+
+      if (estData) {
+        setEstablishmentId(estData.id);
+        await Promise.all([
+          fetchStats(estData.id),
+          fetchTodayAppointments(estData.id),
+          fetchPauses(estData.id),
+          fetchGoal(estData.id),
+          fetchServices(estData.id),
+          checkOnboarding(estData.id)
+        ]);
+      } else {
+        checkOnboarding();
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCancelAppointment(appId: string) {
+    if (!establishmentId) return;
+
+    try {
+      const { error } = await supabase
+        .from('agendamentos')
+        .update({ status: 'CANCELADO' })
+        .eq('id', appId);
+
+      if (error) throw error;
+      toast.success("Agendamento cancelado!");
+      fetchTodayAppointments(establishmentId);
+      setOpenMenuId(null);
+    } catch (error: any) {
+      toast.error("Erro ao cancelar: " + error.message);
+    }
+  }
+
+  async function handleConfirmPayment(appId: string, price: number) {
+    if (!establishmentId) return;
+
+    try {
+      // 1. Try to use RPC first (to bypass RLS as in mobile)
+      try {
+        const { data, error } = await supabase.rpc('atualizar_status_agendamento', {
+          p_agendamento_id: appId,
+          p_novo_status: 'PAGO'
+        });
+
+        if (!error && data && !data.error) {
+          toast.success("Agendamento pago e concluído!");
+          fetchTodayAppointments(establishmentId);
+          fetchStats(establishmentId);
+          setOpenMenuId(null);
+          return;
+        }
+      } catch (rpcErr) {
+        console.warn('RPC exception, falling back to direct client-side update:', rpcErr);
+      }
+
+      // 2. Direct Supabase Fallback (as in mobile)
+      const { error: updateErr } = await supabase
+        .from('agendamentos')
+        .update({ status: 'CONCLUIDO' })
+        .eq('id', appId);
+
+      if (updateErr) throw updateErr;
+
+      // Check if payment already exists
+      const { data: existingPay } = await supabase
+        .from('pagamentos')
+        .select('id')
+        .eq('agendamento_id', appId)
+        .maybeSingle();
+
+      if (!existingPay) {
+        const methodsToTry = ['PIX', 'PIX_LOCAL', 'ONLINE', 'DINHEIRO', 'DINHEIRO_LOCAL'];
+        let inserted = false;
+
+        for (const method of methodsToTry) {
+          const { error: payErr } = await supabase
+            .from('pagamentos')
+            .insert([{
+              agendamento_id: appId,
+              valor: price,
+              metodo: method,
+              status: 'PAGO',
+              pago_em: new Date().toISOString()
+            }]);
+
+          if (!payErr) {
+            inserted = true;
+            break;
+          }
+        }
+        if (!inserted) {
+          console.warn('Could not insert payment manually via fallback; relying on triggers.');
+        }
+      }
+
+      toast.success("Agendamento pago e concluído!");
+      fetchTodayAppointments(establishmentId);
+      fetchStats(establishmentId);
+      setOpenMenuId(null);
+    } catch (error: any) {
+      toast.error("Erro ao registrar pagamento: " + error.message);
+    }
+  }
+
+  async function fetchStats(estId: string) {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const startOfLastMonth = new Date(startOfMonth);
+    startOfLastMonth.setMonth(startOfLastMonth.getMonth() - 1);
+
+    const endOfLastMonth = new Date(startOfMonth);
+    endOfLastMonth.setMilliseconds(-1);
+
+    // Current Month Data
+    const { count: clientCount } = await supabase
+      .from('clientes_estabelecimentos')
+      .select('cliente_id', { count: 'exact', head: true })
+      .eq('estabelecimento_id', estId);
+
+    const { count: monthAppCount } = await supabase
+      .from('agendamentos')
+      .select('id', { count: 'exact', head: true })
+      .eq('estabelecimento_id', estId)
+      .gte('data_hora', startOfMonth.toISOString());
+
+    const { data: incomeData } = await supabase
+      .from('agendamentos')
+      .select('pagamentos!inner(valor)')
+      .eq('estabelecimento_id', estId)
+      .eq('pagamentos.status', 'PAGO')
+      .gte('pagamentos.pago_em', startOfMonth.toISOString());
+
+    const totalRevenue = incomeData?.reduce((acc: number, curr: any) => {
+      const pays = Array.isArray(curr.pagamentos) ? curr.pagamentos : [curr.pagamentos];
+      return acc + pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0);
+    }, 0) || 0;
+
+    const { data: extrasData } = await supabase
+      .from('receitas_extras')
+      .select('valor')
+      .eq('estabelecimento_id', estId)
+      .gte('data', startOfMonth.toISOString().split('T')[0]);
+
+    const extrasIncome = extrasData?.reduce((acc: number, curr: any) => acc + Number(curr.valor), 0) || 0;
+    const grossRevenue = totalRevenue + extrasIncome;
+
+    const { data: expenses } = await supabase
+      .from('despesas')
+      .select('valor')
+      .eq('estabelecimento_id', estId)
+      .gte('data', startOfMonth.toISOString().split('T')[0]);
+
+    const totalExpense = expenses?.reduce((acc: number, curr: any) => acc + Number(curr.valor), 0) || 0;
+
+    // Last Month Data
+    const { count: lastClientCount } = await supabase
+      .from('clientes_estabelecimentos')
+      .select('cliente_id', { count: 'exact', head: true })
+      .eq('estabelecimento_id', estId)
+      .lt('criado_em', startOfMonth.toISOString()); // approximate for clients up to last month
+
+    const { count: lastMonthAppCount } = await supabase
+      .from('agendamentos')
+      .select('id', { count: 'exact', head: true })
+      .eq('estabelecimento_id', estId)
+      .gte('data_hora', startOfLastMonth.toISOString())
+      .lte('data_hora', endOfLastMonth.toISOString());
+
+    const { data: lastIncomeData } = await supabase
+      .from('agendamentos')
+      .select('pagamentos!inner(valor)')
+      .eq('estabelecimento_id', estId)
+      .eq('pagamentos.status', 'PAGO')
+      .gte('pagamentos.pago_em', startOfLastMonth.toISOString())
+      .lte('pagamentos.pago_em', endOfLastMonth.toISOString());
+
+    const lastTotalRevenue = lastIncomeData?.reduce((acc: number, curr: any) => {
+      const pays = Array.isArray(curr.pagamentos) ? curr.pagamentos : [curr.pagamentos];
+      return acc + pays.reduce((pAcc: number, p: any) => pAcc + Number(p.valor), 0);
+    }, 0) || 0;
+
+    // Helper to calculate trend
+    const calcTrend = (current: number, previous: number) => {
+      if (previous === 0) return current > 0 ? "+100%" : "0%";
+      const change = ((current - previous) / previous) * 100;
+      return `${change > 0 ? '+' : ''}${change.toFixed(0)}%`;
+    };
+
+    const clientTrend = calcTrend(clientCount || 0, lastClientCount || 0);
+    const appTrend = calcTrend(monthAppCount || 0, lastMonthAppCount || 0);
+    const revTrend = calcTrend(grossRevenue, lastTotalRevenue);
+
+    setStats(prev => [
+      { ...prev[0], value: (clientCount || 0).toString(), trend: clientTrend },
+      { ...prev[1], value: (monthAppCount || 0).toString(), trend: appTrend },
+      { ...prev[2], value: `R$ ${(grossRevenue - totalExpense).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, label: "Saldo Mensal", trend: revTrend },
+      { ...prev[3], value: `R$ ${grossRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, label: "Receita Bruta", trend: revTrend }
+    ]);
+
+    setWeeklyGoal(prev => ({ ...prev, current: grossRevenue }));
+  }
+
+  async function fetchTodayAppointments(estId: string) {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const { data } = await supabase
+      .from('agendamentos')
+      .select(`
+        *,
+        usuarios!agendamentos_cliente_id_fkey(nome)
+      `)
+      .eq('estabelecimento_id', estId)
+      .gte('data_hora', startOfDay.toISOString())
+      .lte('data_hora', endOfDay.toISOString())
+      .order('data_hora', { ascending: true });
+
+    if (data) {
+      setTodayAppointments(data.map((app: any) => ({
+        id: app.id,
+        customer: (app.usuarios as any)?.nome || "Cliente",
+        service: Array.isArray(app.servicos) ? app.servicos.map((s: any) => s.nome).join(", ") : "Serviço",
+        time: new Date(app.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        avatar: ((app.usuarios as any)?.nome || "C").substring(0, 2).toUpperCase(),
+        status: app.status,
+        price: Number(app.preco_total) || 0
+      })));
+    }
+  }
+
+  async function fetchPauses(estId: string) {
+    const { data } = await supabase
+      .from('indisponibilidades')
+      .select('*')
+      .eq('estabelecimento_id', estId)
+      .gte('data', new Date().toISOString().split('T')[0])
+      .order('data', { ascending: true });
+
+    if (data) {
+      setAllPauses(data);
+      const todayStr = new Date().toISOString().split('T')[0];
+      setIsPaused(data.some((p: any) => p.data === todayStr));
+    }
+  }
+
+  async function fetchGoal(estId: string) {
+    const { data } = await supabase
+      .from('metas')
+      .select('valor_meta')
+      .eq('estabelecimento_id', estId)
+      .single();
+    
+    if (data) {
+      setWeeklyGoal(prev => ({ ...prev, target: Number(data.valor_meta) }));
+      setGoalInput(data.valor_meta.toString());
+    }
+  }
+
+  async function fetchServices(estId: string) {
+    const { data } = await supabase
+      .from('servicos')
+      .select('id, nome, preco')
+      .eq('estabelecimento_id', estId);
+    if (data) setAvailableServices(data);
+  }
+
+  const handleAppSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!establishmentId) return;
+    if (selectedServices.length === 0) {
+      toast.error("Adicione ao menos um serviço.");
+      return;
+    }
+
+    setAppLoading(true);
+    try {
+      let clientId = null;
+      const { data: userData } = await supabase.from('usuarios').select('id').eq('nome', appFormData.customer).eq('perfil', 'CLIENTE').limit(1);
+      
+      if (userData && userData.length > 0) {
+        clientId = userData[0].id;
+      } else {
+        const fakeEmail = `${appFormData.customer.toLowerCase().replace(/\s+/g, '.')}.${Math.random().toString(36).substring(7)}@agendei.auto`;
+        const { data: newUser, error: userError } = await supabase.from('usuarios').insert([{ nome: appFormData.customer, perfil: 'CLIENTE', email: fakeEmail }]).select().single();
+        if (userError) throw userError;
+        clientId = newUser.id;
+        await supabase.from('clientes_estabelecimentos').insert([{ cliente_id: clientId, estabelecimento_id: establishmentId }]);
+      }
+
+      const dataHora = `${appFormData.date}T${appFormData.time}:00`;
+      const totalPrice = selectedServices.reduce((sum, s) => sum + s.preco, 0);
+
+      const { error } = await supabase.from('agendamentos').insert([{
+        cliente_id: clientId,
+        estabelecimento_id: establishmentId,
+        servicos: selectedServices,
+        preco_total: totalPrice,
+        data_hora: dataHora,
+        status: 'APROVADO'
+      }]);
+
+      if (error) throw error;
+      toast.success("Agendamento realizado com sucesso!");
+      setShowAppointmentModal(false);
+      setSelectedServices([]);
+      setAppFormData({ ...appFormData, customer: "" });
+      fetchTodayAppointments(establishmentId);
+    } catch (error: any) {
+      toast.error("Erro: " + error.message);
+    } finally {
+      setAppLoading(false);
+    }
+  };
+
+  const finishOnboarding = () => {
+    localStorage.setItem('agendei_onboarding_completed', 'true');
+    setShowOnboarding(false);
+    toast.success("Tudo pronto! Vamos começar.");
+  };
+
+  const handlePauseSubmit = async (e: any) => {
+    e.preventDefault();
+    if (!establishmentId || selectedDays.length === 0) {
+      toast.error("Selecione ao menos um dia no calendário.");
+      return;
+    }
+    setPauseLoading(true);
+    try {
+      const records = selectedDays.map(day => ({
+        estabelecimento_id: establishmentId,
+        data: day.toISOString().split('T')[0],
+        motivo: pauseReason
+      }));
+
+      const { error } = await supabase
+        .from('indisponibilidades')
+        .insert(records);
+
+      if (error) throw error;
+      setShowPauseModal(false);
+      await fetchPauses(establishmentId);
+      setSelectedDays([]);
+      setPauseReason("");
+    } catch (error: any) {
+      toast.error("Erro: " + error.message);
+    } finally {
+      setPauseLoading(false);
+    }
+  };
+
+  const handleExpenseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!establishmentId) return;
+    setExpenseLoading(true);
+    try {
+      const { error } = await supabase
+        .from('despesas')
+        .insert([{
+          estabelecimento_id: establishmentId,
+          descricao: expenseData.description,
+          valor: parseFloat(expenseData.value.replace(',', '.')),
+          categoria: expenseData.category,
+          data: expenseData.date
+        }]);
+      if (error) throw error;
+      toast.success("Despesa registrada no financeiro!");
+      setShowExpensesModal(false);
+      setExpenseData({ description: "", value: "", category: "Outros", date: new Date().toISOString().split('T')[0] });
+      fetchStats(establishmentId);
+    } catch (error: any) {
+      toast.error("Erro ao lançar despesa: " + error.message);
+    } finally {
+      setExpenseLoading(false);
+    }
+  };
+
+  const handleGoalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!establishmentId) return;
+    setGoalLoading(true);
+    try {
+      const { error } = await supabase
+        .from('metas')
+        .upsert([{
+          estabelecimento_id: establishmentId,
+          valor_meta: parseFloat(goalInput.replace(',', '.'))
+        }]);
+      if (error) throw error;
+      toast.success("Meta atualizada!");
+      setWeeklyGoal(prev => ({ ...prev, target: parseFloat(goalInput) }));
+      setShowGoalsModal(false);
+    } catch (error: any) {
+      toast.error("Erro: " + error.message);
+    } finally {
+      setGoalLoading(false);
+    }
+  };
+
+  const removePause = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('indisponibilidades')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      setAllPauses(allPauses.filter(p => p.id !== id));
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (allPauses.find(p => p.id === id)?.data === todayStr) setIsPaused(false);
+      toast.success("Pausa removida.");
+    } catch (error) {
+      toast.error("Erro ao remover pausa.");
+    }
+  };
+
+  const onboardingSteps = [
+    {
+      title: "Seja bem-vindo ao Agendei!",
+      description: "Preparamos um sistema limpo e pronto para você começar a crescer. Vamos te mostrar o básico em 1 minuto.",
+      icon: <Rocket className="w-12 h-12 text-[#fd9602]" />,
+      color: "from-[#fd9602]/20"
+    },
+    {
+      title: "Sua Agenda Inteligente",
+      description: "Aqui no topo você acompanha seus compromissos do dia. Tudo sincronizado em tempo real com o banco de dados.",
+      icon: <CalendarDays className="w-12 h-12 text-blue-500" />,
+      color: "from-blue-500/20"
+    },
+    {
+      title: "Controle Financeiro",
+      description: "Lance suas despesas e acompanhe suas metas semanais. Nosso sistema calcula seu lucro automaticamente.",
+      icon: <DollarSign className="w-12 h-12 text-emerald-500" />,
+      color: "from-emerald-500/20"
+    },
+    {
+      title: "Pronto para decolar?",
+      description: "Agora é com você. Comece cadastrando seus serviços e clientes para liberar todo o poder do Agendei.",
+      icon: <PartyPopper className="w-12 h-12 text-purple-500" />,
+      color: "from-purple-500/20"
+    }
+  ];
+
+  return (
+    <div className="space-y-10">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-3xl font-bold tracking-tight text-title dark:text-white">Olá, {userName}! 👋</h2>
+        <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm">Gerencie seu negócio com precisão e facilidade.</p>
+      </div>
+
+      <DashboardCards stats={stats} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-xl font-bold text-title dark:text-white tracking-tight">Agenda de Hoje</h3>
+            <Link href="/dashboard/appointments" className="text-xs font-bold text-[#fd9602] hover:text-[#fd9602]/80 transition-colors uppercase tracking-[0.2em]">
+              Ver tudo
+            </Link>
+          </div>
+
+          <div className="glass-card rounded-2xl divide-y divide-white/5 dark:divide-zinc-800 shadow-xl min-h-[200px]">
+            {loading ? (
+              <div className="flex items-center justify-center p-20">
+                <Loader2 className="w-8 h-8 text-[#fd9602] animate-spin" />
+              </div>
+            ) : todayAppointments.length > 0 ? (
+              todayAppointments.map((app) => (
+                <div key={app.id} className="p-5 flex items-center justify-between group hover:bg-zinc-500/5 dark:hover:bg-white/5 transition-colors first:rounded-t-2xl last:rounded-b-2xl">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-zinc-800/50 dark:bg-zinc-800 border border-subtle dark:border-zinc-800 flex items-center justify-center font-bold text-zinc-500 group-hover:bg-[#fd9602] group-hover:text-zinc-950 transition-all">
+                      {app.avatar}
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-title dark:text-white">{app.customer}</h4>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">{app.service}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-10">
+                    <div className="flex flex-col items-center gap-1.5 w-24">
+                      <div className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 font-bold text-[10px] uppercase tracking-tighter">
+                        <Clock className="w-3.5 h-3.5 text-[#fd9602]" />
+                        {app.time}
+                      </div>
+                      <span className={cn(
+                        "text-[9px] font-bold tracking-[0.1em] px-2.5 py-1 rounded-lg",
+                        (app.status === "CONFIRMADO" || app.status === "APROVADO") && "text-blue-500 bg-blue-500/10",
+                        app.status === "PENDENTE" && "text-[#fd9602] bg-[#fd9602]/10",
+                        app.status === "CONCLUIDO" && "text-emerald-500 bg-emerald-500/10"
+                      )}>
+                        {app.status}
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <button onClick={() => setOpenMenuId(openMenuId === app.id ? null : app.id)} className="p-2.5 hover:bg-zinc-800 dark:hover:bg-zinc-700 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-title dark:hover:text-white transition-all">
+                        <MoreHorizontal className="w-5 h-5" />
+                      </button>
+
+                      <AnimatePresence>
+                        {openMenuId === app.id && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)} />
+                            <motion.div 
+                              initial={{ opacity: 0, scale: 0.9, y: -20 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                              className="absolute right-0 mt-3 w-56 bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 py-3 overflow-hidden"
+                            >
+                              <button 
+                                onClick={() => {
+                                  setSelectedApp(app);
+                                  setShowDetailsModal(true);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full flex items-center gap-4 px-6 py-4 text-sm font-bold text-zinc-400 hover:text-title dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-all group"
+                              >
+                                <div className="p-2 rounded-xl bg-[#fd9602]/15 text-[#fd9602] group-hover:scale-105 transition-all">
+                                  <Eye size={18} />
+                                </div>
+                                Ver Detalhes
+                              </button>
+                              {app.status === "APROVADO" && (
+                                <button 
+                                  onClick={() => handleConfirmPayment(app.id, app.price)}
+                                  className="w-full flex items-center gap-4 px-6 py-4 text-sm font-bold text-zinc-400 hover:text-emerald-500 hover:bg-emerald-500/5 transition-all group"
+                                >
+                                  <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-500 group-hover:scale-105 transition-all">
+                                    <CheckCircle size={18} />
+                                  </div>
+                                  Marcar como Pago
+                                </button>
+                              )}
+                              <button 
+                                onClick={() => handleCancelAppointment(app.id)}
+                                className="w-full flex items-center gap-4 px-6 py-4 text-sm font-bold text-zinc-400 hover:text-red-500 hover:bg-red-500/5 transition-all group"
+                              >
+                                <div className="p-2 rounded-xl bg-red-500/15 text-red-500 group-hover:scale-105 transition-all">
+                                  <Trash2 size={18} />
+                                </div>
+                                Cancelar Agendamento
+                              </button>
+                            </motion.div>
+                          </>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center p-20 gap-2">
+                <Calendar className="w-10 h-10 text-zinc-800/50" />
+                <p className="text-zinc-500 text-sm font-medium">Nenhum agendamento para hoje.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <Tooltip text="Clique para gerenciar suas metas">
+            <motion.div 
+              whileHover={{ scale: 1.02, borderColor: "rgba(245, 158, 11, 0.5)" }}
+              onClick={() => setShowGoalsModal(true)}
+              className="relative overflow-hidden group p-8 rounded-2xl border border-[#fd9602]/20 glass-card bg-gradient-to-br from-[#fd9602]/5 to-transparent cursor-pointer shadow-lg"
+            >
+              <div className="relative z-10 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h3 className="text-zinc-500 dark:text-zinc-400 font-bold text-[10px] uppercase tracking-[0.2em]">Meta Semanal</h3>
+                    <p className="text-4xl font-bold text-title dark:text-white tracking-tighter">
+                      {weeklyGoal.target > 0 ? Math.round((weeklyGoal.current / weeklyGoal.target) * 100) : 0}%
+                    </p>
+                  </div>
+                  <div className="p-3 bg-accent/10 rounded-2xl">
+                    <TrendingUp className="text-accent w-6 h-6" />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+                    <span>Progresso</span>
+                    <span className="text-[#fd9602] font-bold">R$ {weeklyGoal.current.toLocaleString()} / {(weeklyGoal.target / 1000).toFixed(1)}k</span>
+                  </div>
+                  <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-2.5 rounded-full overflow-hidden">
+                    <div style={{ width: `${Math.min(100, (weeklyGoal.current / weeklyGoal.target) * 100)}%` }} className="bg-accent h-full shadow-[0_0_20px_rgba(245, 158, 11, 0.4)] transition-all duration-1000" />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </Tooltip>
+
+          <QuickActions 
+            setShowAppointmentModal={setShowAppointmentModal}
+            setShowPauseModal={setShowPauseModal}
+            setShowExpensesModal={setShowExpensesModal}
+            isPaused={isPaused}
+          />
+        </div>
+      </div>
+
+      {/* Onboarding Modal */}
+      <AnimatePresence>
+        {showOnboarding && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-zinc-950 border border-white/10 w-full max-w-lg rounded-[32px] overflow-hidden shadow-[0_0_100px_rgba(253,150,2,0.15)]"
+            >
+              <div className={cn("h-40 bg-gradient-to-b flex items-center justify-center transition-all duration-500", onboardingSteps[onboardingStep].color)}>
+                 <motion.div
+                  key={onboardingStep}
+                  initial={{ rotate: -10, scale: 0.8, opacity: 0 }}
+                  animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", damping: 12 }}
+                 >
+                    {onboardingSteps[onboardingStep].icon}
+                 </motion.div>
+              </div>
+              
+              <div className="p-10 space-y-6 text-center">
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-black text-white tracking-tight leading-tight">
+                    {onboardingSteps[onboardingStep].title}
+                  </h3>
+                  <p className="text-zinc-400 font-medium text-base">
+                    {onboardingSteps[onboardingStep].description}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-center gap-2">
+                  {onboardingSteps.map((_, i) => (
+                    <div key={i} className={cn("h-1.5 transition-all duration-300 rounded-full", onboardingStep === i ? "w-8 bg-[#fd9602]" : "w-1.5 bg-zinc-800")} />
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-3 pt-4">
+                  {onboardingStep > 0 && (
+                    <button 
+                      onClick={() => setOnboardingStep(s => s - 1)}
+                      className="flex-1 py-4 px-6 rounded-2xl border border-white/5 bg-white/5 text-zinc-400 font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                    >
+                      <ChevronLeft size={18} /> Voltar
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => onboardingStep === onboardingSteps.length - 1 ? finishOnboarding() : setOnboardingStep(s => s + 1)}
+                    className="flex-[2] py-4 px-6 rounded-2xl bg-[#fd9602] text-zinc-950 font-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_20px_rgba(253,150,2,0.2)] flex items-center justify-center gap-2"
+                  >
+                    {onboardingStep === onboardingSteps.length - 1 ? "Começar Agora" : "Continuar"} <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Extracted Modals */}
+      <AppointmentModal 
+        isOpen={showAppointmentModal}
+        onClose={() => setShowAppointmentModal(false)}
+        onSubmit={handleAppSave}
+        appFormData={appFormData}
+        setAppFormData={setAppFormData}
+        serviceSearch={serviceSearch}
+        setServiceSearch={setServiceSearch}
+        availableServices={availableServices}
+        selectedServices={selectedServices}
+        setSelectedServices={setSelectedServices}
+        appLoading={appLoading}
+      />
+
+      <PauseModal 
+        isOpen={showPauseModal}
+        onClose={() => setShowPauseModal(false)}
+        selectedDays={selectedDays}
+        setSelectedDays={setSelectedDays}
+        pauseReason={pauseReason}
+        setPauseReason={setPauseReason}
+        handlePauseSubmit={handlePauseSubmit}
+        pauseLoading={pauseLoading}
+        allPauses={allPauses}
+        removePause={removePause}
+      />
+
+      <ExpenseModal 
+        isOpen={showExpensesModal}
+        onClose={() => setShowExpensesModal(false)}
+        onSubmit={handleExpenseSubmit}
+        expenseData={expenseData}
+        setExpenseData={setExpenseData}
+        expenseLoading={expenseLoading}
+      />
+
+      <Modal isOpen={showGoalsModal} onClose={() => setShowGoalsModal(false)} title="Meta de Faturamento">
+        <form className="space-y-8" onSubmit={handleGoalSubmit}>
+           <div className="space-y-3">
+            <label className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Valor da Meta Semanal</label>
+            <input required type="text" value={goalInput} onChange={e => setGoalInput(e.target.value)} placeholder="Ex: 15.000" className="w-full bg-zinc-100 dark:bg-zinc-800 border border-subtle dark:border-zinc-700 rounded-2xl px-6 py-6 dark:text-white outline-none focus:ring-4 focus:ring-[#fd9602]/10 transition-all font-black text-3xl placeholder:text-zinc-600" />
+          </div>
+          <button type="submit" disabled={goalLoading} className="w-full btn-primary py-6 text-lg font-black flex items-center justify-center gap-3">
+            {goalLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Salvar Nova Meta"}
+          </button>
+        </form>
+      </Modal>
+
+      <Modal isOpen={showDetailsModal} onClose={() => setShowDetailsModal(false)} title="Detalhes do Agendamento">
+        {selectedApp && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 p-4 bg-zinc-100/50 dark:bg-zinc-800/30 rounded-2xl border border-subtle dark:border-zinc-800">
+              <div className="w-12 h-12 rounded-xl bg-[#fd9602] flex items-center justify-center font-bold text-zinc-950 text-xl">{selectedApp.avatar}</div>
+              <div>
+                <h4 className="font-bold text-title dark:text-white">{selectedApp.customer}</h4>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">{selectedApp.service}</p>
+              </div>
+            </div>
+            <button className="w-full btn-primary py-4" onClick={() => setShowDetailsModal(false)}>Fechar</button>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+function QuickActionButton({ icon, label, onClick, color, statusIndicator }: any) {
+  return (
+    <motion.button 
+      whileHover={{ 
+        scale: 1.01, 
+        x: 6,
+        backgroundColor: "rgba(255, 255, 255, 0.04)",
+        boxShadow: "0 20px 40px -15px rgba(0,0,0,0.5)"
+      }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className="w-full flex items-center justify-between p-4 rounded-2xl bg-zinc-800/50 hover:bg-zinc-800 border border-transparent hover:border-white/10 transition-all text-left group"
+    >
+      <div className="flex items-center gap-4">
+        <div className={cn("p-2 rounded-xl flex items-center justify-center", color)}>
+          {React.cloneElement(icon, { size: 22 })}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-zinc-300 group-hover:text-white transition-colors">{label}</span>
+          {statusIndicator && (
+            <div className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </div>
+          )}
+        </div>
+      </div>
+      <ChevronRight size={16} className="text-zinc-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
+    </motion.button>
+  );
+}

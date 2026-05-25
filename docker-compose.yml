@@ -1,0 +1,37 @@
+services:
+  # 🐘 Banco de Dados Relacional (PostgreSQL) - Core do Sistema
+  postgres:
+    image: postgres:16-alpine
+    container_name: agendei-postgres
+    environment:
+      POSTGRES_DB: agendei_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - agendei-network
+
+  # 🍃 Banco de Dados NoSQL (MongoDB) - Logs e Configurações
+  mongodb:
+    image: mongo:latest
+    container_name: agendei-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - agendei-network
+
+networks:
+  agendei-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongodb_data:

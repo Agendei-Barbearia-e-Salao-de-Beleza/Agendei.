@@ -1,0 +1,237 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --color-accent: var(--accent);
+}
+
+/* Variáveis de Tema - MODO ESCURO (Padrão) */
+:root {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #111113;
+  --card-foreground: #fafafa;
+  --border: #202023;
+  --accent: #fd9602; /* Amarelo Vibrante Agendei */
+  --muted: #71717a;
+  --sidebar: rgba(9, 9, 11, 0.8);
+}
+
+/* Variáveis de Tema - MODO CLARO (Aesthetic Inverted) */
+:root.light {
+  --background: #f4f4f5;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --border: #e4e4e7;
+  --accent: #fd9602; 
+  --muted: #64748b;
+  --sidebar: #09090b; /* 100% opaque dark sidebar for light theme */
+
+  /* Inversão Global Tailwind (Para transformar bg-zinc-950 em bg-white) */
+  --color-zinc-950: #f4f4f5; 
+  --color-zinc-900: #ffffff; 
+  --color-zinc-800: #e4e4e7; 
+  --color-zinc-700: #d4d4d8; 
+  --color-zinc-600: #71717a; 
+  --color-zinc-500: #52525b; 
+  --color-zinc-400: #3f3f46; 
+  --color-zinc-300: #27272a; 
+  --color-zinc-200: #18181b; 
+  --color-zinc-100: #09090b; 
+  --color-zinc-50:  #000000; 
+  
+  --color-white: #09090b; 
+  --color-black: #ffffff;
+}
+
+/* Força os componentes a permanecerem no tema escuro, ignorando a inversão do tema claro */
+.force-dark {
+  --color-zinc-950: oklch(14.1% 0.005 285.823); 
+  --color-zinc-900: oklch(21% 0.006 285.885); 
+  --color-zinc-800: oklch(27.4% 0.006 286.033); 
+  --color-zinc-700: oklch(37% 0.013 285.805); 
+  --color-zinc-600: oklch(44.2% 0.017 285.786); 
+  --color-zinc-500: oklch(55.2% 0.016 285.938); 
+  --color-zinc-400: oklch(70.5% 0.015 286.067); 
+  --color-zinc-300: oklch(87.1% 0.006 286.286); 
+  --color-zinc-200: oklch(92% 0.004 286.32); 
+  --color-zinc-100: oklch(96.7% 0.001 286.375); 
+  --color-zinc-50:  oklch(98.5% 0 0); 
+  
+  --color-white: #ffffff; 
+  --color-black: #000000;
+}
+
+/* Proteção para garantir que textos sobre o Amarelo Vibrante continuem escuros no tema claro */
+:root.light .bg-\[\#fd9602\] {
+  color: #000000 !important;
+}
+:root.light .bg-\[\#fd9602\] * {
+  color: #000000 !important;
+}
+:root.light .text-\[\#fd9602\] {
+  color: #fd9602 !important;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Componentes Globais */
+aside {
+  background-color: var(--sidebar) !important;
+  border-right: 1px solid var(--border) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
+
+:root.light aside {
+  border-right-color: var(--border) !important;
+}
+
+.bg-card {
+  background-color: var(--card) !important;
+  color: var(--card-foreground) !important;
+  border: 1px solid var(--border) !important;
+}
+
+:root.light .bg-card {
+  border-color: var(--border) !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+.text-title {
+  color: var(--foreground) !important;
+}
+
+.border-subtle {
+  border-color: var(--border) !important;
+}
+
+/* BOTÃO PADRÃO AGENDEI (Vibrante) */
+.btn-primary {
+  background-color: var(--accent) !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+  border-radius: 12px !important;
+  padding: 0.75rem 1.5rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border: none !important;
+  cursor: pointer !important;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 20px -3px rgba(253, 150, 2, 0.4) !important;
+}
+
+/* Cursor Pointer em tudo que é clicável */
+button, a, .cursor-pointer {
+  cursor: pointer !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+
+/* Animação de Pulso */
+@keyframes pulse-green {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+.pulse-green {
+  animation: pulse-green 2s infinite;
+}
+
+.transition-smooth {
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Glassmorphism */
+.glass-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+:root.light .glass-card {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+.glass-modal {
+  background: rgba(9, 9, 11, 0.85) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+:root.light .glass-modal {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid var(--border) !important;
+}
+
+/* FullCalendar Customization */
+.fc {
+  --fc-border-color: var(--border);
+  --fc-button-bg-color: transparent;
+  --fc-button-border-color: var(--border);
+  --fc-button-hover-bg-color: rgba(253, 150, 2, 0.1);
+  --fc-button-hover-border-color: #fd9602;
+  --fc-button-active-bg-color: #fd9602;
+  --fc-button-active-border-color: #fd9602;
+  --fc-event-bg-color: rgba(253, 150, 2, 0.1);
+  --fc-event-border-color: #fd9602;
+  --fc-event-text-color: #fd9602;
+  --fc-today-bg-color: rgba(253, 150, 2, 0.05);
+  font-family: inherit;
+}
+.fc-theme-standard td, .fc-theme-standard th {
+  border-color: var(--border) !important;
+}
+.fc-col-header-cell {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+:root.light .fc-col-header-cell {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+.fc-button-primary {
+  color: var(--foreground) !important;
+  text-transform: capitalize;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease;
+}
+.fc-button-active {
+  color: #000 !important;
+}
+.fc-toolbar-title {
+  font-weight: 800 !important;
+  color: var(--foreground);
+}
+.fc-view-harness {
+  background-color: var(--card);
+}
+.fc-timegrid-slot-label-cushion {
+  color: var(--muted);
+}

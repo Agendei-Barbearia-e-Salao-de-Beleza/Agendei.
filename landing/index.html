@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendei. | Gestão Inteligente para Barbeiros</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #09090b;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+        .orange-glow {
+            box-shadow: 0 0 50px -12px rgba(253, 150, 2, 0.3);
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #ffffff 0%, #fd9602 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 px-6 py-8 flex justify-between items-center backdrop-blur-md bg-black/20">
+        <div class="text-2xl font-black tracking-tighter flex items-center gap-2">
+            <div class="w-10 h-10 bg-[#fd9602] rounded-xl flex items-center justify-center text-zinc-950">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3 3 6"/><path d="M15 3h6v6"/><path d="M10 8.5 4.5 3"/><path d="m14.5 9 5.5-5.5"/><circle cx="10" cy="16" r="3"/><circle cx="14" cy="16" r="3"/><path d="M13 19l2 2"/><path d="M11 19l-2 2"/></svg>
+            </div>
+            Agendei<span class="text-[#fd9602]">.</span>
+        </div>
+        <div class="hidden md:flex gap-8 font-bold text-sm text-zinc-400">
+            <a href="#recursos" class="hover:text-white transition-colors">Recursos</a>
+            <a href="#sobre" class="hover:text-white transition-colors">Sobre</a>
+            <a href="#possibilidades" class="hover:text-white transition-colors">Possibilidades</a>
+        </div>
+        <a href="https://agendei-alpha.vercel.app" target="_blank" class="px-6 py-3 bg-white text-zinc-950 rounded-full font-black text-xs hover:scale-105 transition-all shadow-xl">ACESSAR DASHBOARD</a>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="min-h-screen flex flex-col items-center justify-center pt-32 px-6 relative overflow-hidden">
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[#fd9602]/10 blur-[120px] -z-10 rounded-full"></div>
+        
+        <div class="max-w-4xl text-center space-y-8" id="hero-content">
+            <span class="px-4 py-2 bg-[#fd9602]/10 border border-[#fd9602]/20 rounded-full text-[#fd9602] text-[10px] font-black uppercase tracking-[0.2em] inline-block mb-4">
+                Lançamento Alpha 2026
+            </span>
+            <h1 class="text-6xl md:text-8xl font-black tracking-tight leading-[0.9] gradient-text">
+                O futuro da sua <br> barbearia é agora.
+            </h1>
+            <p class="text-zinc-400 text-lg md:text-xl max-w-2xl mx-auto font-medium">
+                Gestão simplificada, design premium e inteligência de dados para levar o seu salão ao próximo nível.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
+                <a href="https://agendei-alpha.vercel.app" target="_blank" class="px-10 py-5 bg-[#fd9602] text-zinc-950 rounded-2xl font-black text-lg hover:scale-105 transition-all shadow-2xl shadow-[#fd9602]/20 group">
+                    Começar Gratuitamente 
+                    <svg class="inline-block ml-2 group-hover:translate-x-1 transition-transform" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </a>
+                <span class="text-zinc-600 text-sm font-bold uppercase tracking-widest">Sem cartão de crédito</span>
+            </div>
+        </div>
+
+        <!-- Laptop Mockup -->
+        <div class="mt-20 w-full max-w-6xl relative perspective-1000" id="laptop-trigger">
+            <div class="relative z-10 p-4 bg-zinc-900/50 border border-white/5 rounded-[32px] orange-glow" id="laptop-mockup">
+                <img src="mockup-laptop.png" alt="Agendei Dashboard" class="w-full rounded-[24px]">
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="recursos" class="py-32 px-6">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="p-10 rounded-[40px] bg-zinc-900/40 border border-white/5 space-y-6 hover:border-[#fd9602]/30 transition-all feature-card">
+                <div class="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                </div>
+                <h3 class="text-2xl font-bold">Agenda em Tempo Real</h3>
+                <p class="text-zinc-500 font-medium">Sincronização instantânea de todos os agendamentos. Nunca mais perca um cliente por conflitos de horário.</p>
+            </div>
+            <div class="p-10 rounded-[40px] bg-zinc-900/40 border border-white/5 space-y-6 hover:border-[#fd9602]/30 transition-all feature-card">
+                <div class="w-16 h-16 bg-[#fd9602]/10 rounded-2xl flex items-center justify-center text-[#fd9602]">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </div>
+                <h3 class="text-2xl font-bold">Financeiro Transparente</h3>
+                <p class="text-zinc-500 font-medium">Controle de entradas, saídas e faturamento bruto com gráficos intuitivos e análise de metas semanais.</p>
+            </div>
+            <div class="p-10 rounded-[40px] bg-zinc-900/40 border border-white/5 space-y-6 hover:border-[#fd9602]/30 transition-all feature-card">
+                <div class="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <h3 class="text-2xl font-bold">Base de Clientes</h3>
+                <p class="text-zinc-500 font-medium">Conheça seus clientes, histórico de serviços e frequência. Fidelize quem mais importa com inteligência.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Mobile Showcase Section -->
+    <section id="sobre" class="py-32 px-6 bg-white/5 relative">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-20">
+            <div class="flex-1 space-y-8" id="mobile-text">
+                <h2 class="text-5xl font-black tracking-tight leading-[1.1]">Sua barbearia no bolso. <br> Literalmente.</h2>
+                <p class="text-zinc-400 text-lg font-medium leading-relaxed">
+                    Desenvolvemos uma interface ultra-responsiva que se adapta a qualquer dispositivo. Gerencie seus barbeiros, horários e lucros diretamente do seu smartphone, com a mesma fluidez do desktop.
+                </p>
+                <ul class="space-y-4">
+                    <li class="flex items-center gap-3 text-white font-bold">
+                        <div class="w-6 h-6 rounded-full bg-[#fd9602] flex items-center justify-center">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-950"><path d="M20 6 9 17l-5-5"/></svg>
+                        </div>
+                        Notificações de Novos Agendamentos
+                    </li>
+                    <li class="flex items-center gap-3 text-white font-bold">
+                        <div class="w-6 h-6 rounded-full bg-[#fd9602] flex items-center justify-center">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-950"><path d="M20 6 9 17l-5-5"/></svg>
+                        </div>
+                        WhatsApp Automático para Clientes
+                    </li>
+                    <li class="flex items-center gap-3 text-white font-bold">
+                        <div class="w-6 h-6 rounded-full bg-[#fd9602] flex items-center justify-center">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-950"><path d="M20 6 9 17l-5-5"/></svg>
+                        </div>
+                        Bloqueio de Horários em Segundos
+                    </li>
+                </ul>
+            </div>
+            <div class="flex-1 relative" id="mobile-mockup-container">
+                <div class="absolute inset-0 bg-[#fd9602]/20 blur-[100px] rounded-full"></div>
+                <img src="mockup-mobile.png" alt="Mobile App" class="w-full max-w-[400px] mx-auto relative z-10 drop-shadow-2xl" id="mobile-mockup">
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section id="possibilidades" class="py-40 px-6 text-center">
+        <div class="max-w-4xl mx-auto space-y-12 bg-gradient-to-br from-zinc-900 to-black p-16 rounded-[60px] border border-white/5 relative overflow-hidden" id="cta-card">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-[#fd9602]/10 blur-[80px] -z-10 rounded-full"></div>
+            <h2 class="text-5xl font-black tracking-tight leading-tight">Pronto para transformar <br> seu negócio?</h2>
+            <p class="text-zinc-500 text-xl font-medium max-w-2xl mx-auto">
+                Junte-se a centenas de barbearias que já estão usando o Agendei. para automatizar processos e faturar mais.
+            </p>
+            <div class="pt-4">
+                <a href="https://agendei-alpha.vercel.app" target="_blank" class="px-12 py-6 bg-white text-zinc-950 rounded-3xl font-black text-xl hover:scale-105 transition-all shadow-2xl inline-block">
+                    ACESSAR AGORA
+                </a>
+            </div>
+            <p class="text-zinc-600 font-bold uppercase tracking-widest text-xs">Versão Alpha Gratuita para Testes</p>
+        </div>
+    </section>
+
+    <footer class="py-20 px-6 border-t border-white/5 text-center">
+        <p class="text-zinc-600 font-bold text-sm">© 2026 Agendei. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Hero Animations
+        gsap.from("#hero-content > *", {
+            y: 50,
+            opacity: 0,
+            duration: 1,
+            stagger: 0.2,
+            ease: "power4.out"
+        });
+
+        gsap.from("#laptop-mockup", {
+            scale: 0.8,
+            opacity: 0,
+            duration: 1.5,
+            delay: 0.5,
+            ease: "expo.out"
+        });
+
+        // Scroll Parallax for Laptop
+        gsap.to("#laptop-mockup", {
+            scrollTrigger: {
+                trigger: "#laptop-trigger",
+                start: "top bottom",
+                end: "bottom top",
+                scrub: 1
+            },
+            y: -100,
+            rotateX: 10
+        });
+
+        // Feature Cards Animation
+        gsap.from(".feature-card", {
+            scrollTrigger: {
+                trigger: "#recursos",
+                start: "top 80%",
+            },
+            y: 100,
+            opacity: 0,
+            duration: 1,
+            stagger: 0.2,
+            ease: "power3.out"
+        });
+
+        // Mobile Showcase Animation
+        gsap.from("#mobile-text > *", {
+            scrollTrigger: {
+                trigger: "#sobre",
+                start: "top 70%",
+            },
+            x: -50,
+            opacity: 0,
+            duration: 1,
+            stagger: 0.15,
+            ease: "power2.out"
+        });
+
+        gsap.from("#mobile-mockup", {
+            scrollTrigger: {
+                trigger: "#sobre",
+                start: "top 70%",
+            },
+            x: 50,
+            opacity: 0,
+            scale: 0.9,
+            duration: 1.2,
+            ease: "power4.out"
+        });
+
+        // CTA Card Reveal
+        gsap.from("#cta-card", {
+            scrollTrigger: {
+                trigger: "#possibilidades",
+                start: "top 80%",
+            },
+            y: 50,
+            opacity: 0,
+            duration: 1.5,
+            ease: "elastic.out(1, 0.5)"
+        });
+    </script>
+</body>
+</html>

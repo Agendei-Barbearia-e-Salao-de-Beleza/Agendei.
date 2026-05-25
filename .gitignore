@@ -1,0 +1,34 @@
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.iml
+
+# Build outputs
+/backend/target/
+/backend/bin/
+/backend/build/
+/dashboard/.next/
+/dashboard/out/
+/saas/.next/
+/saas/scratch/
+/mobile/app/build/
+/mobile/build/
+.gradle/
+build/
+bin/
+
+# Dependencies
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Firebase & Supabase secrets
+.env*
+service-account.json
+google-services.json
