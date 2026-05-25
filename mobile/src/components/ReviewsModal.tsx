@@ -89,7 +89,7 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
                 <div 
                   key={r.id}
                   className={`border p-4 rounded-2xl space-y-2.5 transition-colors ${
-                    theme === 'dark' ? 'bg-zinc-950/30 border-white/5' : 'bg-white border-zinc-200 shadow-sm'
+                    theme === 'dark' ? 'bg-zinc-950/30 border-white/5' : 'bg-zinc-50 border-zinc-200 shadow-sm'
                   }`}
                 >
                   <div className="flex justify-between items-center">

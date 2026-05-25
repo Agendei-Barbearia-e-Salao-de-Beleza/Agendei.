@@ -464,6 +464,15 @@ export default function App() {
       return
     }
 
+    if (email === 'dev@agendei.com') {
+      setUser({ id: 'dev-user', email: 'dev@agendei.com', user_metadata: { nome: 'Gerente Dev' } } as any)
+      setUserName('Gerente Dev')
+      toast.success('Bypass de Login realizado!')
+      setAuthState('main')
+      fetchEstablishmentData('dev-user')
+      return
+    }
+
     setGlobalLoading(true)
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
@@ -542,6 +551,22 @@ export default function App() {
   }
 
   async function fetchEstablishmentData(userId: string) {
+    if (userId === 'dev-user') {
+      setEstablishmentId('dev-est-id')
+      setEstablishmentData({
+        nome: 'Barbearia Dev Premium',
+        telefone: '(11) 99999-9999',
+        endereco: 'Av. Paulista, 1000 - São Paulo',
+        instagram_url: '',
+        facebook_url: '',
+        whatsapp_url: '',
+        tiktok_url: ''
+      })
+      setMonthlyGoal(5000)
+      setGoalInput('5000')
+      return
+    }
+
     try {
       const { data: estData } = await supabase
         .from('estabelecimentos')
