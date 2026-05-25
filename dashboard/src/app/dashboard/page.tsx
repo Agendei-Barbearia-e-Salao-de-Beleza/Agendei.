@@ -423,7 +423,14 @@ export default function DashboardOverview() {
         await supabase.from('clientes_estabelecimentos').insert([{ cliente_id: clientId, estabelecimento_id: establishmentId }]);
       }
 
-      const dataHora = `${appFormData.date}T${appFormData.time}:00`;
+      const offsetMinutes = new Date().getTimezoneOffset();
+      const offsetSign = offsetMinutes > 0 ? '-' : '+';
+      const absMinutes = Math.abs(offsetMinutes);
+      const offsetHours = String(Math.floor(absMinutes / 60)).padStart(2, '0');
+      const offsetMins = String(absMinutes % 60).padStart(2, '0');
+      const timezoneOffset = `${offsetSign}${offsetHours}:${offsetMins}`;
+
+      const dataHora = `${appFormData.date}T${appFormData.time}:00${timezoneOffset}`;
       const totalPrice = selectedServices.reduce((sum, s) => sum + s.preco, 0);
 
       const { error } = await supabase.from('agendamentos').insert([{

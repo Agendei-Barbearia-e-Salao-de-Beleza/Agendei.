@@ -464,15 +464,6 @@ export default function App() {
       return
     }
 
-    if (email === 'dev@agendei.com') {
-      setUser({ id: 'dev-user', email: 'dev@agendei.com', user_metadata: { nome: 'Gerente Dev' } } as any)
-      setUserName('Gerente Dev')
-      toast.success('Bypass de Login realizado!')
-      setAuthState('main')
-      fetchEstablishmentData('dev-user')
-      return
-    }
-
     setGlobalLoading(true)
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
@@ -1033,7 +1024,14 @@ export default function App() {
 
       const servicesToAdd = services.filter(s => appFormData.selectedServiceIds.includes(s.id))
       const totalPrice = servicesToAdd.reduce((acc, curr) => acc + curr.preco, 0)
-      const dataHora = `${appFormData.date}T${appFormData.time}:00`
+      const offsetMinutes = new Date().getTimezoneOffset()
+      const offsetSign = offsetMinutes > 0 ? '-' : '+'
+      const absMinutes = Math.abs(offsetMinutes)
+      const offsetHours = String(Math.floor(absMinutes / 60)).padStart(2, '0')
+      const offsetMins = String(absMinutes % 60).padStart(2, '0')
+      const timezoneOffset = `${offsetSign}${offsetHours}:${offsetMins}`
+
+      const dataHora = `${appFormData.date}T${appFormData.time}:00${timezoneOffset}`
 
       const { error } = await supabase
         .from('agendamentos')

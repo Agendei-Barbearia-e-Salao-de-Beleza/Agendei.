@@ -174,7 +174,14 @@ export default function AppointmentsPage() {
 
       if (!clientId) throw new Error("Falha ao identificar ou criar cliente.");
 
-      const dataHora = `${formData.date}T${formData.time}:00`;
+      const offsetMinutes = new Date().getTimezoneOffset();
+      const offsetSign = offsetMinutes > 0 ? '-' : '+';
+      const absMinutes = Math.abs(offsetMinutes);
+      const offsetHours = String(Math.floor(absMinutes / 60)).padStart(2, '0');
+      const offsetMins = String(absMinutes % 60).padStart(2, '0');
+      const timezoneOffset = `${offsetSign}${offsetHours}:${offsetMins}`;
+
+      const dataHora = `${formData.date}T${formData.time}:00${timezoneOffset}`;
       const totalPrice = selectedServices.reduce((sum, s) => sum + s.preco, 0);
 
       const payload = {
