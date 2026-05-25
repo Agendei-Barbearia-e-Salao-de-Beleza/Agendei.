@@ -68,7 +68,7 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
 
         <div className="flex-1 overflow-y-auto space-y-4 pr-1">
           <div className={`border p-4 rounded-2xl flex items-center justify-between shrink-0 transition-colors ${
-            theme === 'dark' ? 'bg-zinc-950/50 border-white/5' : 'bg-zinc-50 border-zinc-200'
+            theme === 'dark' ? 'bg-zinc-950/50 border-white/5' : 'bg-zinc-100 border-zinc-200'
           }`}>
             <div>
               <span className={`text-3xl font-black ${theme === 'dark' ? 'text-white' : 'text-zinc-950'}`}>{averageRating}</span>
@@ -89,7 +89,7 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
                 <div 
                   key={r.id}
                   className={`border p-4 rounded-2xl space-y-2.5 transition-colors ${
-                    theme === 'dark' ? 'bg-zinc-950/30 border-white/5' : 'bg-zinc-50 border-zinc-150/80'
+                    theme === 'dark' ? 'bg-zinc-950/30 border-white/5' : 'bg-white border-zinc-200 shadow-sm'
                   }`}
                 >
                   <div className="flex justify-between items-center">
@@ -104,7 +104,7 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
                           className={`w-3 h-3 ${
                             star <= r.rating 
                               ? 'text-[#fd9602] fill-[#fd9602]' 
-                              : 'text-zinc-700'
+                              : theme === 'dark' ? 'text-zinc-700' : 'text-zinc-300'
                           }`} 
                         />
                       ))}
