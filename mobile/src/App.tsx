@@ -11,6 +11,7 @@ import { SelectDateScreen } from './screens/SelectDateScreen';
 import { SelectTimeScreen } from './screens/SelectTimeScreen';
 import { SummaryScreen } from './screens/SummaryScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { HistoryScreen } from './screens/HistoryScreen';
 
 export const App: React.FC = () => {
   return (
@@ -27,6 +28,7 @@ export const App: React.FC = () => {
         <Route path="/select-time" element={<SelectTimeScreen />} />
         <Route path="/summary" element={<SummaryScreen />} />
         <Route path="/settings" element={<SettingsScreen />} />
+        <Route path="/history" element={<HistoryScreen />} />
         
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

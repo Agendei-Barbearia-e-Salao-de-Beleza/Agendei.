@@ -1,114 +1,183 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Scissors, Home, Settings, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, ArrowRight, Sparkles } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { Header } from '../components/Header';
+import { TabBar } from '../components/TabBar';
 
 export const SelectServiceScreen: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedService, setSelectedService] = useState<any | null>(null);
+  const [services, setServices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data to match the 6 cards in the design
-  const services = Array(6).fill({
-    id: Math.random().toString(36).substr(2, 9),
-    title: 'Corte simples',
-    time: '30 min',
-    price: 'R$ 35,00'
-  });
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const currentState = location.state || JSON.parse(sessionStorage.getItem('agendei_booking_state') || '{}');
+        const estId = currentState?.establishmentId;
+        const category = currentState?.category;
+        
+        let query = supabase.from('servicos').select('*');
+        if (estId) {
+          query = query.eq('estabelecimento_id', estId);
+        }
+        
+        const { data, error } = await query;
+        if (error) throw error;
+
+        const filterByCategory = (list: any[], cat: string) => {
+          const lowerCat = cat.toLowerCase();
+          return list.filter(s => {
+            const nameMatch = s.nome ? s.nome.toLowerCase().includes(lowerCat) : false;
+            const catMatch = s.categoria ? s.categoria.toLowerCase().includes(lowerCat) : false;
+            
+            // Map Cabelo to "Corte", "Selagem", "Penteado"; Barba to "Barba"; Combos to "Combo"
+            let keywordMatch = false;
+            const serviceName = (s.nome || '').toLowerCase();
+            if (lowerCat.includes('cabelo')) {
+              keywordMatch = serviceName.includes('corte') || serviceName.includes('selagem') || serviceName.includes('penteado');
+            } else if (lowerCat.includes('barba')) {
+              keywordMatch = serviceName.includes('barba');
+            } else if (lowerCat.includes('combo')) {
+              keywordMatch = serviceName.includes('combo') || serviceName.includes('pacote');
+            }
+            return nameMatch || catMatch || keywordMatch;
+          });
+        };
+        
+        if (data && data.length > 0) {
+          // Filter dynamically by category if present safely
+          const filteredData = category ? filterByCategory(data, category) : data;
+          const displayData = filteredData.length > 0 ? filteredData : data;
+
+          setServices(displayData.map(s => ({
+            id: s.id,
+            title: s.nome || 'Serviço',
+            time: s.duracao_minutos ? `${s.duracao_minutos} min` : '30 min',
+            price: s.preco ? `R$ ${Number(s.preco).toFixed(2).replace('.', ',')}` : 'R$ 35,00',
+            rawPrice: s.preco
+          })));
+        } else {
+          throw new Error("Sem serviços cadastrados no Supabase");
+        }
+      } catch (err) {
+        console.log("Fallback para mock services", err);
+        const category = location.state?.category;
+        
+        const mockList = [
+          { id: '1', title: 'Corte Degradê', time: '30 min', price: 'R$ 40,00', rawPrice: 40.00 },
+          { id: '2', title: 'Barba Terapia', time: '25 min', price: 'R$ 30,00', rawPrice: 30.00 },
+          { id: '3', title: 'Combo Cabelo + Barba', time: '50 min', price: 'R$ 65,00', rawPrice: 65.00 },
+          { id: '4', title: 'Sobrancelha Navalha', time: '15 min', price: 'R$ 15,00', rawPrice: 15.00 },
+          { id: '5', title: 'Selagem Térmica', time: '60 min', price: 'R$ 80,00', rawPrice: 80.00 },
+          { id: '6', title: 'Penteado Clássico', time: '20 min', price: 'R$ 25,00', rawPrice: 25.00 }
+        ];
+
+        // Intelligently filter mock services if category is selected
+        if (category) {
+          const lowerCat = category.toLowerCase();
+          const filteredMocks = mockList.filter(s => {
+            const name = s.title.toLowerCase();
+            if (lowerCat.includes('cabelo')) {
+              return name.includes('corte') || name.includes('selagem') || name.includes('penteado');
+            } else if (lowerCat.includes('barba')) {
+              return name.includes('barba');
+            } else if (lowerCat.includes('combo')) {
+              return name.includes('combo') || name.includes('pacote');
+            }
+            return true;
+          });
+          setServices(filteredMocks.length > 0 ? filteredMocks : mockList);
+        } else {
+          setServices(mockList);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchServices();
+  }, [location.state]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#0A0A0A] text-white font-sans relative overflow-x-hidden pb-24">
+    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 font-sans relative overflow-x-hidden pb-28">
+      {/* Background radial glowing ambient light */}
+      <div className="absolute top-0 right-0 w-[80%] h-[60%] bg-[radial-gradient(ellipse_at_top_right,rgba(253,150,2,0.15),transparent_65%)] pointer-events-none z-0" />
       
-      {/* Top Bar - Social Icons */}
-      <div className="relative z-10 w-full flex justify-end p-6 space-x-2 pb-2">
-        <motion.a 
-          href="#"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="p-2 text-[#F59E0B] hover:text-white transition-colors"
-        >
-          {/* WhatsApp SVG Icon */}
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.888-.788-1.487-1.761-1.663-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51h-.57c-.198 0-.52.074-.792.347-.272.273-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-          </svg>
-        </motion.a>
-        <motion.a 
-          href="#"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="p-2 text-[#F59E0B] hover:text-white transition-colors"
-        >
-          {/* Instagram SVG Icon */}
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
-          </svg>
-        </motion.a>
-      </div>
+      <Header />
 
-      {/* Header Logo & Subtitle */}
+      {/* Header Info */}
       <motion.div 
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="flex flex-col items-center justify-center space-y-4 mb-8"
+        className="flex flex-col items-center justify-center space-y-2 mb-8 relative z-10"
       >
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-[#F59E0B] rounded-sm">
-            <Scissors className="w-6 h-6 text-black" strokeWidth={2} />
-          </div>
-          <h1 className="text-2xl font-extrabold tracking-widest text-white">
-            AGENDEI
-          </h1>
-        </div>
-        <h2 className="text-white text-[22px] font-bold text-center px-8 tracking-wide">
-          Selecione um serviço
+        <span className="text-[10px] font-black text-[#fd9602] uppercase tracking-widest bg-[#fd9602]/10 border border-[#fd9602]/20 px-3 py-1 rounded-full">Passo 2 de 4</span>
+        <h2 className="text-zinc-100 text-[24px] font-black text-center tracking-tight px-8">
+          Escolha o Serviço Ideal
         </h2>
+        {location.state?.category && (
+          <p className="text-zinc-500 text-xs font-semibold text-center flex items-center justify-center gap-1">
+            Filtrado por: <span className="text-[#fd9602] font-black">{location.state.category}</span>
+          </p>
+        )}
       </motion.div>
 
       {/* Service Grid */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-        className="px-6 mb-8"
-      >
-        <div className="grid grid-cols-2 gap-4">
-          {services.map((service) => (
-            <motion.div
-              key={service.id}
-              onClick={() => setSelectedService(service)}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.95 }}
-              className={`rounded-2xl p-4 flex flex-col justify-between h-[120px] shadow-[0_0_15px_rgba(0,0,0,0.5)] cursor-pointer transition-all ${selectedService?.id === service.id ? 'bg-[#3A260F] border-2 border-[#F59E0B]' : 'bg-[#2A1B0B] border border-white/5 hover:opacity-90 active:scale-95'}`}
-            >
-              <span className="text-[#F59E0B] text-lg font-medium leading-tight">
-                {service.title}
-              </span>
-              <div className="flex items-end justify-between w-full mt-2">
-                <div className="flex items-center space-x-1">
-                  <Clock className="w-3.5 h-3.5 text-[#F59E0B]" strokeWidth={2.5} />
-                  <span className="text-[#F59E0B] text-[10px] font-medium">{service.time}</span>
-                </div>
-                <span className="text-[#F59E0B] font-bold text-sm tracking-wide">
-                  {service.price}
-                </span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Navigation Header */}
-      <div className="flex justify-between items-center px-6 mt-2 mb-4">
-        <button 
-          onClick={() => navigate(-1)}
-          className="text-[#E65100] hover:text-[#F59E0B] transition-all cursor-pointer hover:opacity-90 active:scale-95 focus:outline-none"
-        >
-          <ChevronLeft className="w-10 h-10" strokeWidth={3} />
-        </button>
-        <button className="text-[#E65100] hover:text-[#F59E0B] transition-all cursor-pointer hover:opacity-90 active:scale-95 focus:outline-none">
-          <ChevronRight className="w-12 h-12" strokeWidth={3} />
-        </button>
+      <div className="flex-1 px-6 relative z-10 max-w-md mx-auto w-full mb-8">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 space-y-3">
+            <div className="w-8 h-8 border-4 border-[#fd9602] border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-zinc-500 text-sm font-semibold">Carregando serviços...</span>
+          </div>
+        ) : services.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4 animate-pulse-subtle">
+            {services.map((service) => {
+              const isSelected = selectedService?.id === service.id;
+              return (
+                <motion.div
+                  key={service.id}
+                  onClick={() => setSelectedService(service)}
+                  whileHover={{ scale: 1.02 }}
+                  className={`rounded-[1.5rem] p-4.5 flex flex-col justify-between h-[140px] shadow-xl border cursor-pointer transition-all ${
+                    isSelected 
+                      ? 'bg-[#fd9602]/10 border-[#fd9602] shadow-[0_0_20px_rgba(253,150,2,0.25)]' 
+                      : 'bg-[#0c0c0e]/60 border-zinc-800/80 hover:bg-zinc-900/40 hover:border-zinc-700/85'
+                  }`}
+                >
+                  <div className="flex flex-col">
+                    <span className="text-zinc-100 text-sm font-black leading-tight line-clamp-2 uppercase tracking-wide">
+                      {service.title}
+                    </span>
+                  </div>
+                  <div className="flex flex-col space-y-2 mt-auto">
+                    <div className="flex items-center space-x-1">
+                      <Clock className="w-3.5 h-3.5 text-zinc-550" strokeWidth={2.5} />
+                      <span className="text-zinc-500 text-[11px] font-bold">{service.time}</span>
+                    </div>
+                    <span className="text-[#fd9602] font-black text-sm tracking-wider">
+                      {service.price}
+                    </span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+            <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center border border-zinc-800">
+              <Sparkles className="w-6 h-6 text-zinc-650" />
+            </div>
+            <div>
+              <p className="text-zinc-400 text-sm font-semibold">Nenhum serviço disponível.</p>
+              <p className="text-zinc-600 text-xs mt-1">Este estabelecimento não possui serviços vinculados a esta categoria.</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Confirm Button */}
@@ -117,40 +186,26 @@ export const SelectServiceScreen: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="flex justify-center mb-6"
+          className="flex justify-center mb-6 relative z-10"
         >
           <motion.button
-            onClick={() => navigate('/select-date', { state: { ...location.state, service: selectedService } })}
+            onClick={() => {
+              const currentState = location.state || JSON.parse(sessionStorage.getItem('agendei_booking_state') || '{}');
+              const nextState = { ...currentState, service: selectedService };
+              sessionStorage.setItem('agendei_booking_state', JSON.stringify(nextState));
+              navigate('/select-date', { state: nextState });
+            }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.95 }}
-            className="w-full max-w-[240px] py-3.5 bg-[#F59E0B] text-black font-extrabold text-[15px] rounded-xl shadow-[0_5px_15px_rgba(245,158,11,0.2)] hover:bg-[#D97706] transition-all cursor-pointer hover:opacity-90 active:scale-95 tracking-wide"
+            className="w-full max-w-[260px] py-4 bg-[#fd9602] text-zinc-950 font-black text-[15px] rounded-2xl shadow-[0_0_20px_rgba(253,150,2,0.4)] hover:bg-[#e08500] transition-all cursor-pointer tracking-widest uppercase flex items-center justify-center space-x-2"
           >
-            CONFIRMAR
+            <span>Escolher Data</span>
+            <ArrowRight className="w-4 h-4 text-zinc-950" strokeWidth={3} />
           </motion.button>
         </motion.div>
       )}
 
-      {/* Bottom Navigation Bar */}
-      <div className="fixed bottom-0 left-0 right-0 h-24 bg-[#0A0A0A] flex items-center justify-around px-8 pb-6 pt-4 border-t border-white/5 z-50">
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="w-14 h-14 flex items-center justify-center opacity-60 hover:opacity-100 transition-opacity"
-        >
-          <Home className="w-7 h-7 text-white" strokeWidth={2} />
-        </button>
-        <button 
-          onClick={() => navigate('/select-category')}
-          className="w-14 h-14 bg-[#F59E0B] rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:scale-105 transition-transform"
-        >
-          <Scissors className="w-7 h-7 text-white" strokeWidth={2.5} />
-        </button>
-        <button 
-          onClick={() => navigate('/settings')}
-          className="w-14 h-14 flex items-center justify-center opacity-60 hover:opacity-100 transition-opacity"
-        >
-          <Settings className="w-7 h-7 text-white" strokeWidth={2} />
-        </button>
-      </div>
+      <TabBar activeTab="booking" />
     </div>
   );
 };
