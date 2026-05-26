@@ -90,7 +90,7 @@ export const SummaryScreen: React.FC = () => {
       >
         <button 
           onClick={() => navigate(-1)}
-          className="text-[#E65100] hover:text-[#F59E0B] transition-colors focus:outline-none"
+          className="text-[#E65100] hover:text-[#F59E0B] transition-all cursor-pointer hover:opacity-90 active:scale-95 focus:outline-none"
         >
           <ChevronLeft className="w-12 h-12" strokeWidth={3.5} />
         </button>
@@ -110,7 +110,7 @@ export const SummaryScreen: React.FC = () => {
           }}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.95 }}
-          className="w-full max-w-[240px] py-3.5 bg-[#F59E0B] text-black font-extrabold text-[15px] rounded-xl shadow-lg tracking-wide"
+          className="w-full max-w-[240px] py-3.5 bg-[#F59E0B] text-black font-extrabold text-[15px] rounded-xl shadow-lg tracking-wide transition-all cursor-pointer hover:opacity-90 active:scale-95 hover:bg-[#D97706]"
         >
           CONFIRMAR
         </motion.button>

@@ -5,6 +5,11 @@ import { useNavigate, Link } from 'react-router-dom';
 
 export const RegisterScreen: React.FC = () => {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const navigate = useNavigate();
 
   return (
@@ -76,7 +81,10 @@ export const RegisterScreen: React.FC = () => {
               </div>
               <input 
                 type="text" 
-                className="w-full bg-[#1A1A1A] text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-1 focus:ring-[#F59E0B] transition-all shadow-inner"
+                placeholder="Digite seu usuário"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full bg-[#1A1A1A] text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-1 focus:ring-[#F59E0B] transition-all shadow-inner placeholder-gray-500"
               />
             </div>
           </div>
@@ -90,7 +98,10 @@ export const RegisterScreen: React.FC = () => {
               </div>
               <input 
                 type="email" 
-                className="w-full bg-[#1A1A1A] text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-1 focus:ring-[#F59E0B] transition-all shadow-inner"
+                placeholder="Seu e-mail"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-[#1A1A1A] text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-1 focus:ring-[#F59E0B] transition-all shadow-inner placeholder-gray-500"
               />
             </div>
           </div>
@@ -104,7 +115,10 @@ export const RegisterScreen: React.FC = () => {
               </div>
               <input 
                 type="tel" 
-                className="w-full bg-[#1A1A1A] text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-1 focus:ring-[#F59E0B] transition-all shadow-inner"
+                placeholder="(11) 99999-9999"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full bg-[#1A1A1A] text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-1 focus:ring-[#F59E0B] transition-all shadow-inner placeholder-gray-500"
               />
             </div>
           </div>
@@ -118,7 +132,10 @@ export const RegisterScreen: React.FC = () => {
               </div>
               <input 
                 type="password" 
-                className="w-full bg-[#1A1A1A] text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-1 focus:ring-[#F59E0B] transition-all shadow-inner"
+                placeholder="Crie uma senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-[#1A1A1A] text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-1 focus:ring-[#F59E0B] transition-all shadow-inner placeholder-gray-500"
               />
             </div>
           </div>
@@ -132,7 +149,10 @@ export const RegisterScreen: React.FC = () => {
               </div>
               <input 
                 type="password" 
-                className="w-full bg-[#1A1A1A] text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-1 focus:ring-[#F59E0B] transition-all shadow-inner"
+                placeholder="Confirme sua senha"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full bg-[#1A1A1A] text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-1 focus:ring-[#F59E0B] transition-all shadow-inner placeholder-gray-500"
               />
             </div>
           </div>
@@ -157,14 +177,14 @@ export const RegisterScreen: React.FC = () => {
             onClick={() => navigate('/login')}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.95 }}
-            className="w-full max-w-[200px] py-3 bg-[#F59E0B] text-white font-bold text-lg rounded-xl shadow-lg"
+            className="w-full max-w-[200px] py-3 bg-[#F59E0B] text-white font-bold text-lg rounded-xl shadow-lg cursor-pointer hover:opacity-90 active:scale-95 transition-all"
           >
             Cadastrar
           </motion.button>
 
           {/* Botão Já possui conta */}
           <div className="text-center mt-2">
-            <Link to="/login" className="text-[#888888] text-[13px] hover:text-[#F59E0B] font-medium transition-colors">
+            <Link to="/login" className="text-[#888888] text-[13px] hover:text-[#F59E0B] font-medium transition-colors cursor-pointer hover:opacity-90 active:scale-95 inline-block">
               já possui uma conta? entre na plataforma
             </Link>
           </div>

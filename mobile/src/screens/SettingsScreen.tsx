@@ -6,6 +6,11 @@ import { useNavigate } from 'react-router-dom';
 export const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [dob, setDob] = useState('');
 
   return (
     <div className="flex flex-col min-h-screen bg-[#111111] text-white font-sans relative overflow-x-hidden pb-24">
@@ -77,7 +82,13 @@ export const SettingsScreen: React.FC = () => {
         {/* Field: Usuário */}
         <div>
           <h3 className="text-white text-lg font-bold mb-2">Usuário</h3>
-          <p className="text-[#E0E0E0] text-[16px] mb-3 ml-2 font-medium">WesleyW</p>
+          <input 
+            type="text" 
+            placeholder="Digite seu usuário"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full bg-transparent text-[#E0E0E0] text-[16px] mb-3 ml-2 font-medium focus:outline-none placeholder-gray-600"
+          />
           <div className="h-[1px] bg-white/20 w-full mt-2"></div>
         </div>
 
@@ -85,8 +96,14 @@ export const SettingsScreen: React.FC = () => {
         <div>
           <h3 className="text-white text-lg font-bold mb-2">E-mail</h3>
           <div className="flex justify-between items-center mb-3 ml-2">
-            <p className="text-[#E0E0E0] text-[16px] font-medium">wesley@gmail</p>
-            <button className="text-[#888888] hover:text-[#AAAAAA] text-[12px] font-semibold transition-colors mr-1">Alterar</button>
+            <input 
+              type="email" 
+              placeholder="Digite seu e-mail"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-transparent text-[#E0E0E0] text-[16px] font-medium focus:outline-none placeholder-gray-600"
+            />
+            <button className="text-[#888888] hover:text-[#AAAAAA] text-[12px] font-semibold transition-colors mr-1 cursor-pointer hover:opacity-90 active:scale-95">Alterar</button>
           </div>
           <div className="h-[1px] bg-white/20 w-full mt-2"></div>
         </div>
@@ -95,8 +112,14 @@ export const SettingsScreen: React.FC = () => {
         <div>
           <h3 className="text-white text-lg font-bold mb-2">Celular</h3>
           <div className="flex justify-between items-center mb-3 ml-2">
-            <p className="text-[#E0E0E0] text-[16px] font-medium">(11) 99999-9999</p>
-            <button className="text-[#888888] hover:text-[#AAAAAA] text-[12px] font-semibold transition-colors mr-1">Alterar</button>
+            <input 
+              type="tel" 
+              placeholder="Digite seu celular"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full bg-transparent text-[#E0E0E0] text-[16px] font-medium focus:outline-none placeholder-gray-600"
+            />
+            <button className="text-[#888888] hover:text-[#AAAAAA] text-[12px] font-semibold transition-colors mr-1 cursor-pointer hover:opacity-90 active:scale-95">Alterar</button>
           </div>
           <div className="h-[1px] bg-white/20 w-full mt-2"></div>
         </div>
@@ -105,12 +128,16 @@ export const SettingsScreen: React.FC = () => {
         <div>
           <h3 className="text-white text-lg font-bold mb-2">Senha</h3>
           <div className="flex justify-between items-center mb-3 ml-2">
-            <p className="text-[#E0E0E0] text-[16px] tracking-widest mt-1">
-              {showPassword ? "minhasenha123" : "****************"}
-            </p>
+            <input 
+              type={showPassword ? "text" : "password"}
+              placeholder="Digite sua senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={`w-full bg-transparent text-[#E0E0E0] text-[16px] mt-1 focus:outline-none placeholder-gray-600 ${!showPassword && password ? 'tracking-widest' : ''}`}
+            />
             <button 
               onClick={() => setShowPassword(!showPassword)}
-              className="text-white hover:text-[#F59E0B] transition-colors"
+              className="text-white hover:text-[#F59E0B] transition-colors cursor-pointer hover:opacity-90 active:scale-95"
             >
               {showPassword ? (
                 <Eye className="w-5 h-5 mr-1" />
@@ -125,7 +152,13 @@ export const SettingsScreen: React.FC = () => {
         {/* Field: Data de nascimento */}
         <div>
           <h3 className="text-white text-lg font-bold mb-2">Data de nascimento</h3>
-          <p className="text-[#777777] text-[16px] mb-3 ml-2 font-medium">adicionar</p>
+          <input 
+            type="text" 
+            placeholder="Adicionar data"
+            value={dob}
+            onChange={(e) => setDob(e.target.value)}
+            className="w-full bg-transparent text-[#E0E0E0] text-[16px] mb-3 ml-2 font-medium focus:outline-none placeholder-gray-600"
+          />
           <div className="h-[1px] bg-white/20 w-full mt-2"></div>
         </div>
       </motion.div>
@@ -140,7 +173,7 @@ export const SettingsScreen: React.FC = () => {
         <motion.button 
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.95 }}
-          className="px-8 py-3.5 bg-[#F59E0B] text-black font-extrabold text-[15px] rounded-xl shadow-[0_5px_15px_rgba(245,158,11,0.2)] hover:bg-[#D97706] transition-colors tracking-wide"
+          className="px-8 py-3.5 bg-[#F59E0B] text-black font-extrabold text-[15px] rounded-xl shadow-[0_5px_15px_rgba(245,158,11,0.2)] hover:bg-[#D97706] transition-all cursor-pointer hover:opacity-90 active:scale-95 tracking-wide"
         >
           Salvar alterações
         </motion.button>

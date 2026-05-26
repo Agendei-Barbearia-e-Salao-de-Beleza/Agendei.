@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Scissors, Home, Settings, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export const SelectServiceScreen: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [selectedService, setSelectedService] = useState<any | null>(null);
 
   // Mock data to match the 6 cards in the design
   const services = Array(6).fill({
@@ -74,10 +76,10 @@ export const SelectServiceScreen: React.FC = () => {
           {services.map((service) => (
             <motion.div
               key={service.id}
-              onClick={() => navigate('/select-date', { state: { service } })}
+              onClick={() => setSelectedService(service)}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.95 }}
-              className="bg-[#2A1B0B] rounded-2xl p-4 flex flex-col justify-between h-[120px] shadow-[0_0_15px_rgba(0,0,0,0.5)] border border-white/5 cursor-pointer"
+              className={`rounded-2xl p-4 flex flex-col justify-between h-[120px] shadow-[0_0_15px_rgba(0,0,0,0.5)] cursor-pointer transition-all ${selectedService?.id === service.id ? 'bg-[#3A260F] border-2 border-[#F59E0B]' : 'bg-[#2A1B0B] border border-white/5 hover:opacity-90 active:scale-95'}`}
             >
               <span className="text-[#F59E0B] text-lg font-medium leading-tight">
                 {service.title}
@@ -97,17 +99,36 @@ export const SelectServiceScreen: React.FC = () => {
       </motion.div>
 
       {/* Navigation Header */}
-      <div className="flex justify-between items-center px-6 mt-8 mb-4">
+      <div className="flex justify-between items-center px-6 mt-2 mb-4">
         <button 
           onClick={() => navigate(-1)}
-          className="text-[#E65100] hover:text-[#F59E0B] transition-colors focus:outline-none"
+          className="text-[#E65100] hover:text-[#F59E0B] transition-all cursor-pointer hover:opacity-90 active:scale-95 focus:outline-none"
         >
           <ChevronLeft className="w-10 h-10" strokeWidth={3} />
         </button>
-        <button className="text-[#E65100] hover:text-[#F59E0B] transition-colors focus:outline-none">
+        <button className="text-[#E65100] hover:text-[#F59E0B] transition-all cursor-pointer hover:opacity-90 active:scale-95 focus:outline-none">
           <ChevronRight className="w-12 h-12" strokeWidth={3} />
         </button>
       </div>
+
+      {/* Confirm Button */}
+      {selectedService && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="flex justify-center mb-6"
+        >
+          <motion.button
+            onClick={() => navigate('/select-date', { state: { ...location.state, service: selectedService } })}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.95 }}
+            className="w-full max-w-[240px] py-3.5 bg-[#F59E0B] text-black font-extrabold text-[15px] rounded-xl shadow-[0_5px_15px_rgba(245,158,11,0.2)] hover:bg-[#D97706] transition-all cursor-pointer hover:opacity-90 active:scale-95 tracking-wide"
+          >
+            CONFIRMAR
+          </motion.button>
+        </motion.div>
+      )}
 
       {/* Bottom Navigation Bar */}
       <div className="fixed bottom-0 left-0 right-0 h-24 bg-[#0A0A0A] flex items-center justify-around px-8 pb-6 pt-4 border-t border-white/5 z-50">

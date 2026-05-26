@@ -81,10 +81,10 @@ export const SelectTimeScreen: React.FC = () => {
               onClick={() => setSelectedTime(time)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className={`py-3.5 rounded-full border border-[#D97706] text-[17px] font-bold tracking-widest shadow-[0_0_10px_rgba(245,158,11,0.15)] transition-colors ${
+              className={`py-3.5 rounded-full border border-[#D97706] text-[17px] font-bold tracking-widest shadow-[0_0_10px_rgba(245,158,11,0.15)] transition-all cursor-pointer hover:opacity-90 active:scale-95 ${
                 selectedTime === time 
                   ? 'bg-[#F59E0B] text-black shadow-[0_0_20px_rgba(245,158,11,0.5)]' 
-                  : 'bg-[#1A1A1A] text-[#F59E0B]'
+                  : 'bg-[#1A1A1A] text-[#F59E0B] hover:bg-[#251605]'
               }`}
             >
               {time}
@@ -102,7 +102,7 @@ export const SelectTimeScreen: React.FC = () => {
       >
         <button 
           onClick={() => navigate(-1)}
-          className="text-[#E65100] hover:text-[#F59E0B] transition-colors focus:outline-none"
+          className="text-[#E65100] hover:text-[#F59E0B] transition-all cursor-pointer hover:opacity-90 active:scale-95 focus:outline-none"
         >
           <ChevronLeft className="w-12 h-12" strokeWidth={3.5} />
         </button>
@@ -124,7 +124,7 @@ export const SelectTimeScreen: React.FC = () => {
           disabled={!selectedTime}
           whileHover={selectedTime ? { scale: 1.02 } : {}}
           whileTap={selectedTime ? { scale: 0.95 } : {}}
-          className={`w-full max-w-[240px] py-3.5 bg-[#F59E0B] text-black font-extrabold text-[15px] rounded-xl shadow-lg tracking-wide ${!selectedTime && 'opacity-50 cursor-not-allowed'}`}
+          className={`w-full max-w-[240px] py-3.5 bg-[#F59E0B] text-black font-extrabold text-[15px] rounded-xl shadow-lg tracking-wide transition-all ${!selectedTime ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-90 active:scale-95 hover:bg-[#D97706]'}`}
         >
           CONFIRMAR
         </motion.button>

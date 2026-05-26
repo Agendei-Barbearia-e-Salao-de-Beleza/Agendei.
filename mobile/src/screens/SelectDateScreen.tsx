@@ -27,9 +27,9 @@ export const SelectDateScreen: React.FC = () => {
           onClick={() => day !== null && setSelectedDay(day)}
           whileHover={day ? { scale: 1.1 } : {}}
           whileTap={day ? { scale: 0.95 } : {}}
-          className={`flex items-center justify-center h-10 w-10 mx-auto rounded-full text-[16px] font-extrabold ${day ? 'cursor-pointer' : ''} ${
+          className={`flex items-center justify-center h-10 w-10 mx-auto rounded-full text-[16px] font-extrabold transition-all ${day ? 'cursor-pointer hover:opacity-90 active:scale-95' : ''} ${
             day === selectedDay 
-              ? 'bg-white text-[#0A0A0A]' 
+              ? 'bg-white text-[#0A0A0A] shadow-[0_0_10px_rgba(255,255,255,0.5)]' 
               : isSunday ? 'text-white/60' : 'text-white'
           }`}
         >
@@ -123,7 +123,7 @@ export const SelectDateScreen: React.FC = () => {
       >
         <button 
           onClick={() => navigate(-1)}
-          className="text-[#E65100] hover:text-[#F59E0B] transition-colors focus:outline-none"
+          className="text-[#E65100] hover:text-[#F59E0B] transition-all cursor-pointer hover:opacity-90 active:scale-95 focus:outline-none"
         >
           <ChevronLeft className="w-12 h-12" strokeWidth={3.5} />
         </button>
@@ -145,7 +145,7 @@ export const SelectDateScreen: React.FC = () => {
           disabled={!selectedDay}
           whileHover={selectedDay ? { scale: 1.02 } : {}}
           whileTap={selectedDay ? { scale: 0.95 } : {}}
-          className={`w-full max-w-[240px] py-3.5 bg-[#F59E0B] text-black font-extrabold text-[15px] rounded-xl shadow-lg tracking-wide ${!selectedDay && 'opacity-50 cursor-not-allowed'}`}
+          className={`w-full max-w-[240px] py-3.5 bg-[#F59E0B] text-black font-extrabold text-[15px] rounded-xl shadow-lg tracking-wide transition-all ${!selectedDay ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-90 active:scale-95 hover:bg-[#D97706]'}`}
         >
           CONFIRMAR
         </motion.button>

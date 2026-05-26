@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Scissors, User, Key } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
 export const LoginScreen: React.FC = () => {
   const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   return (
     <div className="flex flex-col min-h-screen bg-[#0A0A0A] text-white font-sans relative overflow-hidden">
@@ -74,7 +76,10 @@ export const LoginScreen: React.FC = () => {
               </div>
               <input 
                 type="text" 
-                className="w-full bg-[#1A1A1A] text-white rounded-xl py-4 pl-14 pr-4 focus:outline-none focus:ring-1 focus:ring-[#F59E0B] transition-all shadow-inner"
+                placeholder="Digite seu usuário"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full bg-[#1A1A1A] text-white rounded-xl py-4 pl-14 pr-4 focus:outline-none focus:ring-1 focus:ring-[#F59E0B] transition-all shadow-inner placeholder-gray-500"
               />
             </div>
           </div>
@@ -88,12 +93,15 @@ export const LoginScreen: React.FC = () => {
               </div>
               <input 
                 type="password" 
-                className="w-full bg-[#1A1A1A] text-white rounded-xl py-4 pl-14 pr-4 focus:outline-none focus:ring-1 focus:ring-[#F59E0B] transition-all shadow-inner"
+                placeholder="Sua senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-[#1A1A1A] text-white rounded-xl py-4 pl-14 pr-4 focus:outline-none focus:ring-1 focus:ring-[#F59E0B] transition-all shadow-inner placeholder-gray-500"
               />
             </div>
             
             <div className="flex justify-end pt-2">
-              <a href="#" className="text-[#F59E0B] text-xs font-semibold hover:underline">
+              <a href="#" className="text-[#F59E0B] text-xs font-semibold hover:underline cursor-pointer hover:opacity-90 active:scale-95 transition-all">
                 Esqueceu a senha ?
               </a>
             </div>
@@ -104,8 +112,8 @@ export const LoginScreen: React.FC = () => {
           <motion.button
             onClick={() => navigate('/dashboard')}
             whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="w-full py-3.5 bg-[#F59E0B] text-black font-extrabold text-[15px] rounded-xl shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:bg-[#D97706] transition-colors tracking-wide mb-6"
+            whileTap={{ scale: 0.95 }}
+            className="w-full py-3.5 bg-[#F59E0B] text-black font-extrabold text-[15px] rounded-xl shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:bg-[#D97706] cursor-pointer hover:opacity-90 active:scale-95 transition-all tracking-wide mb-6"
           >
             Entrar
           </motion.button>

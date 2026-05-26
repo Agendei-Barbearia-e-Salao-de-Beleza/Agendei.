@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Scissors, Home, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const SelectCategoryScreen: React.FC = () => {
   const navigate = useNavigate();
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   return (
     <div className="flex flex-col min-h-screen bg-[#0A0A0A] text-white font-sans relative overflow-x-hidden pb-24">
@@ -56,37 +57,56 @@ export const SelectCategoryScreen: React.FC = () => {
       </motion.div>
 
       {/* Category Buttons */}
-      <div className="flex-1 px-8 flex flex-col justify-center space-y-6 mt-10 max-w-sm mx-auto w-full">
+      <div className="flex-1 px-8 flex flex-col justify-center space-y-6 mt-6 max-w-sm mx-auto w-full mb-8">
         {/* Cabelo */}
         <motion.button
-          onClick={() => navigate('/select-service')}
+          onClick={() => setSelectedCategory('Cabelo')}
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.95 }}
-          className="w-full py-6 bg-[#251605] border border-[#3A260F] rounded-2xl flex items-center justify-center shadow-lg hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] transition-all"
+          className={`w-full py-6 rounded-2xl flex items-center justify-center shadow-lg transition-all cursor-pointer ${selectedCategory === 'Cabelo' ? 'bg-[#3A260F] border-2 border-[#F59E0B] shadow-[0_0_20px_rgba(245,158,11,0.3)]' : 'bg-[#251605] border border-[#3A260F] hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:opacity-90 active:scale-95'}`}
         >
           <span className="text-[#F59E0B] text-2xl font-bold tracking-wider">Cabelo</span>
         </motion.button>
 
         {/* Barba */}
         <motion.button
-          onClick={() => navigate('/select-service')}
+          onClick={() => setSelectedCategory('Barba')}
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.95 }}
-          className="w-full py-6 bg-[#251605] border border-[#3A260F] rounded-2xl flex items-center justify-center shadow-lg hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] transition-all"
+          className={`w-full py-6 rounded-2xl flex items-center justify-center shadow-lg transition-all cursor-pointer ${selectedCategory === 'Barba' ? 'bg-[#3A260F] border-2 border-[#F59E0B] shadow-[0_0_20px_rgba(245,158,11,0.3)]' : 'bg-[#251605] border border-[#3A260F] hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:opacity-90 active:scale-95'}`}
         >
           <span className="text-[#F59E0B] text-2xl font-bold tracking-wider">Barba</span>
         </motion.button>
 
         {/* Combo */}
         <motion.button
-          onClick={() => navigate('/select-service')}
+          onClick={() => setSelectedCategory('Combo')}
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.95 }}
-          className="w-full py-6 bg-[#251605] border border-[#3A260F] rounded-2xl flex items-center justify-center shadow-lg hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] transition-all"
+          className={`w-full py-6 rounded-2xl flex items-center justify-center shadow-lg transition-all cursor-pointer ${selectedCategory === 'Combo' ? 'bg-[#3A260F] border-2 border-[#F59E0B] shadow-[0_0_20px_rgba(245,158,11,0.3)]' : 'bg-[#251605] border border-[#3A260F] hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:opacity-90 active:scale-95'}`}
         >
           <span className="text-[#F59E0B] text-2xl font-bold tracking-wider">Combo</span>
         </motion.button>
       </div>
+
+      {/* Confirm Button */}
+      {selectedCategory && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="flex justify-center mb-10"
+        >
+          <motion.button
+            onClick={() => navigate('/select-service', { state: { category: selectedCategory } })}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.95 }}
+            className="w-full max-w-[240px] py-3.5 bg-[#F59E0B] text-black font-extrabold text-[15px] rounded-xl shadow-[0_5px_15px_rgba(245,158,11,0.2)] hover:bg-[#D97706] transition-all cursor-pointer hover:opacity-90 active:scale-95 tracking-wide"
+          >
+            CONFIRMAR
+          </motion.button>
+        </motion.div>
+      )}
 
       {/* Bottom Navigation Bar */}
       <div className="fixed bottom-0 left-0 right-0 h-24 bg-[#0A0A0A] flex items-center justify-around px-8 pb-6 pt-4 border-t border-white/5 z-50">

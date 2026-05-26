@@ -144,7 +144,7 @@ export const ExploreScreen: React.FC = () => {
           onClick={() => navigate('/login')}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.95 }}
-          className="w-full max-w-xs py-4 bg-[#F59E0B] text-black font-bold text-lg rounded-xl mb-12 shadow-lg"
+          className="w-full max-w-xs py-4 bg-[#F59E0B] text-black font-bold text-lg rounded-xl mb-12 shadow-lg transition-all cursor-pointer hover:opacity-90 active:scale-95"
         >
           Agendar
         </motion.button>

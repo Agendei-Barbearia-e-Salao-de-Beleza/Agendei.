@@ -92,7 +92,7 @@ export const WelcomeScreen: React.FC = () => {
       >
         <button 
           onClick={() => navigate('/explore')}
-          className="w-full py-4 rounded-xl bg-orange-500 text-black font-extrabold text-lg uppercase tracking-wider shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:bg-orange-400 hover:shadow-[0_0_30px_rgba(245,158,11,0.6)] hover:-translate-y-1 transition-all duration-300"
+          className="w-full py-4 rounded-xl bg-[#F59E0B] text-black font-extrabold text-lg uppercase tracking-wider shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:bg-[#D97706] hover:shadow-[0_0_30px_rgba(245,158,11,0.6)] hover:-translate-y-1 transition-all duration-300 cursor-pointer hover:opacity-90 active:scale-95"
         >
           Agendar
         </button>
