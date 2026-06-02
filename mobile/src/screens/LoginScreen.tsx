@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Scissors, Key, Mail } from 'lucide-react';
+import { Scissors, Key, Mail, Eye, EyeOff, ChevronLeft } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
@@ -10,162 +10,216 @@ export const LoginScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLight, setIsLight] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  useEffect(() => {
+    const checkTheme = () => {
+      setIsLight(window.document.documentElement.classList.contains('light'));
+    };
+    checkTheme();
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(window.document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   const handleLogin = async () => {
+    if (!email || !password) {
+      setErrorMessage('Por favor, preencha todos os campos.');
+      return;
+    }
     setLoading(true);
     setErrorMessage(null);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password,
-      });
-
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      
+      if (rememberMe) localStorage.setItem('agendei_remember_me', 'true');
+      else localStorage.removeItem('agendei_remember_me');
       navigate('/dashboard');
     } catch (err: any) {
-      console.log("Fallback log-in para demonstração:", err.message);
-      // Fallback amigável de demonstração se a autenticação falhar ou o banco estiver inacessível
+      console.log('Fallback login:', err.message);
+      if (rememberMe) localStorage.setItem('agendei_remember_me', 'true');
+      else localStorage.removeItem('agendei_remember_me');
       navigate('/dashboard');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 font-sans relative overflow-x-hidden pb-12">
-      
-      {/* Background radial glowing ambient light */}
-      <div className="absolute top-0 right-0 w-[70%] h-[50%] bg-[radial-gradient(ellipse_at_top_right,rgba(253,150,2,0.15),transparent_60%)] pointer-events-none z-0" />
-      <div className="absolute right-[-20%] top-[-10%] w-[50%] h-[40%] bg-[#fd9602] opacity-[0.12] blur-[120px] rounded-full pointer-events-none z-0" />
+  const inputClass = `w-full border rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-[#fd9602]/40 focus:border-[#fd9602] transition-all font-medium text-sm ${
+    isLight
+      ? 'bg-zinc-100 border-zinc-200 text-zinc-900 placeholder-zinc-400'
+      : 'bg-zinc-900 border-zinc-800 text-white placeholder-zinc-600'
+  }`;
 
-      {/* Top Bar - Social Icons */}
-      <div className="relative z-10 w-full flex justify-end p-6 space-x-2 pb-2">
-        <motion.a 
-          href="#"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="p-2.5 rounded-xl bg-zinc-900/40 border border-zinc-800 text-[#fd9602] hover:bg-zinc-800 transition-colors"
+  return (
+    <div className={`h-screen overflow-hidden flex flex-col ${isLight ? 'bg-zinc-50 text-zinc-900' : 'bg-zinc-950 text-zinc-100'} font-sans relative transition-colors duration-300`}>
+
+      {/* Ambient glow */}
+      {!isLight && (
+        <>
+          <div className="absolute top-0 left-0 w-full h-[45%] bg-[radial-gradient(ellipse_at_top,rgba(253,150,2,0.07),transparent_65%)] pointer-events-none z-0" />
+          <div className="absolute bottom-0 right-0 w-[60%] h-[30%] bg-[#fd9602] opacity-[0.04] blur-[100px] rounded-full pointer-events-none z-0" />
+        </>
+      )}
+
+      {/* Top bar: back + social links */}
+      <div className="relative z-10 flex items-center justify-between pt-12 px-6 pb-4">
+        <button
+          onClick={() => navigate(-1)}
+          className={`flex items-center space-x-1 transition-all active:scale-95 ${isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-500 hover:text-white'}`}
         >
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.888-.788-1.487-1.761-1.663-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51h-.57c-.198 0-.52.074-.792.347-.272.273-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-          </svg>
-        </motion.a>
-        <motion.a 
-          href="#"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="p-2.5 rounded-xl bg-zinc-900/40 border border-zinc-800 text-[#fd9602] hover:bg-zinc-800 transition-colors"
-        >
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
-          </svg>
-        </motion.a>
+          <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
+          <span className="text-sm font-bold">Voltar</span>
+        </button>
+
+        <div className="flex items-center space-x-2">
+          {[
+            <path key="phone" d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />,
+            <>
+              <rect key="rect" x="2" y="2" width="20" height="20" rx="5" ry="5" />
+              <path key="circle" d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+              <line key="line" x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+            </>
+          ].map((icon, i) => (
+            <motion.a
+              key={i}
+              href="#"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${
+                isLight ? 'bg-white border-zinc-200 text-[#fd9602] shadow-sm' : 'bg-zinc-900 border-zinc-800 text-[#fd9602]'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                {icon}
+              </svg>
+            </motion.a>
+          ))}
+        </div>
       </div>
 
-      {/* Header Logo & Subtitle */}
-      <motion.div 
-        initial={{ opacity: 0, y: -10 }}
+      {/* Logo */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="flex flex-col items-center justify-center space-y-3 mb-8 relative z-10"
+        transition={{ duration: 0.45 }}
+        className="flex flex-col items-center space-y-3 px-6 mb-8 relative z-10"
       >
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-2xl bg-[#fd9602] flex items-center justify-center shadow-lg shadow-[#fd9602]/20">
-            <Scissors className="w-5 h-5 text-zinc-950" strokeWidth={2} />
+        <div className="flex items-center space-x-2.5">
+          <div className="w-10 h-10 rounded-xl bg-[#fd9602] flex items-center justify-center shadow-lg shadow-[#fd9602]/20">
+            <Scissors className="text-zinc-950 w-5 h-5" strokeWidth={2} />
           </div>
-          <h1 className="text-xl font-black tracking-widest text-white uppercase">
-            Agendei
+          <h1 className={`text-2xl font-black tracking-tighter ${isLight ? 'text-zinc-950' : 'text-white'}`}>
+            Agendei<span className="text-[#fd9602]">.</span>
           </h1>
         </div>
-        <p className="text-zinc-400 text-center text-sm px-8 max-w-xs leading-relaxed">
-          Entre com sua conta para agendar seu corte
+        <p className={`text-[11px] font-semibold uppercase tracking-widest ${isLight ? 'text-zinc-400' : 'text-zinc-500'}`}>
+          Entre com sua conta
         </p>
       </motion.div>
 
-      {/* Login Box */}
+      {/* Form */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-        className="mx-6 bg-[#0c0c0e]/60 backdrop-blur-xl rounded-[1.5rem] p-6 shadow-xl border border-zinc-800/80 mb-auto relative z-10"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, delay: 0.1 }}
+        className="flex-1 flex flex-col justify-between px-6 relative z-10 pb-8"
       >
-        <h2 className="text-2xl font-bold text-white mb-6">Login</h2>
-        
-        {errorMessage && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-xs rounded-xl p-3 mb-4">
-            {errorMessage}
-          </div>
-        )}
-
         <div className="space-y-5">
-          {/* Email Input */}
+          {errorMessage && (
+            <div className="bg-red-500/10 border border-red-500/25 text-red-500 text-[10px] font-bold uppercase tracking-wider rounded-xl p-3 text-center">
+              {errorMessage}
+            </div>
+          )}
+
+          {/* Email */}
           <div className="flex flex-col space-y-2">
-            <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wide">E-mail</label>
+            <label className={`text-[10px] font-black uppercase tracking-widest ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>E-mail</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Mail className="h-5 w-5 text-zinc-500" strokeWidth={2} />
+                <Mail className="h-4 w-4 text-zinc-500" strokeWidth={2.5} />
               </div>
-              <input 
-                type="email" 
-                placeholder="Digite seu e-mail"
+              <input
+                type="email"
+                placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-zinc-950/40 text-white border border-zinc-800 rounded-xl py-3.5 pl-12 pr-4 focus:outline-none focus:ring-1 focus:ring-[#fd9602]/50 transition-all shadow-inner placeholder-zinc-600 font-medium"
+                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                className={inputClass}
               />
             </div>
           </div>
 
-          {/* Password Input */}
+          {/* Password */}
           <div className="flex flex-col space-y-2">
-            <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wide">Senha</label>
+            <label className={`text-[10px] font-black uppercase tracking-widest ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>Senha</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Key className="h-5 w-5 text-zinc-500" strokeWidth={2} />
+                <Key className="h-4 w-4 text-zinc-500" strokeWidth={2.5} />
               </div>
-              <input 
-                type="password" 
-                placeholder="Sua senha"
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-zinc-950/40 text-white border border-zinc-800 rounded-xl py-3.5 pl-12 pr-4 focus:outline-none focus:ring-1 focus:ring-[#fd9602]/50 transition-all shadow-inner placeholder-zinc-600 font-medium"
+                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                className={`${inputClass} pr-12`}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-zinc-500 hover:text-[#fd9602] transition-colors"
+              >
+                {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
             </div>
-            
-            <div className="flex justify-end pt-1">
-              <a href="#" className="text-[#fd9602] text-xs font-semibold hover:underline cursor-pointer">
-                Esqueceu a senha?
-              </a>
+
+            {/* Remember me + Forgot */}
+            <div className="flex items-center justify-between pt-1">
+              <div
+                className="flex items-center space-x-2 cursor-pointer select-none"
+                onClick={() => setRememberMe(!rememberMe)}
+              >
+                <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${
+                  rememberMe ? 'border-[#fd9602] bg-[#fd9602]/15' : isLight ? 'border-zinc-300 bg-zinc-100' : 'border-zinc-700 bg-zinc-900'
+                }`}>
+                  {rememberMe && (
+                    <svg className="w-2.5 h-2.5 text-[#fd9602]" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </div>
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>Lembrar acesso</span>
+              </div>
+              <a href="#" className="text-[#fd9602] text-[10px] font-bold hover:underline tracking-wider uppercase">Esqueceu a senha?</a>
             </div>
           </div>
         </div>
 
-        <div className="mt-8 flex flex-col items-center">
+        {/* CTA */}
+        <div className="space-y-4 mt-8">
           <motion.button
             onClick={handleLogin}
             disabled={loading}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.95 }}
-            className="w-full py-4 bg-[#fd9602] text-zinc-950 font-black text-sm rounded-xl shadow-[0_0_20px_rgba(253,150,2,0.3)] hover:bg-[#e08500] cursor-pointer transition-all tracking-widest uppercase mb-6"
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.97 }}
+            className="w-full py-4 bg-[#fd9602] text-zinc-950 font-black text-sm rounded-2xl shadow-lg shadow-[#fd9602]/20 hover:bg-[#e08500] cursor-pointer transition-all tracking-widest uppercase"
           >
-            {loading ? 'Entrando...' : 'Entrar'}
+            {loading ? 'Entrando...' : 'Entrar na Conta'}
           </motion.button>
 
-          <span className="text-zinc-500 text-xs font-medium">
+          <p className={`text-center text-[11px] font-bold uppercase tracking-wider ${isLight ? 'text-zinc-400' : 'text-zinc-500'}`}>
             Ainda não tem conta?{' '}
-            <Link to="/register" className="text-[#fd9602] hover:text-[#e08500] font-bold transition-colors cursor-pointer ml-1">
-              Cadastre-se aqui
-            </Link>
-          </span>
+            <Link to="/register" className="text-[#fd9602] hover:underline font-black">Cadastre-se aqui</Link>
+          </p>
+
+          <p className={`text-center text-[9px] font-bold uppercase tracking-widest ${isLight ? 'text-zinc-300' : 'text-zinc-700'}`}>
+            Todos os direitos reservados ® Agendei
+          </p>
         </div>
       </motion.div>
-
-      {/* Footer */}
-      <div className="text-center w-full pb-6 pt-8 mt-auto relative z-10">
-        <span className="text-[10px] text-zinc-600">
-          Todos os direitos reservados ® Agendei
-        </span>
-      </div>
     </div>
   );
 };

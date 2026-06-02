@@ -21,6 +21,7 @@ CREATE TABLE usuarios (
     genero genero_usuario DEFAULT 'OUTRO',
     perfil perfil_usuario NOT NULL DEFAULT 'CLIENTE',
     firebase_token TEXT,
+    data_nascimento VARCHAR(50),
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

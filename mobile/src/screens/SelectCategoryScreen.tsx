@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Scissors, Sparkles, Smile, Layers, ArrowRight } from 'lucide-react';
+import { Scissors, Sparkles, Layers, ArrowRight, Crown, ChevronLeft } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Header } from '../components/Header';
@@ -25,13 +25,30 @@ export const SelectCategoryScreen: React.FC = () => {
       try {
         const { data, error } = await supabase.from('categorias').select('*');
         if (error) throw error;
-        setCategories(data || []);
+        
+        let loadedCats = data || [];
+        if (loadedCats.length === 0) {
+          loadedCats = [
+            { id: '1', nome: 'Cabelo' },
+            { id: '2', nome: 'Barba' },
+            { id: '3', nome: 'Combos' },
+            { id: '4', nome: 'Planos' }
+          ];
+        } else {
+          // Check if Planos is already in the loaded categories (case-insensitive)
+          const hasPlanos = loadedCats.some(c => c.nome.toLowerCase().includes('plano'));
+          if (!hasPlanos) {
+            loadedCats.push({ id: '4', nome: 'Planos' });
+          }
+        }
+        setCategories(loadedCats);
       } catch (err) {
         console.error('Erro ao buscar categorias, usando padrão:', err);
         setCategories([
           { id: '1', nome: 'Cabelo' },
           { id: '2', nome: 'Barba' },
-          { id: '3', nome: 'Combos' }
+          { id: '3', nome: 'Combos' },
+          { id: '4', nome: 'Planos' }
         ]);
       } finally {
         setLoading(false);
@@ -45,19 +62,43 @@ export const SelectCategoryScreen: React.FC = () => {
     if (normalized.includes('cabelo') || normalized.includes('hair')) {
       return <Scissors className="w-8 h-8 text-[#fd9602]" strokeWidth={1.5} />;
     } else if (normalized.includes('barba') || normalized.includes('beard') || normalized.includes('barber')) {
-      return <Smile className="w-8 h-8 text-[#fd9602]" strokeWidth={1.5} />;
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="w-8 h-8 text-[#fd9602]"
+        >
+          <path d="M12 16.5c-2.5-3-5.5-3-8.5-2-1 .3-1.5-.5-1.5-1 0-1 2-3.5 6-3 2.5.3 3.5 2 4 3 .5-1 1.5-2.7 4-3 4-.5 6 2 6 3 0 .5-.5 1.3-1.5 1-3-1-6-1-8.5 2z" />
+        </svg>
+      );
     } else if (normalized.includes('combo') || normalized.includes('pacote')) {
       return <Layers className="w-8 h-8 text-[#fd9602]" strokeWidth={1.5} />;
+    } else if (normalized.includes('plano') || normalized.includes('plan')) {
+      return <Crown className="w-8 h-8 text-[#fd9602]" strokeWidth={1.5} />;
     }
     return <Sparkles className="w-8 h-8 text-[#fd9602]" strokeWidth={1.5} />;
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 font-sans relative overflow-x-hidden pb-28">
-      {/* Background radial glowing ambient light */}
-      <div className="absolute top-0 right-0 w-[80%] h-[60%] bg-[radial-gradient(ellipse_at_top_right,rgba(253,150,2,0.15),transparent_65%)] pointer-events-none z-0" />
+      {/* Removed radial glowing light for minimal SaaS aesthetics */}
       
       <Header />
+
+      {/* Back Button */}
+      <div className="relative z-10 px-6 mt-28 mb-2">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center space-x-1 text-zinc-400 hover:text-white transition-all active:scale-95"
+        >
+          <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
+          <span className="text-sm font-bold">Voltar</span>
+        </button>
+      </div>
 
       {/* Header Logo & Subtitle */}
       <motion.div 
@@ -88,18 +129,17 @@ export const SelectCategoryScreen: React.FC = () => {
                 <motion.div
                   key={idx}
                   onClick={() => setSelectedCategory(cat.nome)}
-                  whileHover={{ scale: 1.02 }}
-                  className={`rounded-[1.5rem] p-5 flex flex-col items-center justify-center shadow-xl border cursor-pointer text-center transition-all ${
+                  whileHover={{ scale: 1.01 }}
+                  className={`rounded-xl p-4 flex flex-col items-center justify-center shadow-xl border cursor-pointer text-center transition-all ${
                     isSelected 
-                      ? 'bg-[#fd9602]/10 border-[#fd9602] shadow-[0_0_25px_rgba(253,150,2,0.25)]' 
-                      : 'bg-[#0c0c0e]/60 border-zinc-800/80 hover:bg-zinc-900/40 hover:border-zinc-700/80'
+                      ? 'bg-zinc-950 border-[#fd9602] shadow-[0_0_15px_rgba(253,150,2,0.1)]' 
+                      : 'bg-zinc-900 border-zinc-850 hover:bg-zinc-950/80 hover:border-zinc-700'
                   }`}
                 >
-                  <div className={`p-3.5 rounded-2xl mb-4 transition-transform duration-300 ${isSelected ? 'bg-[#fd9602]/20 scale-110 shadow-lg shadow-[#fd9602]/10' : 'bg-zinc-950/60'}`}>
+                  <div className={`p-3 rounded-xl mb-3 transition-transform duration-300 ${isSelected ? 'bg-[#fd9602]/10 scale-105 border border-[#fd9602]/20' : 'bg-zinc-950 border border-zinc-900'}`}>
                     {getCategoryIcon(cat.nome)}
                   </div>
-                  <span className="text-zinc-200 text-sm font-black uppercase tracking-wider">{cat.nome}</span>
-                  <p className="text-zinc-500 text-[10px] font-semibold mt-1">Especialidades profissionais</p>
+                  <span className={`text-[11px] font-black uppercase tracking-widest ${isSelected ? 'text-[#fd9602]' : 'text-zinc-300'}`}>{cat.nome}</span>
                 </motion.div>
               );
             })}
@@ -128,10 +168,10 @@ export const SelectCategoryScreen: React.FC = () => {
             }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.95 }}
-            className="w-full max-w-[260px] py-4 bg-[#fd9602] text-zinc-950 font-black text-[15px] rounded-2xl shadow-[0_0_20px_rgba(253,150,2,0.4)] hover:bg-[#e08500] transition-all cursor-pointer tracking-widest uppercase flex items-center justify-center space-x-2"
+            className="w-full max-w-[260px] py-3.5 bg-[#fd9602] text-zinc-950 font-black text-[11px] rounded-xl shadow-[0_0_15px_rgba(253,150,2,0.2)] hover:bg-[#e08500] transition-all cursor-pointer tracking-widest uppercase flex items-center justify-center space-x-2"
           >
-            <span>Avançar para Serviços</span>
-            <ArrowRight className="w-4 h-4 text-zinc-950" strokeWidth={3} />
+            <span>Avançar</span>
+            <ArrowRight className="w-3.5 h-3.5 text-zinc-950" strokeWidth={3} />
           </motion.button>
         </motion.div>
       )}

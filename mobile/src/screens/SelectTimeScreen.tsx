@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Clock } from 'lucide-react';
+import { ArrowRight, Clock, ChevronLeft } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { TabBar } from '../components/TabBar';
@@ -27,6 +27,17 @@ export const SelectTimeScreen: React.FC = () => {
       
       <Header />
 
+      {/* Back Button */}
+      <div className="relative z-10 px-6 mt-28 mb-2">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center space-x-1 text-zinc-400 hover:text-white transition-all active:scale-95"
+        >
+          <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
+          <span className="text-sm font-bold">Voltar</span>
+        </button>
+      </div>
+
       {/* Header Info */}
       <motion.div 
         initial={{ opacity: 0, y: -10 }}
@@ -50,11 +61,11 @@ export const SelectTimeScreen: React.FC = () => {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6, delay: 0.2 }}
-        className="mx-6 bg-[#0c0c0e]/60 backdrop-blur-xl rounded-[1.5rem] p-6 shadow-xl border border-zinc-800/80 relative z-10"
+        className="mx-6 bg-zinc-900 backdrop-blur-xl rounded-xl p-6 shadow-xl border border-zinc-800 relative z-10 transition-all duration-300"
       >
-        <div className="flex items-center space-x-2.5 mb-5 border-b border-zinc-850/60 pb-3">
+        <div className="flex items-center space-x-2.5 mb-5 border-b border-zinc-800 pb-3">
           <Clock className="w-5 h-5 text-[#fd9602]" />
-          <span className="text-zinc-300 text-sm font-bold uppercase tracking-wider">Horários Disponíveis</span>
+          <span className="text-zinc-350 text-sm font-bold uppercase tracking-wider">Horários Disponíveis</span>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
@@ -69,7 +80,7 @@ export const SelectTimeScreen: React.FC = () => {
                 className={`py-3.5 rounded-xl border text-sm font-black tracking-widest transition-all cursor-pointer ${
                   isSelected 
                     ? 'bg-[#fd9602]/10 border-[#fd9602] text-[#fd9602] shadow-[0_0_15px_rgba(253,150,2,0.25)]' 
-                    : 'bg-zinc-950/45 border-zinc-850/80 text-zinc-400 hover:border-zinc-700/80 hover:text-white'
+                    : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white'
                 }`}
               >
                 {time}
@@ -96,10 +107,10 @@ export const SelectTimeScreen: React.FC = () => {
             }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.95 }}
-            className="w-full max-w-[260px] py-4 bg-[#fd9602] text-zinc-950 font-black text-[15px] rounded-2xl shadow-[0_0_20px_rgba(253,150,2,0.4)] hover:bg-[#e08500] transition-all cursor-pointer tracking-widest uppercase flex items-center justify-center space-x-2"
+            className="w-full max-w-[260px] py-3.5 bg-[#fd9602] text-zinc-950 font-black text-[11px] rounded-xl shadow-[0_0_15px_rgba(253,150,2,0.2)] hover:bg-[#e08500] transition-all cursor-pointer tracking-widest uppercase flex items-center justify-center space-x-2"
           >
             <span>Confirmar Agendamento</span>
-            <ArrowRight className="w-4 h-4 text-zinc-950" strokeWidth={3} />
+            <ArrowRight className="w-3.5 h-3.5 text-zinc-950" strokeWidth={3} />
           </motion.button>
         </motion.div>
       )}

@@ -20,53 +20,57 @@ export const TabBar: React.FC<TabBarProps> = ({ activeTab }) => {
   );
 
   return (
-    <div className="fixed bottom-6 left-6 right-6 h-16 bg-zinc-900/80 backdrop-blur-2xl rounded-2xl flex items-center justify-around px-2 border border-zinc-800/80 z-50 shadow-2xl">
+    <div className="fixed bottom-0 left-0 right-0 h-20 bg-zinc-950 flex items-center justify-around px-2 border-t border-zinc-900 z-50 transition-colors duration-300">
       {/* Home Tab */}
       <button 
         onClick={() => navigate('/dashboard')}
-        className={`w-12 h-12 flex items-center justify-center transition-all ${
+        className={`flex flex-col items-center justify-center gap-1 transition-all w-16 h-full ${
           deducedTab === 'home' 
-            ? 'bg-[#fd9602] rounded-xl text-zinc-950 shadow-[0_0_15px_rgba(253,150,2,0.3)]' 
-            : 'text-zinc-500 hover:text-zinc-300'
+            ? 'text-[#fd9602]' 
+            : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
         }`}
       >
         <Home className="w-6 h-6" strokeWidth={deducedTab === 'home' ? 2.5 : 2} />
+        <span className="text-[11px] font-bold">Home</span>
       </button>
 
       {/* Booking Tab */}
       <button 
         onClick={() => navigate('/explore')}
-        className={`w-12 h-12 flex items-center justify-center transition-all ${
+        className={`flex flex-col items-center justify-center gap-1 transition-all w-16 h-full ${
           deducedTab === 'booking' 
-            ? 'bg-[#fd9602] rounded-xl text-zinc-950 shadow-[0_0_15px_rgba(253,150,2,0.3)]' 
-            : 'text-zinc-500 hover:text-zinc-300'
+            ? 'text-[#fd9602]' 
+            : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
         }`}
       >
         <Scissors className="w-6 h-6" strokeWidth={deducedTab === 'booking' ? 2.5 : 2} />
+        <span className="text-[11px] font-bold">Agenda</span>
       </button>
 
       {/* History Tab */}
       <button 
         onClick={() => navigate('/history')}
-        className={`w-12 h-12 flex items-center justify-center transition-all ${
+        className={`flex flex-col items-center justify-center gap-1 transition-all w-16 h-full ${
           deducedTab === 'history' 
-            ? 'bg-[#fd9602] rounded-xl text-zinc-950 shadow-[0_0_15px_rgba(253,150,2,0.3)]' 
-            : 'text-zinc-500 hover:text-zinc-300'
+            ? 'text-[#fd9602]' 
+            : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
         }`}
       >
         <CalendarRange className="w-6 h-6" strokeWidth={deducedTab === 'history' ? 2.5 : 2} />
+        <span className="text-[11px] font-bold">Histórico</span>
       </button>
 
       {/* Settings Tab */}
       <button 
         onClick={() => navigate('/settings')}
-        className={`w-12 h-12 flex items-center justify-center transition-all ${
+        className={`flex flex-col items-center justify-center gap-1 transition-all w-16 h-full ${
           deducedTab === 'settings' 
-            ? 'bg-[#fd9602] rounded-xl text-zinc-950 shadow-[0_0_15px_rgba(253,150,2,0.3)]' 
-            : 'text-zinc-500 hover:text-zinc-300'
+            ? 'text-[#fd9602]' 
+            : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
         }`}
       >
         <Settings className="w-6 h-6" strokeWidth={deducedTab === 'settings' ? 2.5 : 2} />
+        <span className="text-[11px] font-bold">Ajustes</span>
       </button>
     </div>
   );
