@@ -1,0 +1,10 @@
+{
+	"appId": "agendei.app",
+	"appName": "Agendei Manager",
+	"webDir": "dist",
+	"packageClassList": [
+		"FirebaseAnalytics",
+		"PushNotificationsPlugin",
+		"StatusBarPlugin"
+	]
+}
