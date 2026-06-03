@@ -15,6 +15,7 @@ import { SelectTimeScreen } from './screens/SelectTimeScreen';
 import { SummaryScreen } from './screens/SummaryScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
+import { ManagerScreen } from './screens/ManagerScreen';
 import { Toaster } from 'sonner';
 import { StatusBar, Style } from '@capacitor/status-bar';
 
@@ -61,7 +62,17 @@ export const App: React.FC = () => {
         await new Promise(resolve => setTimeout(resolve, 1500));
         
         if (session && rememberMe) {
-          setInitialRoute('/dashboard');
+          // Detecta cargo do usuário para redirecionar corretamente
+          const { data: profile } = await supabase
+            .from('usuarios')
+            .select('cargo')
+            .eq('id', session.user.id)
+            .single();
+          if (profile?.cargo === 'GERENTE') {
+            setInitialRoute('/manager');
+          } else {
+            setInitialRoute('/dashboard');
+          }
         } else {
           setInitialRoute('/welcome');
         }
@@ -147,7 +158,8 @@ export const App: React.FC = () => {
             <Route path="/summary" element={<SummaryScreen />} />
             <Route path="/settings" element={<SettingsScreen />} />
             <Route path="/history" element={<HistoryScreen />} />
-            
+            <Route path="/manager" element={<ManagerScreen />} />
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

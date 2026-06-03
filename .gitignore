@@ -11,9 +11,13 @@
 /dashboard/.next/
 /dashboard/out/
 /saas/.next/
+/saas/.next/
 /saas/scratch/
-/mobile/app/build/
-/mobile/build/
+/mobile/dist/
+/mobile/android/app/build/
+/mobile/android/.gradle/
+/dashboard/android/app/build/
+/dashboard/android/.gradle/
 .gradle/
 build/
 bin/
@@ -32,3 +36,4 @@ Thumbs.db
 .env*
 service-account.json
 google-services.json
+.vercel

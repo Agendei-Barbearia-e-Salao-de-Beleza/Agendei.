@@ -60,14 +60,10 @@ export default function SaaSControlDashboard() {
   const [simulatorMode, setSimulatorMode] = useState<"LIVE" | "MOCK">("MOCK");
   const [simulatedTab, setSimulatedTab] = useState<"home" | "agenda" | "finance" | "profile">("home");
 
-  // Dados simulados de agendamentos para o preview do app mobile no painel
-  const todayAppointments = [
-    { customer: "João Mendes", time: "09:00", date: "Hoje", totalPrice: "45,00", status: "CONFIRMADO" },
-    { customer: "Rafael Lima", time: "10:30", date: "Hoje", totalPrice: "80,00", status: "AGUARDANDO" },
-    { customer: "Carlos Souza", time: "13:00", date: "Hoje", totalPrice: "35,00", status: "CONFIRMADO" },
-    { customer: "Bruno Alves", time: "15:00", date: "Amanhã", totalPrice: "60,00", status: "CONFIRMADO" },
-    { customer: "Lucas Moreira", time: "16:30", date: "Amanhã", totalPrice: "45,00", status: "PENDENTE" }
-  ];
+  // Simulador: mostra dados da agenda quando disponíveis (alimentados pelo Supabase em produção)
+  const todayAppointments: any[] = [];
+
+  const [establishmentId, setEstablishmentId] = useState<string>("");
 
   const [activeServices, setActiveServices] = useState<any[]>([
     { id: "supabase", name: "Supabase Core", status: "ACTIVE", type: "database", features: ["Authentication", "PostgreSQL", "RLS Policies", "Storage"], latency: "14ms" }
@@ -339,97 +335,91 @@ export default function SaaSControlDashboard() {
     }
   };
 
-  // Carrega dados do Supabase
+  // Carrega dados reais do Supabase — sem mock
   const loadData = async () => {
     setLoading(true);
     try {
-      const { data: estData } = await supabase.from("estabelecimentos").select("*");
-      const { data: usersData } = await supabase.from("usuarios").select("*");
-      let verData = null;
-      try {
-        const { data, error } = await supabase
-          .from("app_versions")
-          .select("*")
-          .order("created_at", { ascending: false });
-        if (!error) {
-          verData = data;
-        }
-      } catch (err) {
-        console.warn("Tabela app_versions não configurada no banco de dados.");
-      }
+      const [estResult, usersResult, verResult, bugsResult] = await Promise.allSettled([
+        supabase.from("estabelecimentos").select("*").order("created_at", { ascending: false }),
+        supabase.from("usuarios").select("*").order("created_at", { ascending: false }),
+        supabase.from("app_versions").select("*").order("created_at", { ascending: false }),
+        supabase.from("system_bugs").select("*").in("status", ["OPEN", "INVESTIGATING"]).order("created_at", { ascending: false }).limit(50)
+      ]);
 
-      // Mapeamento dinâmico puxando os endereços reais do Supabase para geocodificação
-      const mappedTenants = estData && estData.length > 0 ? estData.map((e: any, idx: number) => {
-        const { city, state } = parseCityFromAddress(e.endereco, e.nome);
-        
-        // Resolve coordenadas locais determinísticas com jitter dispersivo
-        const coords = resolveLocalCoordinates({ id: e.id, endereco: e.endereco, nome: e.nome, cidade: city });
+      const estData = estResult.status === "fulfilled" ? estResult.value.data : null;
+      const usersData = usersResult.status === "fulfilled" ? usersResult.value.data : null;
+      const verData = verResult.status === "fulfilled" ? verResult.value.data : null;
+      const bugsData = bugsResult.status === "fulfilled" ? bugsResult.value.data : null;
 
+      // Tenants — dados reais do Supabase, sem fallback fictício
+      const mappedTenants = (estData || []).map((e: any) => {
+        const { city, state } = parseCityFromAddress(e.endereco || "", e.nome || "");
+        const coords = resolveLocalCoordinates({ id: e.id, endereco: e.endereco || "", nome: e.nome || "", cidade: city });
         return {
           id: e.id,
-          nome: e.nome || "Estabelecimento Sem Nome",
-          proprietario: e.proprietario_nome || "Gestor do Salão",
-          email: e.proprietario_email || `parceiro_${idx}@agendei.app`,
-          telefone: e.telefone || "(11) 99999-9999",
+          nome: e.nome || "Estabelecimento",
+          proprietario: e.proprietario_nome || e.nome_proprietario || "—",
+          email: e.proprietario_email || e.email || "—",
+          telefone: e.telefone || "—",
           cidade: city,
           estado: state,
-          plano: idx % 2 === 0 ? "PRO" : "ENTERPRISE",
-          valor: idx % 2 === 0 ? 149.90 : 299.90,
-          status: "ACTIVE",
-          usuariosAtivos: idx % 2 === 0 ? 14 : 38,
-          nps: idx % 2 === 0 ? 9.4 : 9.8,
+          plano: e.plano_tipo || e.plano || "FREE",
+          valor: parseFloat(e.mensalidade || e.valor_plano || "0") || 0,
+          status: e.status_assinatura || e.status || "ACTIVE",
+          usuariosAtivos: e.usuarios_ativos || 0,
+          nps: e.nps || null,
           endereco: e.endereco || "",
           lat: coords.lat,
           lng: coords.lng
         };
-      }) : [
-        { id: "1", nome: "Barbearia Imperial", proprietario: "Carlos Eduardo", email: "carlos@imperial.com", telefone: "(11) 98765-4321", cidade: "São Paulo", estado: "SP", plano: "PRO", valor: 149.90, status: "ACTIVE", usuariosAtivos: 14, nps: 9.4, lat: -23.55052, lng: -46.633308, endereco: "Av. Paulista, 1000, São Paulo, SP" },
-        { id: "2", nome: "Studio Premium & Co", proprietario: "Juliana Silva", email: "juliana@studiopremium.com", telefone: "(21) 99887-6655", cidade: "Rio de Janeiro", estado: "RJ", plano: "ENTERPRISE", valor: 299.90, status: "ACTIVE", usuariosAtivos: 38, nps: 9.8, lat: -22.906847, lng: -43.172896, endereco: "Av. Atlântica, 1702, Rio de Janeiro, RJ" },
-        { id: "3", nome: "Corte & Navalha Club", proprietario: "Renato Souza", email: "renato@corteclub.com", telefone: "(31) 97766-5544", cidade: "Belo Horizonte", estado: "MG", plano: "FREE", valor: 0.00, status: "ACTIVE", usuariosAtivos: 2, nps: 8.2, lat: -19.919068, lng: -43.938575, endereco: "Praça da Liberdade, Belo Horizonte, MG" },
-        { id: "4", nome: "Elegance Hair & Beauty", proprietario: "Patrícia Alves", email: "patricia@elegance.com", telefone: "(19) 98822-3344", cidade: "Campinas", estado: "SP", plano: "PRO", valor: 149.90, status: "PAST_DUE", usuariosAtivos: 8, nps: 7.9, lat: -22.909938, lng: -47.062633, endereco: "Rua Regente Feijó, 1000, Campinas, SP" }
-      ];
+      });
 
-      const mappedLogins = usersData && usersData.length > 0 ? usersData.map((u: any) => ({
+      // Logins — dados reais, sem fallback fictício
+      const mappedLogins = (usersData || []).map((u: any) => ({
         id: u.id,
-        nome: u.nome || "Sem Nome",
-        email: u.email || "sem_email@agendei.app",
-        funcao: u.cargo || "COLABORADOR",
-        criadoEm: new Date(u.created_at).toLocaleDateString("pt-BR") || "Hoje",
-        status: "ACTIVE"
-      })) : [
-        { id: "u1", nome: "Carlos Eduardo", email: "carlos@imperial.com", funcao: "GERENTE", criadoEm: "12/03/2026", status: "ACTIVE" },
-        { id: "u2", nome: "Juliana Silva", email: "juliana@studiopremium.com", funcao: "GERENTE", criadoEm: "05/04/2026", status: "ACTIVE" },
-        { id: "u3", nome: "Bruno Navalha", email: "bruno@navalha.com", funcao: "COLABORADOR", criadoEm: "14/05/2026", status: "ACTIVE" },
-        { id: "u4", nome: "Patrícia Alves", email: "patricia@elegance.com", funcao: "GERENTE", criadoEm: "18/05/2026", status: "SUSPENDED" }
-      ];
+        nome: u.nome || u.name || "—",
+        email: u.email || "—",
+        funcao: u.cargo || u.role || "CLIENTE",
+        criadoEm: u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : "—",
+        status: u.status || "ACTIVE"
+      }));
 
-      const mappedUpdates = verData && verData.length > 0 ? verData : [
-        { id: "v1", platform: "android", latest_version: "1.0.2", download_url: "https://vpalasmdcxnhpsbwmsqq.supabase.co/storage/v1/object/public/app-updates/app-release.apk", required_update: false, changelog: "Correção de contraste e tema claro nos modais." }
-      ];
+      // Updates — dados reais
+      const mappedUpdates = verData || [];
+
+      // Bugs — dados reais do Supabase
+      const mappedBugs = (bugsData || []).map((b: any) => ({
+        id: b.id,
+        plataforma: b.platform || "—",
+        versao: b.app_version || "—",
+        mensagem: b.error_message || "Erro",
+        stack: b.error_stack || "",
+        aparelho: b.device_model || "—",
+        so: b.os_version || "—",
+        emailUser: b.user_email || "—",
+        severidade: b.severity || "HIGH",
+        status: b.status || "OPEN",
+        criadoEm: b.created_at ? new Date(b.created_at).toLocaleString("pt-BR") : "—"
+      }));
 
       setTenants(mappedTenants);
       setLogins(mappedLogins);
       setUpdates(mappedUpdates);
+      setBugs(mappedBugs);
 
-      // Dispara a geocodificação assíncrona em background para centralizar os parceiros reais nos endereços corretos do banco!
+      if (estData && estData.length > 0) setEstablishmentId(estData[0].id);
+
       geocodeAllTenants(mappedTenants);
 
-      setBugs([
-        { id: "b1", plataforma: "mobile_manager", versao: "1.0.2", mensagem: "Cannot read properties of undefined (reading 'split')", stack: "TypeError: Cannot read properties of undefined (reading 'split')\n  at AppointmentModal.tsx:242:18\n  at react-dom.production.min.js:244:11", aparelho: "iPhone 14 Pro", so: "iOS 17.2", emailUser: "carlos@imperial.com", severidade: "HIGH", status: "OPEN", criadoEm: "Há 10 minutos" },
-        { id: "b2", plataforma: "dashboard", versao: "1.2.0", mensagem: "Failed to fetch financial indicators: 500 Internal Server Error", stack: "Error: Failed to fetch financial indicators: 500 Internal Server Error\n  at finance/page.tsx:84:12\n  at async fetchInitialData (page.tsx:32:5)", aparelho: "Chrome / Windows 11", so: "Web OS", emailUser: "patricia@elegance.com", severidade: "CRITICAL", status: "INVESTIGATING", criadoEm: "Há 2 horas" }
-      ]);
-
-      setMessages([
-        {
-          id: "m-start",
-          sender: "bot",
-          text: `Olá! Sou o **Agendei SaaS AI Assistant**. \n\nConectado ao seu banco de dados em **produção**. \n\nMonitorando **${mappedTenants.length} parceiros** com **${mappedLogins.length} contas de logins** ativos.\n\nComo posso ajudar hoje?`,
-          time: "Agora"
-        }
-      ]);
+      setMessages([{
+        id: "m-start",
+        sender: "bot",
+        text: `Olá! Sou o Agendei SaaS AI Assistant.\n\nConectado ao banco de dados de produção.\nMonitorando ${mappedTenants.length} parceiros | ${mappedLogins.length} logins | ${mappedBugs.length} bugs abertos.\n\nPergunte sobre MRR, parceiros, bugs, logins ou versões OTA.`,
+        time: "Agora"
+      }]);
 
     } catch (err) {
-      console.error("Erro ao carregar dados de produção:", err);
+      console.error("Erro ao carregar dados:", err);
     } finally {
       setLoading(false);
     }
@@ -593,16 +583,32 @@ export default function SaaSControlDashboard() {
     setInputMessage("");
 
     setTimeout(() => {
+      const mrr = tenants.reduce((acc, t) => acc + (t.valor || 0), 0);
+      const arr = mrr * 12;
       let botResponse = "";
-      if (query.includes("fatur") || query.includes("mrr") || query.includes("dinhe")) {
-        const mrr = tenants.reduce((acc, t) => acc + (t.valor || 0), 0);
-        botResponse = `### 💰 Telemetria Financeira\n\nMRR recorrente: **R$ ${mrr.toFixed(2)}**.\n\n${tenants.map(t => `*   **${t.nome}:** R$ ${t.valor.toFixed(2)}`).join("\n")}`;
-      } else if (query.includes("parce") || query.includes("sal") || query.includes("estab")) {
-        botResponse = `### 🏢 Salões Parceiros\n\n**${tenants.length} salões**:\n\n${tenants.map((t, idx) => `${idx + 1}.  **${t.nome}** (${t.cidade}) • NPS: **${t.nps}**`).join("\n")}`;
-      } else if (query.includes("bug") || query.includes("erro")) {
-        botResponse = `### 🐜 Bugs Registrados\n\n**${bugs.length} falhas** não resolvidas:\n\n*   [CRÍTICO] **Dashboard (v1.2.0):** Timeout na rota financeira.\n*   [ALTO] **Mobile Manager (v1.0.2):** Splitting of null em AppointmentModal.tsx.`;
+      if (query.includes("fatur") || query.includes("mrr") || query.includes("arr") || query.includes("dinhe") || query.includes("receit")) {
+        botResponse = `💰 **Telemetria Financeira**\n\nMRR: **R$ ${mrr.toFixed(2)}**\nARR projetado: **R$ ${arr.toFixed(2)}**\n\nDetalhamento por parceiro:\n${tenants.map(t => `• **${t.nome}** — R$ ${(t.valor || 0).toFixed(2)}/mês (Plano ${t.plano})`).join("\n")}`;
+      } else if (query.includes("parce") || query.includes("sal") || query.includes("estab") || query.includes("tenant")) {
+        botResponse = `🏢 **${tenants.length} Salões Parceiros**\n\n${tenants.map((t, idx) => `${idx + 1}. **${t.nome}** — ${t.cidade}/${t.estado} • NPS ${t.nps} • ${t.usuariosAtivos} usuários ativos`).join("\n")}`;
+      } else if (query.includes("bug") || query.includes("erro") || query.includes("falh")) {
+        botResponse = `🐜 **Bugs em Aberto: ${bugs.length}**\n\n${bugs.map(b => `• [${b.severidade}] **${b.plataforma} v${b.versao}:** ${b.mensagem.substring(0, 60)}...`).join("\n")}\n\nAcesse a aba **Bugs** para depuração completa.`;
+      } else if (query.includes("login") || query.includes("usuário") || query.includes("usuario") || query.includes("conta")) {
+        botResponse = `👤 **${logins.length} Logins Cadastrados**\n\n${logins.map(l => `• **${l.nome}** (${l.funcao}) — ${l.email}`).join("\n")}`;
+      } else if (query.includes("update") || query.includes("versão") || query.includes("versao") || query.includes("apk") || query.includes("ota")) {
+        const latest = updates[0];
+        botResponse = latest
+          ? `📱 **Última Versão Publicada**\n\nv${latest.latest_version} (${latest.platform?.toUpperCase()})\n${latest.required_update ? "⚠️ Atualização OBRIGATÓRIA" : "✅ Atualização opcional"}\n\nChangelog: ${latest.changelog}`
+          : `📱 Nenhuma versão publicada ainda. Use a aba **Updates** para lançar a primeira.`;
+      } else if (query.includes("nps") || query.includes("satisf")) {
+        const avgNps = tenants.length ? (tenants.reduce((acc, t) => acc + (t.nps || 0), 0) / tenants.length).toFixed(1) : "N/A";
+        botResponse = `⭐ **NPS Médio da Plataforma: ${avgNps}**\n\n${tenants.map(t => `• **${t.nome}:** NPS ${t.nps}`).join("\n")}`;
+      } else if (query.includes("plano") || query.includes("plan")) {
+        const pro = tenants.filter(t => t.plano === "PRO").length;
+        const enterprise = tenants.filter(t => t.plano === "ENTERPRISE").length;
+        const free = tenants.filter(t => t.plano === "FREE").length;
+        botResponse = `📊 **Distribuição de Planos**\n\n• PRO: **${pro}** salões\n• ENTERPRISE: **${enterprise}** salões\n• FREE: **${free}** salões\n\nConversão Free→Pago: **${tenants.length > 0 ? (((pro + enterprise) / tenants.length) * 100).toFixed(0) : 0}%**`;
       } else {
-        botResponse = `Compreendi! Sou o Assistente SaaS do Agendei. Posso te detalhar o **MRR**, **salões parceiros**, **bugs de produção** ou **logins cadastrados**.`;
+        botResponse = `Olá! Sou o Assistente SaaS do Agendei. 🤖\n\nPosso te ajudar com:\n• **MRR / ARR** — receita recorrente\n• **Parceiros** — lista de salões\n• **Bugs** — logs de erros\n• **Logins** — contas cadastradas\n• **Updates** — versões OTA publicadas\n• **NPS** — satisfação dos parceiros\n• **Planos** — distribuição PRO/ENTERPRISE/FREE`;
       }
 
       setMessages(prev => [...prev, {
@@ -824,6 +830,24 @@ export default function SaaSControlDashboard() {
               ))}
             </div>
           </div>
+
+          {/* KPI Summary Bar - sempre visível */}
+          {!loading && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: "Salões Parceiros", value: tenants.length, sub: `${tenants.filter(t => t.plano !== "FREE").length} pagantes`, color: "text-[#fd9602]", bg: "bg-[#fd9602]/10 border-[#fd9602]/20" },
+                { label: "MRR", value: `R$ ${tenants.reduce((a, t) => a + (t.valor || 0), 0).toFixed(0)}`, sub: `ARR: R$ ${(tenants.reduce((a, t) => a + (t.valor || 0), 0) * 12).toFixed(0)}`, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+                { label: "Logins Ativos", value: logins.length, sub: `${logins.filter(l => l.funcao === "GERENTE").length} gerentes`, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
+                { label: "Bugs Abertos", value: bugs.length, sub: bugs.filter(b => b.severidade === "CRITICAL").length > 0 ? `${bugs.filter(b => b.severidade === "CRITICAL").length} críticos` : "Nenhum crítico", color: bugs.length > 0 ? "text-red-400" : "text-emerald-400", bg: bugs.length > 0 ? "bg-red-500/10 border-red-500/20" : "bg-emerald-500/10 border-emerald-500/20" }
+              ].map((kpi, i) => (
+                <div key={i} className={`p-4 rounded-2xl border animate-gsap-card transition-colors ${isLight ? "bg-white border-zinc-200/80" : "bg-zinc-900/40 border-zinc-900"}`}>
+                  <span className={`text-[9px] font-black uppercase tracking-widest block ${isLight ? "text-zinc-500" : "text-zinc-500"}`}>{kpi.label}</span>
+                  <span className={`text-2xl font-black block mt-1 ${kpi.color}`}>{kpi.value}</span>
+                  <span className={`text-[9px] font-bold inline-flex items-center gap-1 px-2 py-0.5 rounded-full border mt-2 ${kpi.bg} ${kpi.color}`}>{kpi.sub}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Core Content Switching Panels */}
           <div className="min-h-0">

@@ -1,0 +1,12 @@
+mobile/android/
+dashboard/android/
+backend/
+mobile/dist/
+saas/.next/
+.next/
+*.apk
+*.aab
+*.gradle
+.gradle/
+scratch/
+node_modules/

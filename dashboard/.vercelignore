@@ -1,0 +1,8 @@
+android/
+.next/
+.gradle/
+*.apk
+*.aab
+capacitor.config.ts
+tsconfig.tsbuildinfo
+test-out.css

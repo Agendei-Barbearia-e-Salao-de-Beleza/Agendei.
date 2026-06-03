@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'agendei.app',
-  appName: 'Agendei Manager',
+  appId: 'com.agendei.app',
+  appName: 'Agendei.',
   webDir: 'dist'
 };
 
