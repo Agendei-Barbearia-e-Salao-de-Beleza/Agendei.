@@ -4,13 +4,13 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Building2, Users, AlertOctagon, TrendingUp, Search, 
-  MapPin, ShieldAlert, CheckCircle, ExternalLink, 
-  Sparkles, Layers, ArrowUpRight, BarChart3, 
-  Bug, LogOut, Sun, Moon, Send, Bot, User, Bell, 
-  Trash2, RefreshCw, Smartphone, ChevronRight, Eye, UploadCloud, Check,
-  X, Play, Plus, Calendar, Compass, Lock, Activity, GitBranch, Terminal,
+import {
+  Building2, Users, Search,
+  MapPin, ShieldAlert, CheckCircle,
+  Sparkles, BarChart3,
+  Bug, LogOut, Sun, Moon, Send, Bot, User, Bell,
+  Trash2, RefreshCw, Smartphone, ChevronRight, UploadCloud, Check,
+  X, Play, Plus, Calendar, GitBranch,
   Wifi, Scissors, DollarSign
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -36,6 +36,7 @@ export default function SaaSControlDashboard() {
   const [gitCommits, setGitCommits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingCommits, setLoadingCommits] = useState(false);
+  const [totalAgendamentos, setTotalAgendamentos] = useState(0);
 
   // Form de Atualizações
   const [updateVersion, setUpdateVersion] = useState("");
@@ -339,17 +340,20 @@ export default function SaaSControlDashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [estResult, usersResult, verResult, bugsResult] = await Promise.allSettled([
+      const [estResult, usersResult, verResult, bugsResult, agendResult] = await Promise.allSettled([
         supabase.from("estabelecimentos").select("*").order("created_at", { ascending: false }),
         supabase.from("usuarios").select("*").order("created_at", { ascending: false }),
         supabase.from("app_versions").select("*").order("created_at", { ascending: false }),
-        supabase.from("system_bugs").select("*").in("status", ["OPEN", "INVESTIGATING"]).order("created_at", { ascending: false }).limit(50)
+        supabase.from("system_bugs").select("*").in("status", ["OPEN", "INVESTIGATING"]).order("created_at", { ascending: false }).limit(50),
+        supabase.from("agendamentos").select("id", { count: "exact", head: true })
       ]);
 
       const estData = estResult.status === "fulfilled" ? estResult.value.data : null;
       const usersData = usersResult.status === "fulfilled" ? usersResult.value.data : null;
       const verData = verResult.status === "fulfilled" ? verResult.value.data : null;
       const bugsData = bugsResult.status === "fulfilled" ? bugsResult.value.data : null;
+      const agendCount = agendResult.status === "fulfilled" ? (agendResult.value.count ?? 0) : 0;
+      setTotalAgendamentos(agendCount);
 
       // Tenants — dados reais do Supabase, sem fallback fictício
       const mappedTenants = (estData || []).map((e: any) => {
@@ -747,7 +751,16 @@ export default function SaaSControlDashboard() {
 
           {/* Right Area Notifications & Theme */}
           <div className="flex items-center gap-3.5">
-            <button 
+            <button
+              onClick={() => loadData()}
+              title="Recarregar dados"
+              className={`p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                isLight ? "border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-550" : "border-zinc-900 bg-zinc-900/40 hover:bg-zinc-900 text-zinc-400"
+              }`}
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin text-[#fd9602]" : ""} />
+            </button>
+            <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className={`p-2.5 rounded-xl border cursor-pointer transition-colors ${
                 isLight ? "border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-550" : "border-zinc-900 bg-zinc-900/40 hover:bg-zinc-900 text-zinc-400"
@@ -837,8 +850,8 @@ export default function SaaSControlDashboard() {
               {[
                 { label: "Salões Parceiros", value: tenants.length, sub: `${tenants.filter(t => t.plano !== "FREE").length} pagantes`, color: "text-[#fd9602]", bg: "bg-[#fd9602]/10 border-[#fd9602]/20" },
                 { label: "MRR", value: `R$ ${tenants.reduce((a, t) => a + (t.valor || 0), 0).toFixed(0)}`, sub: `ARR: R$ ${(tenants.reduce((a, t) => a + (t.valor || 0), 0) * 12).toFixed(0)}`, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
-                { label: "Logins Ativos", value: logins.length, sub: `${logins.filter(l => l.funcao === "GERENTE").length} gerentes`, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
-                { label: "Bugs Abertos", value: bugs.length, sub: bugs.filter(b => b.severidade === "CRITICAL").length > 0 ? `${bugs.filter(b => b.severidade === "CRITICAL").length} críticos` : "Nenhum crítico", color: bugs.length > 0 ? "text-red-400" : "text-emerald-400", bg: bugs.length > 0 ? "bg-red-500/10 border-red-500/20" : "bg-emerald-500/10 border-emerald-500/20" }
+                { label: "Agendamentos", value: totalAgendamentos.toLocaleString("pt-BR"), sub: `${logins.filter(l => l.funcao === "GERENTE").length} gerentes ativos`, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
+                { label: "Bugs Abertos", value: bugs.length, sub: bugs.filter(b => b.severidade === "CRITICAL").length > 0 ? `${bugs.filter(b => b.severidade === "CRITICAL").length} críticos` : "Sistema saudável", color: bugs.length > 0 ? "text-red-400" : "text-emerald-400", bg: bugs.length > 0 ? "bg-red-500/10 border-red-500/20" : "bg-emerald-500/10 border-emerald-500/20" }
               ].map((kpi, i) => (
                 <div key={i} className={`p-4 rounded-2xl border animate-gsap-card transition-colors ${isLight ? "bg-white border-zinc-200/80" : "bg-zinc-900/40 border-zinc-900"}`}>
                   <span className={`text-[9px] font-black uppercase tracking-widest block ${isLight ? "text-zinc-500" : "text-zinc-500"}`}>{kpi.label}</span>
@@ -940,9 +953,9 @@ export default function SaaSControlDashboard() {
                       {/* Compact Table */}
                       <div className={`divide-y flex-1 flex flex-col justify-center ${isLight ? "divide-zinc-150" : "divide-zinc-900"}`}>
                         {tenants.length === 0 ? (
-                          <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 py-6">
-                            <RefreshCw className="w-7 h-7 animate-spin text-[#fd9602] mb-2.5" />
-                            <span className="text-[9px] font-black uppercase tracking-widest">Sincronizando Banco Supabase...</span>
+                          <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 py-6 gap-2">
+                            <Building2 className="w-7 h-7 text-zinc-600 mb-1" />
+                            <span className="text-[9px] font-black uppercase tracking-widest text-center">Nenhum parceiro cadastrado.<br/>Use + para adicionar.</span>
                           </div>
                         ) : (
                           tenants.slice(0, 3).map((t) => (
@@ -1127,6 +1140,11 @@ export default function SaaSControlDashboard() {
                           </tr>
                         </thead>
                         <tbody className={`divide-y text-xs font-semibold ${isLight ? "divide-zinc-150" : "divide-zinc-900"}`}>
+                          {filteredLogins.length === 0 && (
+                            <tr><td colSpan={4} className="p-8 text-center text-zinc-500 text-xs font-bold">
+                              {searchTerm ? "Nenhum usuário encontrado para esta busca." : "Nenhum usuário cadastrado."}
+                            </td></tr>
+                          )}
                           {filteredLogins.map((l) => (
                             <tr key={l.id} className={`transition-colors ${isLight ? "hover:bg-zinc-50" : "hover:bg-zinc-900/35"}`}>
                               <td className="p-5 pl-8">
@@ -1661,6 +1679,15 @@ export default function SaaSControlDashboard() {
                   className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full min-h-0"
                 >
                   <div className="md:col-span-1 space-y-3 overflow-y-auto pr-1 animate-gsap-card">
+                    {bugs.length === 0 && (
+                      <div className={`p-6 rounded-2xl border flex flex-col items-center gap-3 text-center ${isLight ? "bg-emerald-50 border-emerald-200" : "bg-emerald-500/10 border-emerald-500/20"}`}>
+                        <CheckCircle className="w-8 h-8 text-emerald-400" />
+                        <div>
+                          <p className="text-xs font-black text-emerald-400">Sistema Saudável</p>
+                          <p className="text-[10px] text-zinc-500 mt-0.5">Nenhum bug em aberto</p>
+                        </div>
+                      </div>
+                    )}
                     {bugs.map((b) => (
                       <div
                         key={b.id}
