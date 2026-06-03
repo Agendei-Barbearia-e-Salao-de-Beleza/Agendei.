@@ -19,6 +19,11 @@ import { ManagerScreen } from './screens/ManagerScreen';
 import { Toaster } from 'sonner';
 import { StatusBar, Style } from '@capacitor/status-bar';
 
+// Determina qual app está sendo servido pelo build
+// VITE_APP_TYPE=client → app do cliente (booking, explore, history)
+// VITE_APP_TYPE=manager → app do gerente (ManagerScreen + modais)
+const APP_TYPE = (import.meta.env.VITE_APP_TYPE as string) || 'client';
+
 export const App: React.FC = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState('/');
@@ -62,17 +67,9 @@ export const App: React.FC = () => {
         await new Promise(resolve => setTimeout(resolve, 1500));
         
         if (session && rememberMe) {
-          // Detecta cargo do usuário para redirecionar corretamente
-          const { data: profile } = await supabase
-            .from('usuarios')
-            .select('cargo')
-            .eq('id', session.user.id)
-            .single();
-          if (profile?.cargo === 'GERENTE') {
-            setInitialRoute('/manager');
-          } else {
-            setInitialRoute('/dashboard');
-          }
+          // App do gerente: sempre vai para /manager
+          // App do cliente: sempre vai para /dashboard
+          setInitialRoute(APP_TYPE === 'manager' ? '/manager' : '/dashboard');
         } else {
           setInitialRoute('/welcome');
         }
@@ -146,19 +143,31 @@ export const App: React.FC = () => {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Navigate to={initialRoute} replace />} />
+            {/* Rotas comuns: login e registro disponíveis em ambos os apps */}
             <Route path="/welcome" element={<WelcomeScreen />} />
-            <Route path="/explore" element={<ExploreScreen />} />
             <Route path="/login" element={<LoginScreen />} />
             <Route path="/register" element={<RegisterScreen />} />
-            <Route path="/dashboard" element={<DashboardScreen />} />
-            <Route path="/select-category" element={<SelectCategoryScreen />} />
-            <Route path="/select-service" element={<SelectServiceScreen />} />
-            <Route path="/select-date" element={<SelectDateScreen />} />
-            <Route path="/select-time" element={<SelectTimeScreen />} />
-            <Route path="/summary" element={<SummaryScreen />} />
-            <Route path="/settings" element={<SettingsScreen />} />
-            <Route path="/history" element={<HistoryScreen />} />
-            <Route path="/manager" element={<ManagerScreen />} />
+
+            {APP_TYPE === 'manager' ? (
+              /* App do Gerente — apenas rotas do painel de gestão */
+              <>
+                <Route path="/manager" element={<ManagerScreen />} />
+                <Route path="/settings" element={<SettingsScreen />} />
+              </>
+            ) : (
+              /* App do Cliente — rotas de agendamento e histórico */
+              <>
+                <Route path="/dashboard" element={<DashboardScreen />} />
+                <Route path="/explore" element={<ExploreScreen />} />
+                <Route path="/select-category" element={<SelectCategoryScreen />} />
+                <Route path="/select-service" element={<SelectServiceScreen />} />
+                <Route path="/select-date" element={<SelectDateScreen />} />
+                <Route path="/select-time" element={<SelectTimeScreen />} />
+                <Route path="/summary" element={<SummaryScreen />} />
+                <Route path="/settings" element={<SettingsScreen />} />
+                <Route path="/history" element={<HistoryScreen />} />
+              </>
+            )}
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
