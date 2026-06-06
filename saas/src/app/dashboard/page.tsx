@@ -6,37 +6,44 @@ import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, Users, Search,
-  MapPin, ShieldAlert, CheckCircle,
-  Sparkles, BarChart3,
-  Bug, LogOut, Sun, Moon, Send, Bot, User, Bell,
-  Trash2, RefreshCw, Smartphone, ChevronRight, UploadCloud, Check,
-  X, Play, Plus, Calendar, GitBranch,
-  Wifi, Scissors, DollarSign
+  MapPin, Activity, Database, Server,
+  Sparkles, BarChart3, TrendingUp, CalendarDays, CheckCircle, ShieldCheck,
+  Bug, LogOut, Sun, Moon, Bell, X,
+  Trash2, RefreshCw, ChevronRight, UploadCloud,
+  Play, Check,
+  Scissors
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import gsap from "gsap";
+import type { BugReport, Tenant } from "@/types";
+import { BugTracker } from "@/components/BugTracker";
+import { ApmDashboard } from "@/components/ApmDashboard";
+import { CicdPipeline } from "@/components/CicdPipeline";
+import { ReleasesPanel } from "@/components/ReleasesPanel";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { NotificationDrawer } from "@/components/NotificationDrawer";
+import type { BotAlert } from "@/components/NotificationDrawer";
 
-// Carregamento dinâmico sem SSR do Mapa Leaflet para prevenir quebras na Vercel
-const SaaSMap = dynamic(() => import("@/components/SaaSMap"), {
+// Carregamento dinâmico sem SSR do Mapa 3D (WebGL — requer browser)
+const TenantMap3D = dynamic(() => import("@/components/TenantMap3D").then(m => ({ default: m.TenantMap3D })), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-950 rounded-[2rem] border border-zinc-200/60 dark:border-zinc-850 text-zinc-550">
-      <Bot className="w-12 h-12 text-[#fd9602] animate-bounce mb-3" />
-      <span className="text-xs font-black uppercase tracking-wider">Iniciando Geolocalizador...</span>
+    <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-950 rounded-3xl border border-zinc-800">
+      <MapPin className="w-10 h-10 text-[#fd9602] animate-bounce mb-3" />
+      <span className="text-xs font-black uppercase tracking-wider text-zinc-500">Iniciando Mapa 3D...</span>
     </div>
   )
 });
 
 export default function SaaSControlDashboard() {
   const [mounted, setMounted] = useState(false);
-  const [tenants, setTenants] = useState<any[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [logins, setLogins] = useState<any[]>([]);
-  const [bugs, setBugs] = useState<any[]>([]);
+  const [bugs, setBugs] = useState<BugReport[]>([]);
   const [updates, setUpdates] = useState<any[]>([]);
-  const [gitCommits, setGitCommits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingCommits, setLoadingCommits] = useState(false);
   const [totalAgendamentos, setTotalAgendamentos] = useState(0);
+  const [deleteLoginId, setDeleteLoginId] = useState<string | null>(null);
 
   // Form de Atualizações
   const [updateVersion, setUpdateVersion] = useState("");
@@ -51,15 +58,22 @@ export default function SaaSControlDashboard() {
   const [activeTab, setActiveTab] = useState<"OVERVIEW" | "PARTNERS" | "LOGINS" | "UPDATES" | "BUGS">("OVERVIEW");
   const [searchTerm, setSearchTerm] = useState("");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [botAlerts, setBotAlerts] = useState<BotAlert[]>([]);
+
   const [isAddPartnerOpen, setIsAddPartnerOpen] = useState(false);
   const [isBackendStatusOpen, setIsBackendStatusOpen] = useState(false);
   const [isDbAnalysisOpen, setIsDbAnalysisOpen] = useState(false);
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
-  const [modalTab, setModalTab] = useState<"PARTNER" | "SERVICE">("PARTNER");
+  const [modalTab, setModalTab] = useState<"INTEGRITY" | "VERCEL" | "SERVICE">("INTEGRITY");
   const [simulatorMode, setSimulatorMode] = useState<"LIVE" | "MOCK">("MOCK");
   const [simulatedTab, setSimulatedTab] = useState<"home" | "agenda" | "finance" | "profile">("home");
+  const hasInjectedAlertsRef = useRef(false);
+  const alertCounterRef = useRef(0);
+  const geocodingStartedRef = useRef(false);
+  const [bugsTableExists, setBugsTableExists] = useState<boolean>(true);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [geocodeProgress, setGeocodeProgress] = useState({ done: 0, total: 0 });
 
   // Simulador: mostra dados da agenda quando disponíveis (alimentados pelo Supabase em produção)
   const todayAppointments: any[] = [];
@@ -159,190 +173,59 @@ export default function SaaSControlDashboard() {
   const [messages, setMessages] = useState<any[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   
+  const injectBotAlert = (alert: Omit<BotAlert, "id" | "timestamp" | "read">) => {
+    setBotAlerts((prev) => {
+      if (prev.some((a) => a.title === alert.title)) return prev;
+      alertCounterRef.current += 1;
+      return [{ ...alert, id: `alert-${alertCounterRef.current}`, timestamp: new Date(), read: false }, ...prev];
+    });
+  };
+
+  const geocodeAllTenants = async () => {
+    const toGeocode = tenants.filter((t) => t.endereco && t.endereco !== "" && !t.lat && !t.lng);
+    if (!toGeocode.length || isGeocoding) return;
+    setIsGeocoding(true);
+    setGeocodeProgress({ done: 0, total: toGeocode.length });
+
+    for (const tenant of toGeocode) {
+      try {
+        const res = await fetch(`/api/geocode?address=${encodeURIComponent(tenant.endereco)}`);
+        const json = await res.json();
+        if (json.lat && json.lng) {
+          setTenants((prev) =>
+            prev.map((t) => (t.id === tenant.id ? { ...t, lat: json.lat, lng: json.lng } : t))
+          );
+          // Tenta persistir no Supabase — silencioso se colunas não existirem ainda
+          await supabase.from("estabelecimentos").update({ lat: json.lat, lng: json.lng }).eq("id", tenant.id);
+        }
+      } catch { /* ignorar erros individuais */ }
+      setGeocodeProgress((prev) => ({ ...prev, done: prev.done + 1 }));
+      // Nominatim: máx 1 req/seg por policy
+      await new Promise((r) => setTimeout(r, 1100));
+    }
+    setIsGeocoding(false);
+  };
+
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const dashboardRef = useRef<HTMLDivElement>(null);
-  const chatDrawerRef = useRef<HTMLDivElement>(null);
 
-  const parseCityFromAddress = (address: string, name: string): { city: string, state: string } => {
-    const addr = (address || "").toLowerCase();
-    const n = (name || "").toLowerCase();
-    
-    if (addr.includes("luis carlos") || addr.includes("aborinha") || n.includes("juba") || n.includes("spacegirl") || n.includes("bigodoes")) {
-      return { city: "Ferraz de Vasconcelos", state: "SP" };
-    }
-    if (addr.includes("campinas")) {
-      return { city: "Campinas", state: "SP" };
-    }
-    if (addr.includes("rio de janeiro") || addr.includes("copacabana") || addr.includes("atlântica")) {
-      return { city: "Rio de Janeiro", state: "RJ" };
-    }
-    if (addr.includes("belo horizonte") || addr.includes("liberdade")) {
-      return { city: "Belo Horizonte", state: "MG" };
-    }
-    
-    return { city: "São Paulo", state: "SP" };
-  };
-
-  const cityFallbacks: { [key: string]: [number, number] } = {
-    "ferraz de vasconcelos": [-23.5413, -46.3686],
-    "são paulo": [-23.5505, -46.6333],
-    "rio de janeiro": [-22.9068, -43.1729],
-    "belo horizonte": [-19.9191, -43.9386],
-    "campinas": [-22.9099, -47.0626]
-  };
-
-  // Resolvedor determinístico local com dispersão (jitter) para evitar sobreposição de ponteiros no mesmo pixel do mapa
-  const resolveLocalCoordinates = (t: any): { lat: number, lng: number } => {
-    const address = (t.endereco || "").toLowerCase().trim();
-    const name = (t.nome || "").toLowerCase().trim();
-    
-    // Ferraz de Vasconcelos - SpaceGirlBrown
-    if (address.includes("luis carlos") || name.includes("spacegirl")) {
-      return { lat: -23.541300, lng: -46.368600 };
-    }
-    // Ferraz de Vasconcelos - Bigodões
-    if (address.includes("aborinha") || name.includes("bigod")) {
-      return { lat: -23.542200, lng: -46.369800 }; 
-    }
-    // São Paulo - BarberMax
-    if (address.includes("paulista 34") || name.includes("barbermax")) {
-      return { lat: -23.561680, lng: -46.656040 };
-    }
-    // São Paulo - Supreme
-    if (name.includes("supreme")) {
-      return { lat: -23.551500, lng: -46.634200 };
-    }
-    // São Paulo - Barbearia Imperial (Mock)
-    if (address.includes("paulista, 1000") || name.includes("imperial")) {
-      return { lat: -23.560200, lng: -46.657500 };
-    }
-    // Rio de Janeiro - Studio Premium (Mock)
-    if (address.includes("atlântica") || name.includes("studio premium")) {
-      return { lat: -22.967200, lng: -43.178900 };
-    }
-    // Belo Horizonte - Corte & Navalha (Mock)
-    if (address.includes("liberdade") || name.includes("corte & navalha")) {
-      return { lat: -19.929800, lng: -43.937800 };
-    }
-    // Campinas - Elegance Hair (Mock)
-    if (address.includes("regente feijó") || name.includes("elegance")) {
-      return { lat: -22.905600, lng: -47.060200 };
-    }
-
-    // Fallbacks baseados na cidade com jitter determinístico baseado no ID do tenant para não sobrepor
-    const city = t.cidade.toLowerCase().trim();
-    let baseCoords = [-23.5505, -46.6333]; 
-    if (city.includes("ferraz")) {
-      baseCoords = [-23.5413, -46.3686];
-    } else if (city.includes("rio")) {
-      baseCoords = [-22.9068, -43.1729];
-    } else if (city.includes("horizonte")) {
-      baseCoords = [-19.9191, -43.9386];
-    } else if (city.includes("campinas")) {
-      baseCoords = [-22.9099, -47.0626];
-    }
-
-    // Geração de Jitter determinístico baseado nos caracteres do ID do parceiro
-    let hash = 0;
-    const idStr = String(t.id || "");
-    for (let i = 0; i < idStr.length; i++) {
-      hash = idStr.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const jitterLat = ((hash & 0xFF) / 255 - 0.5) * 0.003; 
-    const jitterLng = (((hash >> 8) & 0xFF) / 255 - 0.5) * 0.003;
-
-    return {
-      lat: baseCoords[0] + jitterLat,
-      lng: baseCoords[1] + jitterLng
-    };
-  };
-
-  const geocodeSingleTenant = async (t: any): Promise<{ lat: number, lng: number } | null> => {
-    // 1. Tenta resolver localmente de forma instantânea sem requisição de rede
-    const localCoords = resolveLocalCoordinates(t);
-    if (localCoords) {
-      return localCoords;
-    }
-
-    if (!t.endereco || t.endereco.trim().length < 3) {
-      const c = t.cidade.toLowerCase().trim();
-      if (cityFallbacks[c]) {
-        return { lat: cityFallbacks[c][0], lng: cityFallbacks[c][1] };
-      }
-      return null;
-    }
-
-    // Fallback silencioso apenas para endereços novos não mapeados
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(t.endereco)}`;
-      const res = await fetch(url, {
-        headers: {
-          "Accept-Language": "pt-BR,pt;q=0.9",
-          "User-Agent": "AgendeiSaaSControl/2.0"
-        }
-      });
-      const data = await res.json();
-      if (data && data.length > 0) {
-        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-      }
-    } catch (e) {
-      // Falha silenciosa para evitar erros vermelhos de CORS/Network no Console
-    }
-
-    try {
-      const query = `${t.endereco}, ${t.cidade}, ${t.estado}, Brasil`;
-      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
-      const res = await fetch(url, {
-        headers: {
-          "Accept-Language": "pt-BR,pt;q=0.9",
-          "User-Agent": "AgendeiSaaSControl/2.0"
-        }
-      });
-      const data = await res.json();
-      if (data && data.length > 0) {
-        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-      }
-    } catch (e) {
-      // Falha silenciosa
-    }
-
-    const c = t.cidade.toLowerCase().trim();
-    if (cityFallbacks[c]) {
-      return { lat: cityFallbacks[c][0], lng: cityFallbacks[c][1] };
-    }
-
-    return null;
-  };
-
-  // Resolve todos os endereços locais em background sem acionar chamadas HTTP em lote
-  const geocodeAllTenants = async (list: any[]) => {
-    const updatedList = list.map(t => {
-      const coords = resolveLocalCoordinates(t);
-      return { ...t, lat: coords.lat, lng: coords.lng };
-    });
-    setTenants(updatedList);
-  };
-
-  // Geocodificação em tempo real ao selecionar um parceiro manualmente
-  const selectAndGeocodeTenant = async (t: any) => {
+  // Seleciona tenant e exibe no mapa — coordenadas vêm do Supabase (lat/lng persistidos)
+  const selectTenant = (t: Tenant) => {
     setSelectedTenant(t);
-    setActiveTab("PARTNERS"); // Transiciona automaticamente para a tela do mapa ao selecionar
-    const coords = await geocodeSingleTenant(t);
-    if (coords) {
-      const updated = { ...t, lat: coords.lat, lng: coords.lng };
-      setSelectedTenant(updated);
-      setTenants(prev => prev.map(item => item.id === t.id ? updated : item));
-    }
+    setActiveTab("PARTNERS");
   };
 
-  // Carrega dados reais do Supabase — sem mock
+  // Carrega dados reais do Supabase — mapeamento fiel ao schema produção
   const loadData = async () => {
     setLoading(true);
     try {
       const [estResult, usersResult, verResult, bugsResult, agendResult] = await Promise.allSettled([
-        supabase.from("estabelecimentos").select("*").order("created_at", { ascending: false }),
-        supabase.from("usuarios").select("*").order("created_at", { ascending: false }),
+        supabase
+          .from("estabelecimentos")
+          .select("*, proprietario:usuarios!proprietario_id(nome, email, telefone)")
+          .order("criado_em", { ascending: false }),
+        supabase.from("usuarios").select("id, nome, email, perfil, criado_em").order("criado_em", { ascending: false }),
         supabase.from("app_versions").select("*").order("created_at", { ascending: false }),
         supabase.from("system_bugs").select("*").in("status", ["OPEN", "INVESTIGATING"]).order("created_at", { ascending: false }).limit(50),
         supabase.from("agendamentos").select("id", { count: "exact", head: true })
@@ -351,69 +234,61 @@ export default function SaaSControlDashboard() {
       const estData = estResult.status === "fulfilled" ? estResult.value.data : null;
       const usersData = usersResult.status === "fulfilled" ? usersResult.value.data : null;
       const verData = verResult.status === "fulfilled" ? verResult.value.data : null;
-      const bugsData = bugsResult.status === "fulfilled" ? bugsResult.value.data : null;
+      // system_bugs pode não existir ainda (migration pendente) — captura o estado real
+      const bugsQueryResult = bugsResult.status === "fulfilled" ? bugsResult.value : null;
+      const bugsData = bugsQueryResult?.data ?? [];
+      setBugsTableExists(!bugsQueryResult?.error);
       const agendCount = agendResult.status === "fulfilled" ? (agendResult.value.count ?? 0) : 0;
       setTotalAgendamentos(agendCount);
 
-      // Tenants — dados reais do Supabase, sem fallback fictício
-      const mappedTenants = (estData || []).map((e: any) => {
-        const { city, state } = parseCityFromAddress(e.endereco || "", e.nome || "");
-        const coords = resolveLocalCoordinates({ id: e.id, endereco: e.endereco || "", nome: e.nome || "", cidade: city });
-        return {
-          id: e.id,
-          nome: e.nome || "Estabelecimento",
-          proprietario: e.proprietario_nome || e.nome_proprietario || "—",
-          email: e.proprietario_email || e.email || "—",
-          telefone: e.telefone || "—",
-          cidade: city,
-          estado: state,
-          plano: e.plano_tipo || e.plano || "FREE",
-          valor: parseFloat(e.mensalidade || e.valor_plano || "0") || 0,
-          status: e.status_assinatura || e.status || "ACTIVE",
-          usuariosAtivos: e.usuarios_ativos || 0,
-          nps: e.nps || null,
-          endereco: e.endereco || "",
-          lat: coords.lat,
-          lng: coords.lng
-        };
-      });
-
-      // Logins — dados reais, sem fallback fictício
-      const mappedLogins = (usersData || []).map((u: any) => ({
-        id: u.id,
-        nome: u.nome || u.name || "—",
-        email: u.email || "—",
-        funcao: u.cargo || u.role || "CLIENTE",
-        criadoEm: u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : "—",
-        status: u.status || "ACTIVE"
+      // Tenants — proprietario_nome via join com usuarios
+      const mappedTenants: Tenant[] = (estData || []).map((e: any) => ({
+        id: e.id,
+        nome: e.nome || "Estabelecimento",
+        proprietario_nome: e.proprietario?.nome || "—",
+        telefone: e.telefone || e.proprietario?.telefone || "—",
+        endereco: e.endereco || "",
+        // plano/valor não estão no schema atual — deixar com fallback até migration
+        plano: "FREE",
+        valor_plano: 0,
+        status: "ACTIVE",
+        lat: e.lat ?? null,
+        lng: e.lng ?? null,
+        geocoded_at: e.geocoded_at ?? null,
       }));
 
-      // Updates — dados reais
-      const mappedUpdates = verData || [];
+      const mappedLogins = (usersData || []).map((u: any) => ({
+        id: u.id,
+        nome: u.nome || "—",
+        email: u.email || "—",
+        funcao: u.perfil || "CLIENTE",
+        criadoEm: u.criado_em ? new Date(u.criado_em).toLocaleDateString("pt-BR") : "—",
+        status: "ACTIVE"
+      }));
 
-      // Bugs — dados reais do Supabase
-      const mappedBugs = (bugsData || []).map((b: any) => ({
+      const mappedBugs: BugReport[] = (bugsData || []).map((b: any) => ({
         id: b.id,
-        plataforma: b.platform || "—",
-        versao: b.app_version || "—",
-        mensagem: b.error_message || "Erro",
-        stack: b.error_stack || "",
-        aparelho: b.device_model || "—",
-        so: b.os_version || "—",
-        emailUser: b.user_email || "—",
-        severidade: b.severity || "HIGH",
+        platform: b.platform || "—",
+        app_version: b.app_version || "—",
+        error_message: b.error_message || "Erro",
+        error_stack: b.error_stack || null,
+        device_model: b.device_model || null,
+        os_version: b.os_version || null,
+        user_email: b.user_email || null,
+        severity: b.severity || "HIGH",
         status: b.status || "OPEN",
-        criadoEm: b.created_at ? new Date(b.created_at).toLocaleString("pt-BR") : "—"
+        created_at: b.created_at || new Date().toISOString(),
+        resolution_note: b.resolution_note || null,
+        resolved_by: b.resolved_by || null,
+        resolved_at: b.resolved_at || null,
       }));
 
       setTenants(mappedTenants);
       setLogins(mappedLogins);
-      setUpdates(mappedUpdates);
+      setUpdates(verData || []);
       setBugs(mappedBugs);
 
       if (estData && estData.length > 0) setEstablishmentId(estData[0].id);
-
-      geocodeAllTenants(mappedTenants);
 
       setMessages([{
         id: "m-start",
@@ -424,21 +299,13 @@ export default function SaaSControlDashboard() {
 
     } catch (err) {
       console.error("Erro ao carregar dados:", err);
+      injectBotAlert({
+        type: "danger",
+        title: "Falha crítica ao carregar dados",
+        body: "Não foi possível conectar ao Supabase. Verifique as credenciais e a conexão de rede.",
+      });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadGitCommits = async () => {
-    setLoadingCommits(true);
-    try {
-      const res = await fetch("/api/git-commits");
-      const data = await res.json();
-      setGitCommits(data.commits || []);
-    } catch (err) {
-      console.error("Erro ao ler repositório Git:", err);
-    } finally {
-      setLoadingCommits(false);
     }
   };
 
@@ -469,7 +336,6 @@ export default function SaaSControlDashboard() {
       router.push("/");
     } else {
       loadData();
-      loadGitCommits();
     }
 
     return () => {
@@ -504,26 +370,104 @@ export default function SaaSControlDashboard() {
     }
   }, [loading, mounted]);
 
-  // GSAP: Animação de Entrada e Saída do Chat Drawer
+  // Bot de Respeito — monitora estado real do sistema após carga e injeta alertas (uma vez)
   useEffect(() => {
-    if (!chatDrawerRef.current) return; // Protege contra ref nulo na montagem inicial
-    
-    if (isChatOpen) {
-      gsap.to(chatDrawerRef.current, {
-        x: 0,
-        opacity: 1,
-        duration: 0.6,
-        ease: "elastic.out(1, 0.85)"
-      });
-    } else {
-      gsap.to(chatDrawerRef.current, {
-        x: 400,
-        opacity: 0,
-        duration: 0.5,
-        ease: "power3.in"
+    if (loading || !mounted || hasInjectedAlertsRef.current) return;
+    hasInjectedAlertsRef.current = true;
+
+    let alertCount = 0;
+
+    // [DANGER] Bugs críticos reais do system_bugs (CRITICAL + não resolvidos)
+    const criticalBugs = bugs.filter((b) => b.severity === "CRITICAL" && b.status !== "RESOLVED");
+    if (criticalBugs.length > 0) {
+      alertCount++;
+      injectBotAlert({
+        type: "danger",
+        title: `${criticalBugs.length} bug(s) crítico(s) em aberto`,
+        body: `${criticalBugs[0].platform} v${criticalBugs[0].app_version}: ${criticalBugs[0].error_message.substring(0, 80)}`,
       });
     }
-  }, [isChatOpen]);
+
+    // [WARNING] Backlog de bugs acumulado (≥5 sem resolução)
+    const openBugs = bugs.filter((b) => b.status !== "RESOLVED");
+    if (openBugs.length >= 5) {
+      alertCount++;
+      injectBotAlert({
+        type: "warning",
+        title: `${openBugs.length} bugs sem resolução acumulados`,
+        body: "Backlog crescendo — acesse a aba Bugs para triagem.",
+      });
+    }
+
+    // [INFO] Tabela system_bugs não existe ainda (migration pendente)
+    if (!bugsTableExists) {
+      alertCount++;
+      injectBotAlert({
+        type: "info",
+        title: "Tabela system_bugs não existe ainda",
+        body: "Execute a migration SQL para habilitar o Bug Tracker: CREATE TABLE system_bugs (...)",
+      });
+    }
+
+    // [WARNING] Nenhum parceiro cadastrado no Supabase
+    if (tenants.length === 0) {
+      alertCount++;
+      injectBotAlert({
+        type: "warning",
+        title: "Nenhum parceiro cadastrado",
+        body: "A tabela estabelecimentos está vazia. Cadastre o primeiro salão parceiro.",
+      });
+    }
+
+    // [WARNING] Nenhum usuário na plataforma
+    if (logins.length === 0) {
+      alertCount++;
+      injectBotAlert({
+        type: "warning",
+        title: "Nenhum usuário cadastrado",
+        body: "A tabela usuarios está vazia. Nenhum cliente ou gerente registrado ainda.",
+      });
+    }
+
+    // [INFO] Parceiros sem geolocalização (lat/lng ausente — mapa 3D incompleto)
+    const noCoords = tenants.filter((t) => !t.lat || !t.lng);
+    if (noCoords.length > 0) {
+      alertCount++;
+      injectBotAlert({
+        type: "info",
+        title: `${noCoords.length} parceiro(s) sem geolocalização`,
+        body: "Execute: ALTER TABLE estabelecimentos ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION, ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;",
+      });
+    }
+
+    // [INFO] Nenhuma versão OTA publicada
+    if (updates.length === 0) {
+      alertCount++;
+      injectBotAlert({
+        type: "info",
+        title: "Nenhuma versão OTA publicada",
+        body: "A tabela app_versions está vazia. Publique a primeira versão na aba Updates.",
+      });
+    }
+
+    // [SUCCESS] Sistema saudável — só mostra se não há nenhum alerta de problema real
+    if (alertCount === 0 && tenants.length > 0) {
+      injectBotAlert({
+        type: "success",
+        title: "Sistema operando normalmente",
+        body: `${tenants.length} parceiros · ${logins.length} usuários · ${bugs.length} bugs abertos — tudo sob controle.`,
+      });
+    }
+  }, [loading, mounted, bugs, tenants, logins, updates, bugsTableExists]);
+
+  // Auto-geocoding: dispara uma vez após a carga quando há endereços sem coordenadas
+  useEffect(() => {
+    if (loading || geocodingStartedRef.current) return;
+    const toGeocode = tenants.filter((t) => t.endereco && t.endereco !== "" && !t.lat && !t.lng);
+    if (toGeocode.length === 0) return;
+    geocodingStartedRef.current = true;
+    geocodeAllTenants();
+  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -535,12 +479,13 @@ export default function SaaSControlDashboard() {
   };
 
   const handleDeleteLogin = async (id: string) => {
-    if (!confirm("Deletar permanentemente esta conta?")) return;
     try {
       await supabase.from("usuarios").delete().eq("id", id);
       setLogins(prev => prev.filter(l => l.id !== id));
     } catch (err) {
       console.error(err);
+    } finally {
+      setDeleteLoginId(null);
     }
   };
 
@@ -587,15 +532,15 @@ export default function SaaSControlDashboard() {
     setInputMessage("");
 
     setTimeout(() => {
-      const mrr = tenants.reduce((acc, t) => acc + (t.valor || 0), 0);
+      const mrr = tenants.reduce((acc, t) => acc + (t.valor_plano || 0), 0);
       const arr = mrr * 12;
       let botResponse = "";
       if (query.includes("fatur") || query.includes("mrr") || query.includes("arr") || query.includes("dinhe") || query.includes("receit")) {
-        botResponse = `💰 **Telemetria Financeira**\n\nMRR: **R$ ${mrr.toFixed(2)}**\nARR projetado: **R$ ${arr.toFixed(2)}**\n\nDetalhamento por parceiro:\n${tenants.map(t => `• **${t.nome}** — R$ ${(t.valor || 0).toFixed(2)}/mês (Plano ${t.plano})`).join("\n")}`;
+        botResponse = `💰 **Telemetria Financeira**\n\nMRR: **R$ ${mrr.toFixed(2)}**\nARR projetado: **R$ ${arr.toFixed(2)}**\n\nDetalhamento por parceiro:\n${tenants.map(t => `• **${t.nome}** — R$ ${(t.valor_plano || 0).toFixed(2)}/mês (Plano ${t.plano})`).join("\n")}`;
       } else if (query.includes("parce") || query.includes("sal") || query.includes("estab") || query.includes("tenant")) {
-        botResponse = `🏢 **${tenants.length} Salões Parceiros**\n\n${tenants.map((t, idx) => `${idx + 1}. **${t.nome}** — ${t.cidade}/${t.estado} • NPS ${t.nps} • ${t.usuariosAtivos} usuários ativos`).join("\n")}`;
+        botResponse = `🏢 **${tenants.length} Salões Parceiros**\n\n${tenants.map((t, idx) => `${idx + 1}. **${t.nome}** — ${t.endereco}`).join("\n")}`;
       } else if (query.includes("bug") || query.includes("erro") || query.includes("falh")) {
-        botResponse = `🐜 **Bugs em Aberto: ${bugs.length}**\n\n${bugs.map(b => `• [${b.severidade}] **${b.plataforma} v${b.versao}:** ${b.mensagem.substring(0, 60)}...`).join("\n")}\n\nAcesse a aba **Bugs** para depuração completa.`;
+        botResponse = `🐜 **Bugs em Aberto: ${bugs.length}**\n\n${bugs.map(b => `• [${b.severity}] **${b.platform} v${b.app_version}:** ${b.error_message.substring(0, 60)}...`).join("\n")}\n\nAcesse a aba **Bugs** para depuração completa.`;
       } else if (query.includes("login") || query.includes("usuário") || query.includes("usuario") || query.includes("conta")) {
         botResponse = `👤 **${logins.length} Logins Cadastrados**\n\n${logins.map(l => `• **${l.nome}** (${l.funcao}) — ${l.email}`).join("\n")}`;
       } else if (query.includes("update") || query.includes("versão") || query.includes("versao") || query.includes("apk") || query.includes("ota")) {
@@ -604,8 +549,7 @@ export default function SaaSControlDashboard() {
           ? `📱 **Última Versão Publicada**\n\nv${latest.latest_version} (${latest.platform?.toUpperCase()})\n${latest.required_update ? "⚠️ Atualização OBRIGATÓRIA" : "✅ Atualização opcional"}\n\nChangelog: ${latest.changelog}`
           : `📱 Nenhuma versão publicada ainda. Use a aba **Updates** para lançar a primeira.`;
       } else if (query.includes("nps") || query.includes("satisf")) {
-        const avgNps = tenants.length ? (tenants.reduce((acc, t) => acc + (t.nps || 0), 0) / tenants.length).toFixed(1) : "N/A";
-        botResponse = `⭐ **NPS Médio da Plataforma: ${avgNps}**\n\n${tenants.map(t => `• **${t.nome}:** NPS ${t.nps}`).join("\n")}`;
+        botResponse = `⭐ NPS agregado não disponível ainda — dados por estabelecimento não incluem NPS nesta versão.`;
       } else if (query.includes("plano") || query.includes("plan")) {
         const pro = tenants.filter(t => t.plano === "PRO").length;
         const enterprise = tenants.filter(t => t.plano === "ENTERPRISE").length;
@@ -625,9 +569,9 @@ export default function SaaSControlDashboard() {
   };
 
   const filteredTenants = tenants.filter(
-    (t) => t.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
-           t.proprietario.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           t.cidade.toLowerCase().includes(searchTerm.toLowerCase())
+    (t) => t.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           t.proprietario_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           t.endereco.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredLogins = logins.filter(
@@ -682,29 +626,33 @@ export default function SaaSControlDashboard() {
               { id: "OVERVIEW", label: "Visão Geral", icon: BarChart3 },
               { id: "PARTNERS", label: "Mapa & Localização", icon: MapPin },
               { id: "LOGINS", label: "Gerenciar Logins", icon: Users },
-              { id: "UPDATES", label: "Lançar Versão", icon: UploadCloud },
+              { id: "UPDATES", label: "Pipeline & Releases", icon: UploadCloud },
               { id: "BUGS", label: "Logs de Bugs", icon: Bug }
             ].map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
+              const bugBadge = item.id === "BUGS" && bugs.filter(b => b.status !== "RESOLVED").length > 0;
               return (
                 <button
                   key={item.id}
                   onClick={() => { setActiveTab(item.id as any); setSearchTerm(""); }}
                   className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 relative group cursor-pointer ${
-                    isActive 
-                      ? isLight ? "bg-zinc-900 text-white shadow-md scale-110" : "bg-white text-zinc-950 shadow-lg scale-110" 
-                      : isLight 
+                    isActive
+                      ? isLight ? "bg-zinc-900 text-white shadow-md scale-110" : "bg-white text-zinc-950 shadow-lg scale-110"
+                      : isLight
                         ? "text-zinc-400 hover:text-zinc-900 bg-zinc-50 border border-zinc-200/50 hover:border-zinc-300"
                         : "text-zinc-500 hover:text-zinc-200 bg-zinc-900/40 border border-zinc-900/60 hover:border-zinc-800"
                   }`}
                 >
                   <Icon className="w-5 h-5" />
-                  
-                  {/* Premium Scaling Tooltip in Portuguese */}
+                  {bugBadge && (
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] font-black flex items-center justify-center">
+                      {bugs.filter(b => b.status !== "RESOLVED").length}
+                    </span>
+                  )}
                   <span className={`absolute left-20 px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-widest whitespace-nowrap opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 pointer-events-none transition-all duration-200 z-50 shadow-2xl ${
-                    isLight 
-                      ? "bg-zinc-900 text-white border-zinc-800" 
+                    isLight
+                      ? "bg-zinc-900 text-white border-zinc-800"
                       : "bg-white text-zinc-950 border-zinc-200"
                   }`}>
                     {item.label}
@@ -769,30 +717,24 @@ export default function SaaSControlDashboard() {
               {isLight ? <Moon size={14} /> : <Sun size={14} />}
             </button>
 
-            {/* Notification alert */}
-            <div className="relative">
-              <button 
-                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className={`p-2.5 rounded-xl border cursor-pointer transition-colors relative ${
-                  isLight ? "border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-550" : "border-zinc-900 bg-zinc-900/40 hover:bg-zinc-900 text-zinc-400"
-                }`}
-              >
-                <Bell size={14} />
+            {/* Bell → abre drawer unificado */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.92 }}
+              onClick={() => setIsDrawerOpen(true)}
+              className={`p-2.5 rounded-xl border cursor-pointer transition-colors relative ${
+                isLight ? "border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-550" : "border-zinc-900 bg-zinc-900/40 hover:bg-zinc-900 text-zinc-400"
+              }`}
+            >
+              <Bell size={14} />
+              {botAlerts.filter((a) => !a.read).length > 0 ? (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[8px] font-black flex items-center justify-center">
+                  {botAlerts.filter((a) => !a.read).length}
+                </span>
+              ) : (
                 <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#fd9602] rounded-full" />
-              </button>
-              
-              {isNotificationsOpen && (
-                <div className={`absolute right-0 mt-3 w-72 p-5 rounded-2xl border shadow-2xl text-left z-30 animate-in fade-in slide-in-from-top-2 duration-300 ${
-                  isLight ? "bg-white border-zinc-200" : "bg-zinc-900 border-zinc-800"
-                }`}>
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-[#fd9602] mb-3">Alertas Recentes</h4>
-                  <div className="space-y-3">
-                    <p className={`text-[10px] font-medium ${isLight ? "text-zinc-650" : "text-zinc-400"}`}>Novo erro crítico na API Spring Boot de Campinas.</p>
-                    <p className={`text-[10px] font-medium ${isLight ? "text-zinc-650" : "text-zinc-400"}`}>Compensação de fatura de Barbearia Imperial concluída.</p>
-                  </div>
-                </div>
               )}
-            </div>
+            </motion.button>
 
             {/* Avatar Profile */}
             <div className={`w-9 h-9 rounded-full border flex items-center justify-center font-black text-xs cursor-pointer transition-colors ${
@@ -813,15 +755,16 @@ export default function SaaSControlDashboard() {
               <p className={`text-xs font-medium mt-1 ${isLight ? "text-zinc-500" : "text-zinc-500"}`}>Automatize tarefas e monitore a infraestrutura com as métricas do Supabase.</p>
             </div>
             <div className="flex items-center gap-3 overflow-x-auto pb-1">
-              <button 
-                onClick={() => setIsAddPartnerOpen(true)}
+              <motion.button
+                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.93 }}
+                onClick={() => { setIsAddPartnerOpen(true); setModalTab("INTEGRITY"); }}
                 className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors shadow cursor-pointer ${
-                  isLight ? "bg-zinc-900 hover:bg-zinc-800 text-white" : "bg-white text-zinc-950 hover:bg-zinc-150"
+                  isLight ? "bg-zinc-900 hover:bg-zinc-800 text-white" : "bg-white text-zinc-950 hover:bg-zinc-100"
                 }`}
-                title="Cadastrar Novo Parceiro"
+                title="Ferramentas & Integridade"
               >
-                <Plus size={16} />
-              </button>
+                <ShieldCheck size={16} />
+              </motion.button>
               
               {[
                 { label: "Status do Backend", desc: "Integridade de API", color: "text-[#fd9602]", action: () => setIsBackendStatusOpen(true) },
@@ -844,21 +787,81 @@ export default function SaaSControlDashboard() {
             </div>
           </div>
 
-          {/* KPI Summary Bar - sempre visível */}
+          {/* KPI Cards — glassmorphism premium */}
           {!loading && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: "Salões Parceiros", value: tenants.length, sub: `${tenants.filter(t => t.plano !== "FREE").length} pagantes`, color: "text-[#fd9602]", bg: "bg-[#fd9602]/10 border-[#fd9602]/20" },
-                { label: "MRR", value: `R$ ${tenants.reduce((a, t) => a + (t.valor || 0), 0).toFixed(0)}`, sub: `ARR: R$ ${(tenants.reduce((a, t) => a + (t.valor || 0), 0) * 12).toFixed(0)}`, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
-                { label: "Agendamentos", value: totalAgendamentos.toLocaleString("pt-BR"), sub: `${logins.filter(l => l.funcao === "GERENTE").length} gerentes ativos`, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
-                { label: "Bugs Abertos", value: bugs.length, sub: bugs.filter(b => b.severidade === "CRITICAL").length > 0 ? `${bugs.filter(b => b.severidade === "CRITICAL").length} críticos` : "Sistema saudável", color: bugs.length > 0 ? "text-red-400" : "text-emerald-400", bg: bugs.length > 0 ? "bg-red-500/10 border-red-500/20" : "bg-emerald-500/10 border-emerald-500/20" }
-              ].map((kpi, i) => (
-                <div key={i} className={`p-4 rounded-2xl border animate-gsap-card transition-colors ${isLight ? "bg-white border-zinc-200/80" : "bg-zinc-900/40 border-zinc-900"}`}>
-                  <span className={`text-[9px] font-black uppercase tracking-widest block ${isLight ? "text-zinc-500" : "text-zinc-500"}`}>{kpi.label}</span>
-                  <span className={`text-2xl font-black block mt-1 ${kpi.color}`}>{kpi.value}</span>
-                  <span className={`text-[9px] font-bold inline-flex items-center gap-1 px-2 py-0.5 rounded-full border mt-2 ${kpi.bg} ${kpi.color}`}>{kpi.sub}</span>
-                </div>
-              ))}
+              {([
+                {
+                  label: "Salões Parceiros", value: tenants.length,
+                  sub: `${tenants.filter(t => t.plano !== "FREE").length} pagantes`,
+                  gradient: "from-[#fd9602]/15 to-[#fd9602]/5",
+                  ring: "ring-[#fd9602]/15", textAccent: "text-[#fd9602]",
+                  badge: "bg-[#fd9602]/10 border-[#fd9602]/20 text-[#fd9602]",
+                  Icon: Building2, iconBg: "bg-[#fd9602]/10 text-[#fd9602]",
+                },
+                {
+                  label: "MRR", value: `R$ ${tenants.reduce((a, t) => a + (t.valor_plano || 0), 0).toFixed(0)}`,
+                  sub: `ARR: R$ ${(tenants.reduce((a, t) => a + (t.valor_plano || 0), 0) * 12).toFixed(0)}`,
+                  gradient: "from-emerald-500/15 to-emerald-500/5",
+                  ring: "ring-emerald-500/15", textAccent: "text-emerald-400",
+                  badge: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
+                  Icon: TrendingUp, iconBg: "bg-emerald-500/10 text-emerald-400",
+                },
+                {
+                  label: "Agendamentos", value: totalAgendamentos.toLocaleString("pt-BR"),
+                  sub: `${logins.filter(l => l.funcao === "GERENTE").length} gerentes ativos`,
+                  gradient: "from-purple-500/15 to-purple-500/5",
+                  ring: "ring-purple-500/15", textAccent: "text-purple-400",
+                  badge: "bg-purple-500/10 border-purple-500/20 text-purple-400",
+                  Icon: CalendarDays, iconBg: "bg-purple-500/10 text-purple-400",
+                },
+                {
+                  label: "Bugs Abertos", value: bugs.length,
+                  sub: bugs.filter(b => b.severity === "CRITICAL").length > 0
+                    ? `${bugs.filter(b => b.severity === "CRITICAL").length} críticos`
+                    : "Sistema saudável",
+                  gradient: bugs.length > 0 ? "from-red-500/15 to-red-500/5" : "from-emerald-500/15 to-emerald-500/5",
+                  ring: bugs.length > 0 ? "ring-red-500/15" : "ring-emerald-500/15",
+                  textAccent: bugs.length > 0 ? "text-red-400" : "text-emerald-400",
+                  badge: bugs.length > 0 ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
+                  Icon: bugs.length > 0 ? Bug : CheckCircle,
+                  iconBg: bugs.length > 0 ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400",
+                },
+              ] as const).map((kpi, i) => {
+                const Icon = kpi.Icon;
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.08, duration: 0.5, ease: "easeOut" }}
+                    whileHover={{ y: -2, transition: { duration: 0.18 } }}
+                    className={`relative p-5 rounded-3xl border overflow-hidden cursor-default animate-gsap-card transition-all duration-300 ${
+                      isLight
+                        ? "bg-white/90 border-zinc-200/70 shadow-sm backdrop-blur-sm"
+                        : "bg-zinc-900/60 border-zinc-800/70 backdrop-blur-sm"
+                    } ring-1 ${kpi.ring}`}
+                  >
+                    <div className={`absolute inset-0 bg-gradient-to-br ${kpi.gradient} pointer-events-none`} />
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between mb-3">
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>
+                          {kpi.label}
+                        </span>
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${kpi.iconBg}`}>
+                          <Icon size={15} />
+                        </div>
+                      </div>
+                      <span className={`text-3xl font-black block tracking-tight ${kpi.textAccent}`}>{kpi.value}</span>
+                      <span className={`text-[9px] font-bold inline-flex items-center gap-1 px-2.5 py-1 rounded-full border mt-3 ${kpi.badge}`}>
+                        {kpi.sub}
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           )}
 
@@ -875,138 +878,201 @@ export default function SaaSControlDashboard() {
                   exit={{ opacity: 0 }}
                   className="grid grid-cols-1 lg:grid-cols-2 gap-8"
                 >
-                  {/* Left Column: Task Time Chart & Optimize card */}
-                  <div className="space-y-8 flex flex-col justify-between">
-                    {/* Task Time Chart Card */}
-                    <div className={`animate-gsap-card border p-6 rounded-[2rem] space-y-6 h-[21rem] flex-none flex flex-col justify-between transition-colors ${
-                      isLight ? "bg-white border-zinc-200/80 shadow-sm" : "bg-zinc-900/40 border border-zinc-900"
-                    }`}>
-                      <div className="flex justify-between items-center">
+                  {/* Left Column: Chart + CTA card */}
+                  <div className="space-y-6 flex flex-col justify-between">
+                    {/* Chart Card — glass premium */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className={`animate-gsap-card relative border p-6 rounded-[2rem] h-[21rem] flex-none flex flex-col justify-between overflow-hidden transition-colors ring-1 ${
+                        isLight
+                          ? "bg-white/90 border-zinc-200/70 shadow-sm backdrop-blur-sm ring-zinc-200/50"
+                          : "bg-zinc-900/50 border-zinc-800/70 backdrop-blur-sm ring-zinc-800/30"
+                      }`}
+                    >
+                      {/* Radial amber glow BG */}
+                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(253,150,2,0.06),transparent_60%)] pointer-events-none" />
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#fd9602]/20 to-transparent" />
+
+                      <div className="flex justify-between items-start relative z-10">
                         <div>
-                          <h3 className={`text-xs font-black uppercase tracking-widest ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>Atividade dos Servidores</h3>
-                          <span className="text-[10px] text-zinc-500 font-bold block mt-0.5">Média de tráfego de requisições de parceiros</span>
+                          <h3 className={`text-xs font-black uppercase tracking-widest ${isLight ? "text-zinc-600" : "text-zinc-300"}`}>
+                            Atividade dos Servidores
+                          </h3>
+                          <span className={`text-[10px] font-bold block mt-0.5 ${isLight ? "text-zinc-400" : "text-zinc-500"}`}>
+                            Tráfego de requisições de parceiros
+                          </span>
                         </div>
-                        <span className={`text-[9px] px-3 py-1 rounded border uppercase font-black tracking-widest ${
-                          isLight ? "bg-zinc-50 border-zinc-200 text-zinc-500" : "bg-zinc-800 border border-zinc-800 text-zinc-450"
+                        <span className={`text-[9px] px-3 py-1.5 rounded-xl border uppercase font-black tracking-widest ${
+                          isLight ? "bg-zinc-100 border-zinc-200 text-zinc-500" : "bg-zinc-800/80 border-zinc-700/60 text-zinc-400"
                         }`}>Semanal</span>
                       </div>
 
-                      {/* CSS Bars Chart */}
-                      <div className="flex justify-between items-end h-40 pt-4 px-2 relative">
-                        <div className={`absolute inset-x-0 bottom-4 border-b border-dashed pointer-events-none ${
-                          isLight ? "border-zinc-200" : "border-zinc-800/80"
-                        }`} />
+                      {/* Animated chart bars */}
+                      <div className="flex justify-between items-end h-36 px-2 relative z-10">
+                        <div className={`absolute inset-x-0 bottom-0 border-b border-dashed ${isLight ? "border-zinc-200" : "border-zinc-800"}`} />
                         {[
-                          { day: "Seg", height: "h-20", time: "2.4s" },
-                          { day: "Ter", height: "h-32", time: "1.1s" },
-                          { day: "Qua", height: "h-14", time: "3.2s" },
-                          { day: "Qui", height: "h-36", time: "0.8s" },
-                          { day: "Sex", height: "h-8", time: "4.1s" }
+                          { day: "Seg", pct: 55, time: "2.4s" },
+                          { day: "Ter", pct: 88, time: "1.1s" },
+                          { day: "Qua", pct: 38, time: "3.2s" },
+                          { day: "Qui", pct: 100, time: "0.8s" },
+                          { day: "Sex", pct: 22, time: "4.1s" }
                         ].map((bar, idx) => (
-                          <div key={idx} className="flex flex-col items-center gap-2 group relative z-10">
-                            <span className="text-[9px] text-[#fd9602] font-black opacity-0 group-hover:opacity-100 transition-opacity absolute -top-5">
+                          <div key={idx} className="flex flex-col items-center gap-2 group relative">
+                            <motion.span
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: 0.4 + idx * 0.06 }}
+                              className="text-[9px] text-[#fd9602] font-black opacity-0 group-hover:opacity-100 transition-opacity absolute -top-5"
+                            >
                               {bar.time}
-                            </span>
-                            <div className={`w-8 ${bar.height} bg-gradient-to-t from-[#fd9602] to-amber-400 rounded-lg group-hover:scale-y-105 transition-all origin-bottom`} />
-                            <span className="text-[9px] text-zinc-550 font-black">{bar.day}</span>
+                            </motion.span>
+                            <motion.div
+                              initial={{ scaleY: 0 }}
+                              animate={{ scaleY: 1 }}
+                              transition={{ delay: 0.3 + idx * 0.08, duration: 0.5, ease: "easeOut" }}
+                              style={{ height: `${bar.pct}%` }}
+                              className="w-9 bg-gradient-to-t from-[#fd9602] to-amber-300 rounded-xl group-hover:from-amber-500 group-hover:to-amber-200 transition-colors origin-bottom shadow-lg shadow-[#fd9602]/20"
+                            />
+                            <span className={`text-[9px] font-black ${isLight ? "text-zinc-500" : "text-zinc-500"}`}>{bar.day}</span>
                           </div>
                         ))}
                       </div>
-                    </div>
+                    </motion.div>
 
-                    {/* Optimize Workflow gradient card */}
-                    <div className="animate-gsap-card px-8 py-7 rounded-[2rem] bg-gradient-to-br from-emerald-500 to-teal-650 text-zinc-950 flex flex-col justify-between h-56 relative overflow-hidden group">
-                      <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                        <Building2 size={160} />
+                    {/* Optimize CTA card */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.25 }}
+                      className="animate-gsap-card relative px-8 py-7 rounded-[2rem] bg-gradient-to-br from-emerald-500 via-teal-500 to-emerald-700 text-zinc-950 flex flex-col justify-between h-52 overflow-hidden group"
+                    >
+                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(255,255,255,0.15),transparent_60%)] pointer-events-none" />
+                      <div className="absolute right-[-20px] bottom-[-20px] opacity-[0.08] group-hover:scale-110 group-hover:opacity-[0.12] transition-all duration-700 pointer-events-none">
+                        <Building2 size={180} />
                       </div>
                       <div className="space-y-1.5 relative z-10">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-emerald-950/80">Otimização de Estrutura</h4>
-                        <p className="text-xl font-bold text-zinc-950 max-w-xs leading-tight">Consolide chaves primárias e analise logs de produção.</p>
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-950/70">Otimização de Estrutura</h4>
+                        <p className="text-xl font-black text-zinc-950 max-w-xs leading-tight tracking-tight">
+                          Consolide chaves primárias e analise logs de produção.
+                        </p>
                       </div>
-                      <button 
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
                         onClick={() => setActiveTab("LOGINS")}
-                        className="h-10 px-5 bg-zinc-950 text-white hover:bg-zinc-900 text-[10px] font-black uppercase tracking-widest rounded-full transition-colors cursor-pointer w-fit mt-3"
+                        className="h-10 px-6 bg-zinc-950/90 text-white hover:bg-zinc-900 text-[10px] font-black uppercase tracking-widest rounded-full transition-colors cursor-pointer w-fit mt-3 shadow-lg"
                       >
                         Gerenciar Logins
-                      </button>
-                    </div>
+                      </motion.button>
+                    </motion.div>
                   </div>
 
-                  {/* Right Column: Tasks List Card */}
-                  <div className="space-y-8 flex flex-col justify-between">
-                    {/* Tasks List Card */}
-                    <div className={`animate-gsap-card p-7 rounded-[2.5rem] space-y-6 h-[21rem] flex-none flex flex-col justify-between transition-all duration-300 ${
-                      isLight 
-                        ? "bg-white border border-zinc-200/80 shadow-sm text-zinc-900" 
-                        : "bg-zinc-900/40 border border-zinc-900/60 text-white shadow-sm"
-                    }`}>
-                      <div className="flex justify-between items-center">
-                        <h3 className={`text-base font-black tracking-tight uppercase tracking-wider ${isLight ? "text-zinc-900" : "text-white"}`}>Salões Parceiros</h3>
-                        <button 
-                          onClick={() => setActiveTab("PARTNERS")} 
-                          className={`text-[10px] font-black uppercase tracking-widest ${isLight ? "text-[#fd9602] hover:text-amber-600" : "text-[#fd9602] hover:text-amber-400"}`}
+                  {/* Right Column: Partner List + Version CTA */}
+                  <div className="space-y-6 flex flex-col justify-between">
+                    {/* Partners list card — glass premium */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.18 }}
+                      className={`animate-gsap-card relative p-7 rounded-[2.5rem] h-[21rem] flex-none flex flex-col justify-between overflow-hidden ring-1 transition-all duration-300 ${
+                        isLight
+                          ? "bg-white/90 border border-zinc-200/70 shadow-sm backdrop-blur-sm ring-zinc-200/50 text-zinc-900"
+                          : "bg-zinc-900/50 border border-zinc-800/70 backdrop-blur-sm ring-zinc-800/30 text-white"
+                      }`}
+                    >
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(253,150,2,0.04),transparent_60%)] pointer-events-none" />
+
+                      <div className="flex justify-between items-center relative z-10">
+                        <h3 className={`text-base font-black tracking-tight ${isLight ? "text-zinc-900" : "text-white"}`}>
+                          Salões Parceiros
+                        </h3>
+                        <motion.button
+                          whileHover={{ x: 2 }}
+                          onClick={() => setActiveTab("PARTNERS")}
+                          className="text-[10px] font-black uppercase tracking-widest text-[#fd9602] hover:text-amber-500 transition-colors cursor-pointer flex items-center gap-1"
                         >
-                          Ver Todos &rarr;
-                        </button>
+                          Ver Todos <ChevronRight size={11} />
+                        </motion.button>
                       </div>
 
-                      {/* Compact Table */}
-                      <div className={`divide-y flex-1 flex flex-col justify-center ${isLight ? "divide-zinc-150" : "divide-zinc-900"}`}>
+                      <div className={`divide-y flex-1 flex flex-col justify-center relative z-10 ${isLight ? "divide-zinc-100" : "divide-zinc-800/60"}`}>
                         {tenants.length === 0 ? (
-                          <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 py-6 gap-2">
-                            <Building2 className="w-7 h-7 text-zinc-600 mb-1" />
-                            <span className="text-[9px] font-black uppercase tracking-widest text-center">Nenhum parceiro cadastrado.<br/>Use + para adicionar.</span>
+                          <div className="flex-1 flex flex-col items-center justify-center gap-3 py-6">
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isLight ? "bg-zinc-100" : "bg-zinc-800/60"}`}>
+                              <Building2 className="w-6 h-6 text-zinc-500" />
+                            </div>
+                            <span className={`text-[9px] font-black uppercase tracking-widest text-center ${isLight ? "text-zinc-400" : "text-zinc-500"}`}>
+                              Nenhum parceiro cadastrado.<br />Use + para adicionar.
+                            </span>
                           </div>
                         ) : (
-                          tenants.slice(0, 3).map((t) => (
-                            <div key={t.id} className="py-4 flex items-center justify-between gap-3 group text-left">
-                              <div>
-                                <h4 className={`font-bold leading-tight block ${isLight ? "text-zinc-900" : "text-white"}`}>{t.nome}</h4>
-                                <span className={`text-[9px] font-bold block mt-0.5 ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>{t.cidade} - Plano {t.plano}</span>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className={`text-[10px] font-black px-2.5 py-0.5 rounded border ${
-                                  isLight ? "bg-zinc-50 border-zinc-200 text-zinc-650" : "bg-zinc-950 border border-zinc-800 text-zinc-300"
-                                }`}>
-                                  NPS {t.nps}
+                          tenants.slice(0, 3).map((t, idx) => (
+                            <motion.div
+                              key={t.id}
+                              initial={{ opacity: 0, x: 10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.3 + idx * 0.06 }}
+                              className="py-3.5 flex items-center justify-between gap-3"
+                            >
+                              <div className="min-w-0">
+                                <h4 className={`font-black text-sm leading-tight truncate ${isLight ? "text-zinc-900" : "text-white"}`}>{t.nome}</h4>
+                                <span className={`text-[9px] font-bold block mt-0.5 ${isLight ? "text-zinc-400" : "text-zinc-500"}`}>
+                                  {t.proprietario_nome}
                                 </span>
-                                <button 
-                                  onClick={() => selectAndGeocodeTenant(t)}
-                                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                                    isLight ? "bg-zinc-900 text-white hover:bg-zinc-800" : "bg-white text-zinc-950 hover:bg-zinc-100"
-                                  }`}
-                                >
-                                  <Play size={10} className={`ml-0.5 ${isLight ? "fill-white" : "fill-zinc-950"}`} />
-                                </button>
                               </div>
-                            </div>
+                              <motion.button
+                                whileHover={{ scale: 1.08 }}
+                                whileTap={{ scale: 0.94 }}
+                                onClick={() => selectTenant(t)}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-md ${
+                                  isLight ? "bg-zinc-900 text-white hover:bg-zinc-800" : "bg-white text-zinc-950 hover:bg-zinc-100"
+                                }`}
+                              >
+                                <Play size={9} className={`ml-0.5 ${isLight ? "fill-white" : "fill-zinc-950"}`} />
+                              </motion.button>
+                            </motion.div>
                           ))
                         )}
                       </div>
-                    </div>
+                    </motion.div>
 
-                    <div className="animate-gsap-card px-8 py-7 rounded-[2rem] bg-gradient-to-br from-purple-500 to-indigo-600 text-zinc-950 flex flex-col justify-between h-56 relative overflow-hidden group">
-                      <div className="space-y-1.5 relative z-10">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-purple-950/80">Lançamento de Versões</h4>
-                        <p className="text-xl font-bold text-zinc-950 max-w-xs leading-tight">Distribua novos APKs de forma silenciosa e segura.</p>
-                      </div>
-                      
-                      {/* SVG Wave lines animadas */}
-                      <div className="absolute inset-x-0 bottom-0 h-20 opacity-20 pointer-events-none">
+                    {/* Version CTA card */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.32 }}
+                      className="animate-gsap-card relative px-8 py-7 rounded-[2rem] bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-600 flex flex-col justify-between h-52 overflow-hidden group"
+                    >
+                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,0.15),transparent_55%)] pointer-events-none" />
+                      <div className="absolute inset-x-0 bottom-0 h-24 opacity-20 pointer-events-none">
                         <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                          <path d="M0,50 C30,80 70,20 100,50 L100,100 L0,100 Z" fill="white" />
+                          <path d="M0,50 C25,80 75,20 100,50 L100,100 L0,100 Z" fill="white" />
                         </svg>
                       </div>
-
-                      <button 
+                      <div className="space-y-1.5 relative z-10">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-violet-200/80">Lançamento de Versões</h4>
+                        <p className="text-xl font-black text-white max-w-xs leading-tight tracking-tight">
+                          Distribua novos APKs de forma silenciosa e segura.
+                        </p>
+                      </div>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
                         onClick={() => setActiveTab("UPDATES")}
-                        className="h-10 px-5 bg-zinc-950 text-white hover:bg-zinc-900 text-[10px] font-black uppercase tracking-widest rounded-full transition-colors cursor-pointer w-fit mt-3"
+                        className="h-10 px-6 bg-zinc-950/80 text-white hover:bg-zinc-900 text-[10px] font-black uppercase tracking-widest rounded-full transition-colors cursor-pointer w-fit mt-3 shadow-lg"
                       >
                         Publicar Update
-                      </button>
-                    </div>
+                      </motion.button>
+                    </motion.div>
                   </div>
 
+                  {/* APM Observabilidade — coluna full-width abaixo do grid */}
+                  <div className="lg:col-span-2">
+                    <ApmDashboard isLight={isLight} />
+                  </div>
                 </motion.div>
               )}
 
@@ -1036,22 +1102,38 @@ export default function SaaSControlDashboard() {
                     </div>
                   </div>
 
-                  {/* Expanded height h-[36rem] for visual excellence without clipping */}
+                  {/* Mapa 3D + lista de parceiros */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[36rem] min-h-0">
                     <div className="w-full h-full relative animate-gsap-card">
-                      <SaaSMap 
-                        tenants={filteredTenants} 
+                      <TenantMap3D
+                        tenants={filteredTenants}
                         selectedTenant={selectedTenant}
-                        onSelectTenant={(t) => selectAndGeocodeTenant(t)}
+                        onSelectTenant={(t) => selectTenant(t)}
                         isLight={isLight}
                       />
+                      {/* Barra de progresso discreta durante geocodificação automática */}
+                      {isGeocoding && (
+                        <div className="absolute bottom-3 left-3 right-3 z-10 flex flex-col gap-1.5">
+                          <div className="h-1.5 rounded-full bg-zinc-900/70 overflow-hidden backdrop-blur-sm">
+                            <motion.div
+                              className="h-full bg-[#fd9602] rounded-full"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${geocodeProgress.total > 0 ? (geocodeProgress.done / geocodeProgress.total) * 100 : 0}%` }}
+                              transition={{ duration: 0.4 }}
+                            />
+                          </div>
+                          <p className="text-[9px] font-black text-[#fd9602] uppercase tracking-wider text-center drop-shadow">
+                            Geocodificando endereços… {geocodeProgress.done}/{geocodeProgress.total}
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="w-full h-full overflow-y-auto space-y-4 pr-2 scrollbar-thin scrollbar-thumb-zinc-800 animate-gsap-card pb-6">
                       {filteredTenants.map((t) => (
-                        <div 
-                          key={t.id} 
-                          onClick={() => selectAndGeocodeTenant(t)}
+                        <div
+                          key={t.id}
+                          onClick={() => selectTenant(t)}
                           className={`p-6 rounded-[2.2rem] border transition-all cursor-pointer ${
                             selectedTenant?.id === t.id 
                               ? "bg-[#fd9602]/10 border-[#fd9602]/40" 
@@ -1082,12 +1164,12 @@ export default function SaaSControlDashboard() {
                           }`}>
                             <div>
                               <span className="text-[8px] text-zinc-500 block uppercase font-bold tracking-wider">Gestor</span>
-                              <span className={`font-bold block truncate mt-0.5 ${isLight ? "text-zinc-700" : "text-zinc-300"}`}>{t.proprietario}</span>
+                              <span className={`font-bold block truncate mt-0.5 ${isLight ? "text-zinc-700" : "text-zinc-300"}`}>{t.proprietario_nome}</span>
                             </div>
                             <div>
-                              <span className="text-[8px] text-zinc-500 block uppercase font-bold tracking-wider">Localização</span>
+                              <span className="text-[8px] text-zinc-500 block uppercase font-bold tracking-wider">Endereço</span>
                               <span className={`font-bold block mt-0.5 truncate flex items-center gap-1 ${isLight ? "text-zinc-700" : "text-zinc-300"}`}>
-                                <MapPin size={10} className="text-[#fd9602]" /> {t.cidade} - {t.estado}
+                                <MapPin size={10} className="text-[#fd9602]" /> {t.endereco || "—"}
                               </span>
                             </div>
                           </div>
@@ -1173,7 +1255,7 @@ export default function SaaSControlDashboard() {
                                     <Check size={13} />
                                   </button>
                                   <button 
-                                    onClick={() => handleDeleteLogin(l.id)}
+                                    onClick={() => setDeleteLoginId(l.id)}
                                     className="p-2 border border-red-950/20 text-red-500 rounded-xl hover:bg-red-500/10 transition-colors cursor-pointer"
                                     title="Excluir Login"
                                   >
@@ -1190,588 +1272,38 @@ export default function SaaSControlDashboard() {
                 </motion.div>
               )}
 
-              {/* PUBLISH UPDATES CONTENT (OTA/APK & GIT INTEGRATION) */}
+
+              {/* PIPELINE CI/CD + GESTÃO DE RELEASES */}
               {activeTab === "UPDATES" && (
                 <motion.div
                   key="updates"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="space-y-6"
+                  className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-220px)] min-h-0"
                 >
-                  
-                  {/* Git Commits Detection Panel */}
-                  <div className={`border p-6 rounded-[2rem] space-y-4 animate-gsap-card transition-colors ${
-                    isLight ? "bg-white border-zinc-200" : "bg-zinc-900/40 border border-zinc-900"
-                  }`}>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center shrink-0">
-                          <GitBranch size={16} />
-                        </div>
-                        <div>
-                          <h4 className={`text-xs font-black uppercase tracking-widest ${isLight ? "text-zinc-800" : "text-[#fd9602]"}`}>Git Telemetria: Atualizações no Código-Fonte (/mobile)</h4>
-                          <span className="text-[10px] text-zinc-500 font-bold block mt-0.5">Homologação automática de APKs OTA a partir do histórico de commits da branch main</span>
-                        </div>
-                      </div>
-                      <button 
-                        type="button"
-                        onClick={loadGitCommits}
-                        className={`p-1.5 border rounded-lg transition-colors hover:bg-zinc-150 dark:hover:bg-zinc-800 ${
-                          isLight ? "border-zinc-200 text-zinc-600" : "border-zinc-800 text-zinc-400"
-                        }`}
-                        title="Atualizar Commits"
-                      >
-                        <RefreshCw size={12} className={loadingCommits ? "animate-spin text-[#fd9602]" : ""} />
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                      {loadingCommits ? (
-                        <div className="col-span-3 py-6 flex flex-col items-center justify-center text-zinc-500">
-                          <RefreshCw className="w-6 h-6 animate-spin text-[#fd9602] mb-2" />
-                          <span className="text-[9px] font-black uppercase tracking-wider">Lendo repositório Git local...</span>
-                        </div>
-                      ) : gitCommits.length === 0 ? (
-                        <div className="col-span-3 py-6 text-center text-zinc-500 text-[10px] font-bold">
-                          Nenhum commit recente detectado na pasta /mobile
-                        </div>
-                      ) : (
-                        gitCommits.slice(0, 3).map((c) => (
-                          <div key={c.hash} className={`p-4 border rounded-2xl flex flex-col justify-between gap-3 text-xs ${
-                            isLight ? "bg-zinc-50 border-zinc-200" : "bg-zinc-950/40 border border-zinc-900"
-                          }`}>
-                            <div className="space-y-1.5 text-left">
-                              <div className="flex items-center justify-between">
-                                <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 border border-white/5 font-black uppercase">
-                                  {c.hash}
-                                </span>
-                                <span className="text-[8px] text-zinc-500 font-bold">{c.date}</span>
-                              </div>
-                              <p className={`text-[10px] font-bold line-clamp-2 leading-relaxed ${isLight ? "text-zinc-700" : "text-zinc-300"}`}>
-                                {c.message}
-                              </p>
-                              <span className="text-[8px] text-zinc-500 block">Autor: {c.author}</span>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setUpdateChangelog(`[Git ${c.hash}]: ${c.message}`);
-                                if (updates.length > 0) {
-                                  const lastVer = updates[0].latest_version;
-                                  const parts = lastVer.split(".");
-                                  if (parts.length === 3) {
-                                    parts[2] = String(Number(parts[2]) + 1);
-                                    setUpdateVersion(parts.join("."));
-                                  } else {
-                                    setUpdateVersion("1.0.3");
-                                  }
-                                } else {
-                                  setUpdateVersion("1.0.3");
-                                }
-                                alert(`Dados do commit ${c.hash} carregados! Revise e publique o novo update OTA.`);
-                              }}
-                              className={`w-full py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-[8px] font-black uppercase tracking-widest rounded-xl transition-colors cursor-pointer`}
-                            >
-                              Aprovar & Homologar Build
-                            </button>
-                          </div>
-                        ))
-                      )}
-                    </div>
+                  <div className={`p-6 rounded-[2rem] border flex flex-col min-h-0 ${isLight ? "bg-white border-zinc-200" : "bg-zinc-900/40 border-zinc-900"}`}>
+                    <CicdPipeline isLight={isLight} />
                   </div>
-
-                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                    {/* Launch Form */}
-                    <div className={`border p-8 rounded-[2rem] space-y-6 animate-gsap-card transition-colors ${
-                      isLight ? "bg-white border-zinc-200" : "bg-zinc-900/40 border border-zinc-900"
-                    }`}>
-                      <div>
-                        <h3 className={`text-base font-black ${isLight ? "text-zinc-900" : "text-white"}`}>Lançar Nova Atualização</h3>
-                        <p className="text-[11px] text-zinc-500 mt-1">Dispare novas builds do app móvel via Supabase Storage e Firebase.</p>
-                      </div>
-
-                      {formMessage && (
-                        <div className="p-4 rounded-xl bg-[#fd9602]/10 border border-[#fd9602]/20 text-[#fd9602] text-xs font-black">
-                          {formMessage}
-                        </div>
-                      )}
-
-                      <form onSubmit={handleLaunchUpdate} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                            <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-1">Versão do App</label>
-                            <input 
-                              type="text" 
-                              value={updateVersion}
-                              onChange={(e) => setUpdateVersion(e.target.value)}
-                              placeholder="ex: 1.0.3"
-                              required
-                              className={`w-full border rounded-xl px-4 py-3 text-xs font-bold outline-none focus:border-[#fd9602] ${
-                                isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-950 border border-zinc-900"
-                              }`}
-                            />
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-1">Plataforma</label>
-                            <select 
-                              value={updatePlatform}
-                              onChange={(e) => setUpdatePlatform(e.target.value)}
-                              className={`w-full border rounded-xl px-4 py-3 text-xs font-bold outline-none focus:border-[#fd9602] cursor-pointer ${
-                                isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-950 border border-zinc-900"
-                              }`}
-                            >
-                              <option value="android">Android (APK)</option>
-                              <option value="ios">iOS (App Store)</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-1">URL Pública do Instalador</label>
-                          <input 
-                            type="text" 
-                            value={updateUrl}
-                            onChange={(e) => setUpdateUrl(e.target.value)}
-                            required
-                            className={`w-full border rounded-xl px-4 py-3 text-[10px] font-mono outline-none focus:border-[#fd9602] ${
-                              isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-950 border border-zinc-900"
-                            }`}
-                          />
-                        </div>
-
-                        <div className={`flex items-center gap-3 p-3 rounded-xl border ${
-                          isLight ? "bg-zinc-50 border-zinc-200" : "bg-zinc-950 border border-zinc-900"
-                        }`}>
-                          <input 
-                            type="checkbox" 
-                            id="required"
-                            checked={updateRequired}
-                            onChange={(e) => setUpdateRequired(e.target.checked)}
-                            className="w-4 h-4 text-[#fd9602] rounded cursor-pointer"
-                          />
-                          <label htmlFor="required" className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-wider cursor-pointer">
-                            Esta atualização é obrigatória para uso
-                          </label>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-1">Log de Alterações (Changelog)</label>
-                          <textarea 
-                            value={updateChangelog}
-                            onChange={(e) => setUpdateChangelog(e.target.value)}
-                            placeholder="O que mudou nesta atualização significante?"
-                            rows={3}
-                            className={`w-full border rounded-xl px-4 py-3 text-xs font-bold outline-none focus:border-[#fd9602] resize-none ${
-                              isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-950 border border-zinc-900"
-                            }`}
-                          />
-                        </div>
-
-                        <button 
-                          type="submit"
-                          className="w-full h-11 bg-zinc-900 hover:bg-zinc-800 text-white text-[10px] uppercase tracking-widest font-black rounded-xl transition-colors cursor-pointer"
-                        >
-                          Lançar Nova Atualização
-                        </button>
-                      </form>
-                    </div>
-
-                    {/* Releases History */}
-                    <div className={`border p-8 rounded-[2rem] space-y-6 animate-gsap-card transition-colors ${
-                      isLight ? "bg-white border-zinc-200" : "bg-zinc-900/40 border border-zinc-900"
-                    }`}>
-                      <div>
-                        <h3 className={`text-base font-black ${isLight ? "text-zinc-900" : "text-white"}`}>Atualizações Lançadas</h3>
-                        <p className="text-[11px] text-zinc-500 mt-1">Lista das versões registradas e distribuídas em produção.</p>
-                      </div>
-
-                      <div className="space-y-4 max-h-[26rem] overflow-y-auto pr-1">
-                        {updates.map((v) => (
-                          <div key={v.id} className={`p-5 border rounded-2xl text-xs space-y-2 text-left ${
-                            isLight ? "bg-zinc-50 border-zinc-200/80" : "bg-zinc-950/40 border border-zinc-900"
-                          }`}>
-                            <div className="flex justify-between items-center">
-                              <span className={`font-black flex items-center gap-1.5 ${isLight ? "text-zinc-900" : "text-white"}`}>
-                                <Smartphone size={13} className="text-[#fd9602]" /> v{v.latest_version} ({v.platform.toUpperCase()})
-                              </span>
-                              {v.required_update && (
-                                <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 bg-red-500/10 text-red-500 rounded border border-red-500/20">OBRIGATÓRIO</span>
-                              )}
-                            </div>
-                            <p className="text-zinc-500 text-[10px] font-semibold leading-relaxed">{v.changelog}</p>
-                            <span className="text-[9px] font-mono text-zinc-500 block truncate">{v.download_url}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Column 3: Live OTA Mobile Homologator */}
-                    <div className={`border p-8 rounded-[2rem] space-y-6 animate-gsap-card transition-colors flex flex-col justify-between ${
-                      isLight ? "bg-white border-zinc-200" : "bg-zinc-900/40 border border-zinc-900"
-                    }`}>
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <h3 className={`text-base font-black ${isLight ? "text-zinc-900" : "text-white"}`}>Homologador Mobile OTA</h3>
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[8px] font-black bg-[#fd9602]/10 border border-[#fd9602]/30 text-[#fd9602] uppercase tracking-widest animate-pulse">
-                            <span className="w-1.5 h-1.5 bg-[#fd9602] rounded-full animate-ping" /> Sandbox
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-zinc-500 mt-1">Simule o app mobile integrado ao Supabase para validar a build antes da liberação.</p>
-                      </div>
-
-                      {/* Simulator Selector Switch */}
-                      <div className="flex gap-2 p-1 rounded-xl bg-zinc-950 border border-zinc-900 max-w-[240px]">
-                        <button
-                          type="button"
-                          onClick={() => setSimulatorMode("LIVE")}
-                          className={`flex-1 py-1.5 text-[8px] uppercase tracking-wider font-black rounded-lg transition-all cursor-pointer ${
-                            simulatorMode === "LIVE" ? "bg-[#fd9602] text-zinc-950" : "text-zinc-500 hover:text-white"
-                          }`}
-                        >
-                          Vite Live (:5173)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSimulatorMode("MOCK")}
-                          className={`flex-1 py-1.5 text-[8px] uppercase tracking-wider font-black rounded-lg transition-all cursor-pointer ${
-                            simulatorMode === "MOCK" ? "bg-[#fd9602] text-zinc-950" : "text-zinc-500 hover:text-white"
-                          }`}
-                        >
-                          Mock Homologation
-                        </button>
-                      </div>
-
-                      {/* The Virtual iPhone Chassis */}
-                      <div className="w-full flex items-center justify-center py-2">
-                        <div className="w-[270px] h-[480px] rounded-[3rem] bg-zinc-950 border-[6px] border-zinc-900 shadow-2xl relative flex flex-col overflow-hidden text-white font-sans">
-                          {/* Notch & Speaker */}
-                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-[18px] bg-zinc-900 rounded-b-2xl z-20 flex items-center justify-center">
-                            <div className="w-8 h-1 bg-zinc-800 rounded-full" />
-                          </div>
-
-                          {/* Virtual Mobile Top Bar Status */}
-                          <div className="h-6 px-5 pt-1.5 flex justify-between items-center text-[7px] font-black tracking-wider text-zinc-400 select-none z-10">
-                            <span>14:48</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[6px] uppercase tracking-widest text-[#fd9602]">OTA v{updateVersion}</span>
-                              <Wifi size={8} className="text-[#fd9602]" />
-                            </div>
-                          </div>
-
-                          {/* Inner Screen Content */}
-                          <div className="flex-1 min-h-0 relative bg-[#09090b]">
-                            {simulatorMode === "LIVE" ? (
-                              <div className="w-full h-full relative">
-                                <iframe 
-                                  src="http://localhost:5173" 
-                                  className="w-full h-full border-none"
-                                />
-                                {/* Overlay floating message indicating it connects locally */}
-                                <div className="absolute bottom-2 left-2 right-2 p-2 rounded-lg bg-zinc-950/90 border border-zinc-800 text-[7px] text-center text-zinc-450 leading-normal pointer-events-none">
-                                  Conectado em <code className="text-[#fd9602]">http://localhost:5173</code>. Certifique-se de executar <code className="text-white">npm run dev</code> na pasta /mobile.
-                                </div>
-                              </div>
-                            ) : (
-                              /* Interactive Simulator Mock - Ultra rich dynamic UI */
-                              <div className="w-full h-full flex flex-col justify-between">
-                                {/* Simulated Header */}
-                                <div className="p-3 border-b border-zinc-900 bg-zinc-950 flex justify-between items-center shrink-0">
-                                  <div className="flex items-center gap-1.5">
-                                    <div className="w-5 h-5 rounded bg-[#fd9602]/10 border border-[#fd9602]/20 flex items-center justify-center text-[#fd9602]">
-                                      <Scissors size={10} />
-                                    </div>
-                                    <span className="text-[9px] font-black uppercase tracking-wider truncate max-w-[120px]">Barbearia Imperial</span>
-                                  </div>
-                                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
-                                </div>
-
-                                {/* Simulated Body Content based on active tab */}
-                                <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0 text-left">
-                                  {simulatedTab === "home" && (
-                                    <>
-                                      <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-850 space-y-1">
-                                        <span className="text-[7px] text-zinc-500 uppercase tracking-widest font-black block">Faturamento Mensal (PRO)</span>
-                                        <div className="flex items-baseline gap-1">
-                                          <span className="text-sm font-black text-white">R$ 12.450,00</span>
-                                          <span className="text-[7px] text-emerald-400 font-bold">+18.4%</span>
-                                        </div>
-                                        <div className="w-full h-1.5 bg-zinc-950 rounded-full overflow-hidden mt-1.5">
-                                          <div className="h-full bg-[#fd9602] rounded-full" style={{ width: "65%" }} />
-                                        </div>
-                                        <span className="text-[6px] text-zinc-500 font-bold block mt-1">Progresso da Meta: 65% da meta de R$ 20.000,00</span>
-                                      </div>
-
-                                      <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-850 flex justify-between items-center">
-                                        <div>
-                                          <span className="text-[8px] font-black block">Status do Firebase</span>
-                                          <span className="text-[6px] text-zinc-500 font-bold block mt-0.5">Analytics & Push integrados</span>
-                                        </div>
-                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[6px] font-bold uppercase">Ativo</span>
-                                      </div>
-
-                                      <div className="space-y-1.5">
-                                        <span className="text-[7px] font-black uppercase text-zinc-500 tracking-wider block">Agendamentos Recentes</span>
-                                        <div className="space-y-1.5">
-                                          {todayAppointments.slice(0, 2).map((a, idx) => (
-                                            <div key={idx} className="p-2 rounded-lg bg-zinc-950 border border-zinc-900 flex justify-between items-center text-[8px]">
-                                              <div>
-                                                <span className="font-bold text-white block truncate max-w-[80px]">{a.customer}</span>
-                                                <span className="text-[6px] text-zinc-500 block mt-0.5">{a.time} - {a.date}</span>
-                                              </div>
-                                              <span className="text-zinc-300 font-mono">R$ {a.totalPrice}</span>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    </>
-                                  )}
-
-                                  {simulatedTab === "agenda" && (
-                                    <div className="space-y-2.5">
-                                      <span className="text-[8px] font-black uppercase tracking-wider text-zinc-400 block">Agenda de Clientes ({todayAppointments.length})</span>
-                                      <div className="space-y-2">
-                                        {todayAppointments.map((a, idx) => (
-                                          <div key={idx} className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-850 flex justify-between items-center text-[8px]">
-                                            <div className="space-y-0.5">
-                                              <span className="font-black text-white block">{a.customer}</span>
-                                              <span className="text-[6px] text-[#fd9602] font-bold block">{a.time} - {a.date}</span>
-                                            </div>
-                                            <div className="text-right">
-                                              <span className="font-mono text-white block">R$ {a.totalPrice}</span>
-                                              <span className="text-[5px] text-zinc-500 block uppercase font-bold">{a.status}</span>
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {simulatedTab === "finance" && (
-                                    <div className="space-y-3">
-                                      <span className="text-[8px] font-black uppercase tracking-wider text-zinc-400 block">Fluxo de Caixa Simulador</span>
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <div className="p-2.5 rounded-xl bg-[#fd9602]/10 border border-[#fd9602]/20 text-left">
-                                          <span className="text-[6px] text-[#fd9602] font-black uppercase">Receita Bruta</span>
-                                          <span className="text-xs font-black text-white block mt-0.5">R$ 15.650</span>
-                                        </div>
-                                        <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-left">
-                                          <span className="text-[6px] text-red-400 font-black uppercase">Despesas</span>
-                                          <span className="text-xs font-black text-white block mt-0.5">R$ 3.200</span>
-                                        </div>
-                                      </div>
-                                      <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-850 space-y-1.5">
-                                        <span className="text-[7px] text-zinc-500 uppercase tracking-widest font-black block">Últimos Lançamentos</span>
-                                        <div className="space-y-1 text-[7px]">
-                                          <div className="flex justify-between text-zinc-400">
-                                            <span>Serviço: Corte Degradê</span>
-                                            <span className="text-emerald-400 font-bold">+R$ 45,00</span>
-                                          </div>
-                                          <div className="flex justify-between text-zinc-400">
-                                            <span>Serviço: Barba Terapia</span>
-                                            <span className="text-emerald-400 font-bold">+R$ 35,00</span>
-                                          </div>
-                                          <div className="flex justify-between text-zinc-400">
-                                            <span>Despesa: Lâminas de Barbear</span>
-                                            <span className="text-red-400 font-bold">-R$ 120,00</span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {simulatedTab === "profile" && (
-                                    <div className="space-y-3 text-center py-2">
-                                      <div className="w-12 h-12 rounded-full bg-[#fd9602] text-zinc-950 flex items-center justify-center font-black text-xs mx-auto shadow-md">
-                                        SA
-                                      </div>
-                                      <div>
-                                        <span className="text-[10px] font-black block">SuperAdmin Gestor</span>
-                                        <span className="text-[6px] text-[#fd9602] font-black uppercase tracking-wider block mt-0.5">ID: {establishmentId || "Carregando..."}</span>
-                                      </div>
-                                      
-                                      <div className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-850 text-left text-[7px] space-y-1.5">
-                                        <span className="text-[6px] text-zinc-500 uppercase font-black tracking-wider block">Dados da Conta</span>
-                                        <div className="flex justify-between text-zinc-300">
-                                          <span>E-mail:</span>
-                                          <span className="font-bold">carlos@imperial.com</span>
-                                        </div>
-                                        <div className="flex justify-between text-zinc-350">
-                                          <span>Plano:</span>
-                                          <span className="font-bold text-amber-400">SaaS VIP (PRO)</span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Simulated Footer Navigation */}
-                                <div className="h-10 border-t border-zinc-900 bg-zinc-950 flex justify-around items-center shrink-0 px-1 text-zinc-500">
-                                  <button 
-                                    type="button"
-                                    onClick={() => setSimulatedTab("home")}
-                                    className={`flex flex-col items-center gap-0.5 cursor-pointer ${simulatedTab === "home" ? "text-[#fd9602]" : "hover:text-white"}`}
-                                  >
-                                    <Scissors size={10} />
-                                    <span className="text-[5px] font-bold">Home</span>
-                                  </button>
-                                  <button 
-                                    type="button"
-                                    onClick={() => setSimulatedTab("agenda")}
-                                    className={`flex flex-col items-center gap-0.5 cursor-pointer ${simulatedTab === "agenda" ? "text-[#fd9602]" : "hover:text-white"}`}
-                                  >
-                                    <Calendar size={10} />
-                                    <span className="text-[5px] font-bold">Agenda</span>
-                                  </button>
-                                  <button 
-                                    type="button"
-                                    onClick={() => setSimulatedTab("finance")}
-                                    className={`flex flex-col items-center gap-0.5 cursor-pointer ${simulatedTab === "finance" ? "text-[#fd9602]" : "hover:text-white"}`}
-                                  >
-                                    <DollarSign size={10} />
-                                    <span className="text-[5px] font-bold">Finanças</span>
-                                  </button>
-                                  <button 
-                                    type="button"
-                                    onClick={() => setSimulatedTab("profile")}
-                                    className={`flex flex-col items-center gap-0.5 cursor-pointer ${simulatedTab === "profile" ? "text-[#fd9602]" : "hover:text-white"}`}
-                                  >
-                                    <User size={10} />
-                                    <span className="text-[5px] font-bold">Perfil</span>
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Home Indicator bar */}
-                          <div className="h-3 shrink-0 flex items-center justify-center pb-1">
-                            <div className="w-20 h-1 bg-zinc-800 rounded-full" />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="pt-4 border-t border-zinc-800/20 text-center">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            alert("Build mobile OTA homologada com sucesso! Você pode prosseguir e lançar o update.");
-                          }}
-                          className="w-full py-3 bg-[#fd9602] hover:bg-amber-600 text-zinc-950 text-[10px] tracking-widest font-black uppercase rounded-xl transition-all cursor-pointer"
-                        >
-                          Homologar Build Atual
-                        </button>
-                      </div>
-                    </div>
+                  <div className={`p-6 rounded-[2rem] border flex flex-col min-h-0 ${isLight ? "bg-white border-zinc-200" : "bg-zinc-900/40 border-zinc-900"}`}>
+                    <ReleasesPanel isLight={isLight} />
                   </div>
                 </motion.div>
               )}
 
-              {/* BUG TRACKER CONTENT */}
+              {/* BUG TRACKER */}
               {activeTab === "BUGS" && (
                 <motion.div
                   key="bugs"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full min-h-0"
+                  className={`p-6 rounded-[2rem] border min-h-[calc(100vh-220px)] ${isLight ? "bg-white border-zinc-200" : "bg-zinc-900/40 border-zinc-900"}`}
                 >
-                  <div className="md:col-span-1 space-y-3 overflow-y-auto pr-1 animate-gsap-card">
-                    {bugs.length === 0 && (
-                      <div className={`p-6 rounded-2xl border flex flex-col items-center gap-3 text-center ${isLight ? "bg-emerald-50 border-emerald-200" : "bg-emerald-500/10 border-emerald-500/20"}`}>
-                        <CheckCircle className="w-8 h-8 text-emerald-400" />
-                        <div>
-                          <p className="text-xs font-black text-emerald-400">Sistema Saudável</p>
-                          <p className="text-[10px] text-zinc-500 mt-0.5">Nenhum bug em aberto</p>
-                        </div>
-                      </div>
-                    )}
-                    {bugs.map((b) => (
-                      <div
-                        key={b.id}
-                        onClick={() => setSelectedBug(b)}
-                        className={`p-5 rounded-2xl border transition-all cursor-pointer text-left ${
-                          selectedBug?.id === b.id
-                            ? "bg-[#fd9602]/10 border-[#fd9602]/40"
-                            : isLight 
-                              ? "bg-white border-zinc-200 hover:border-zinc-300"
-                              : "bg-zinc-900/40 border-zinc-900 hover:border-zinc-800"
-                        }`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 bg-red-500/10 text-red-500 rounded border border-red-500/20">{b.severidade}</span>
-                          <span className="text-[8px] text-zinc-500 font-semibold">{b.criadoEm}</span>
-                        </div>
-                        <h4 className={`text-xs font-bold truncate mt-2 ${isLight ? "text-zinc-900" : "text-white"}`}>{b.mensagem}</h4>
-                        <span className="text-[9px] text-zinc-500 block mt-1">{b.plataforma} v{b.versao}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="md:col-span-2 animate-gsap-card">
-                    {selectedBug ? (
-                      <div className={`border p-6 rounded-[2rem] space-y-5 h-full overflow-y-auto ${
-                        isLight ? "bg-white border-zinc-200" : "bg-zinc-900/40 border border-zinc-900"
-                      }`}>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <span className="text-[8px] font-black uppercase tracking-widest text-zinc-500 block">Stack Trace</span>
-                            <h3 className={`text-base font-black mt-1 leading-tight ${isLight ? "text-zinc-900" : "text-white"}`}>{selectedBug.mensagem}</h3>
-                          </div>
-                        </div>
-
-                        <div className={`grid grid-cols-2 gap-4 text-[10px] p-4 rounded-xl border ${
-                          isLight ? "bg-zinc-50 border-zinc-200" : "bg-zinc-950/60 border border-zinc-900"
-                        }`}>
-                          <div>
-                            <span className="text-[8px] text-zinc-500 block uppercase font-bold tracking-wider">Aparelho</span>
-                            <span className={`font-bold block mt-0.5 ${isLight ? "text-zinc-800" : "text-zinc-300"}`}>{selectedBug.aparelho}</span>
-                          </div>
-                          <div>
-                            <span className="text-[8px] text-zinc-500 block uppercase font-bold tracking-wider">Sistema Operacional</span>
-                            <span className={`font-bold block mt-0.5 ${isLight ? "text-zinc-800" : "text-zinc-300"}`}>{selectedBug.so}</span>
-                          </div>
-                          <div>
-                            <span className="text-[8px] text-zinc-500 block uppercase font-bold tracking-wider">Versão do App</span>
-                            <span className={`font-bold block mt-0.5 ${isLight ? "text-zinc-800" : "text-zinc-300"}`}>v{selectedBug.versao}</span>
-                          </div>
-                          <div>
-                            <span className="text-[8px] text-zinc-500 block uppercase font-bold tracking-wider">Usuário Afetado</span>
-                            <span className={`font-bold block mt-0.5 truncate ${isLight ? "text-zinc-800" : "text-zinc-300"}`}>{selectedBug.emailUser}</span>
-                          </div>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-[8px] text-zinc-500 block uppercase font-bold tracking-wider">Erro Capturado</span>
-                          <pre className="p-4 bg-zinc-950 text-emerald-400 rounded-xl text-[9px] font-mono leading-relaxed overflow-x-auto border border-white/5 max-h-40">
-                            {selectedBug.stack}
-                          </pre>
-                        </div>
-
-                        <div className={`flex gap-3 justify-end pt-3 border-t ${isLight ? "border-zinc-150" : "border-zinc-900"}`}>
-                          <button 
-                            onClick={() => {
-                              const updated = bugs.map(b => b.id === selectedBug.id ? { ...b, status: "RESOLVED" } : b).filter(b => b.status !== "RESOLVED");
-                              setBugs(updated);
-                              setSelectedBug(null);
-                            }}
-                            className="bg-[#fd9602] hover:bg-[#fd9602]/90 text-zinc-950 text-xs font-black px-4 h-10 rounded-xl transition-colors cursor-pointer"
-                          >
-                            Marcar Resolvido
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="w-full h-80 flex flex-col items-center justify-center border border-dashed border-zinc-300 dark:border-zinc-800 rounded-[2rem] text-zinc-500">
-                        <ShieldAlert className="w-10 h-10 text-zinc-400 mb-2 animate-pulse" />
-                        <p className="text-xs font-bold">Selecione um log para depuração.</p>
-                      </div>
-                    )}
-                  </div>
+                  <BugTracker bugs={bugs} onBugsUpdate={setBugs} isLight={isLight} />
                 </motion.div>
               )}
+
 
             </AnimatePresence>
           </div>
@@ -1779,459 +1311,697 @@ export default function SaaSControlDashboard() {
         </div>
       </main>
 
-      {/* GSAP-Animated Floating AI Bot Trigger Button */}
-      <button 
-        onClick={() => setIsChatOpen(!isChatOpen)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 flex items-center justify-center shadow-2xl hover:scale-105 cursor-pointer z-30 group transition-transform border border-zinc-800/20"
-      >
-        <span className="absolute inset-0 rounded-full bg-[#fd9602] animate-ping opacity-15 pointer-events-none group-hover:hidden" />
-        <Bot className={`w-6 h-6 ${isLight ? "text-white" : "text-zinc-950"}`} />
-      </button>
+      {/* ConfirmDialog para deleção de login */}
+      <ConfirmDialog
+        open={!!deleteLoginId}
+        title="Deletar conta permanentemente?"
+        description="Esta ação não pode ser desfeita. A conta do usuário será removida do banco de dados de produção."
+        confirmLabel="Deletar"
+        variant="danger"
+        onConfirm={() => deleteLoginId && handleDeleteLogin(deleteLoginId)}
+        onCancel={() => setDeleteLoginId(null)}
+      />
 
-      {/* GSAP Drawer Sidebar (Agendei SaaS AI Chat) - Slide-over gaveta */}
-      <div 
-        ref={chatDrawerRef} 
-        style={{ transform: "translateX(400px)", opacity: 0 }}
-        className={`fixed top-0 right-0 h-screen w-96 border-l shadow-2xl z-40 p-6 flex flex-col justify-between transition-colors ${
-          isLight ? "bg-white/98 border-zinc-200/80 backdrop-blur-xl text-zinc-900" : "bg-zinc-900/95 border-zinc-800 backdrop-blur-xl text-zinc-100"
-        }`}
-      >
-        <div className="space-y-4 flex flex-col h-full min-h-0">
-          {/* Header */}
-          <div className={`flex items-center justify-between pb-4 border-b shrink-0 ${isLight ? "border-zinc-200" : "border-zinc-800/80"}`}>
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#fd9602]/10 border border-[#fd9602]/25 text-[#fd9602] flex items-center justify-center animate-pulse">
-                <Bot className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className={`text-xs font-black ${isLight ? "text-zinc-900" : "text-white"}`}>Agendei SaaS AI</h3>
-                <span className="inline-flex items-center gap-1 text-[8px] font-bold text-emerald-500 mt-0.5">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" /> Conectado em tempo real
-                </span>
-              </div>
-            </div>
-            
-            <button 
-              onClick={() => setIsChatOpen(false)}
-              className="p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
+      {/* Drawer unificado: Alertas do Bot + Chat */}
+      <NotificationDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        isLight={isLight}
+        alerts={botAlerts}
+        onMarkAllRead={() => setBotAlerts((prev) => prev.map((a) => ({ ...a, read: true })))}
+        onDismissAlert={(id) => setBotAlerts((prev) => prev.filter((a) => a.id !== id))}
+        messages={messages}
+        onSendMessage={handleSendMessage}
+        inputMessage={inputMessage}
+        onInputChange={setInputMessage}
+        messagesEndRef={messagesEndRef}
+      />
+
+      {/* MODAL 1: FERRAMENTAS & INTEGRIDADE */}
+      <AnimatePresence>
+        {isAddPartnerOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
+            onClick={() => setIsAddPartnerOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ type: "spring", stiffness: 360, damping: 32 }}
+              onClick={(e) => e.stopPropagation()}
+              className={`relative w-full max-w-xl rounded-[2rem] border shadow-2xl overflow-hidden ${
+                isLight ? "bg-white/96 border-zinc-200/80 text-zinc-900" : "bg-zinc-950/97 border-zinc-800/80 text-white"
+              } backdrop-blur-2xl`}
             >
-              <X size={16} />
-            </button>
-          </div>
+              {/* Accent line */}
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#fd9602]/40 to-transparent" />
+              <div className="absolute top-0 left-0 w-full h-32 bg-[radial-gradient(ellipse_at_top_left,rgba(253,150,2,0.07),transparent_60%)] pointer-events-none" />
 
-          {/* Messages Body */}
-          <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-none py-2">
-            {messages.map((m) => (
-              <div 
-                key={m.id}
-                className={`flex gap-3 max-w-[85%] ${m.sender === "user" ? "ml-auto flex-row-reverse" : "mr-auto"}`}
-              >
-                <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 border ${
-                  m.sender === "user" 
-                    ? "bg-zinc-800 border-zinc-700 text-[#fd9602]" 
-                    : "bg-[#fd9602]/10 border-[#fd9602]/20 text-[#fd9602]"
-                }`}>
-                  {m.sender === "user" ? <User size={11} /> : <Bot size={11} />}
-                </div>
-
-                <div className={`p-3.5 rounded-2xl text-[10px] leading-relaxed font-medium whitespace-pre-wrap text-left ${
-                  m.sender === "user" 
-                    ? isLight ? "bg-zinc-900 text-white rounded-tr-none font-bold" : "bg-white text-zinc-950 rounded-tr-none font-bold" 
-                    : isLight 
-                      ? "bg-zinc-100 border border-zinc-200 text-zinc-700 rounded-tl-none"
-                      : "bg-zinc-950/60 border border-zinc-900 text-zinc-300 rounded-tl-none"
-                }`}>
-                  {m.text}
-                </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input Controls Footer */}
-          <form onSubmit={handleSendMessage} className={`flex gap-2 pt-4 border-t shrink-0 ${isLight ? "border-zinc-200" : "border-zinc-800/80"}`}>
-            <input 
-              type="text" 
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Perguntar sobre o MRR, parceiros..."
-              className={`flex-1 border rounded-xl px-4 py-3 text-[10px] font-bold outline-none focus:ring-2 focus:ring-[#fd9602]/20 ${
-                isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-950 border border-zinc-900 text-white"
-              }`}
-            />
-            <button 
-              type="submit"
-              className={`w-11 h-11 rounded-xl flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-md ${
-                isLight ? "bg-zinc-900 hover:bg-zinc-800 text-white" : "bg-white hover:bg-zinc-100 text-zinc-950"
-              }`}
-            >
-              <Send className={`w-4 h-4 ${isLight ? "text-white" : "text-zinc-950"}`} />
-            </button>
-          </form>
-        </div>
-      </div>
-
-      {/* MODAL 1: ADICIONAR NOVO PARCEIRO / SERVIÇO */}
-      {isAddPartnerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
-          <div className={`p-8 rounded-[2.5rem] border w-full max-w-lg shadow-2xl relative transition-all duration-300 ${
-            isLight ? "bg-white border-zinc-200 text-zinc-900" : "bg-zinc-950/95 border-zinc-900 text-white"
-          }`}>
-            <button 
-              onClick={() => setIsAddPartnerOpen(false)}
-              className="absolute top-6 right-6 w-8 h-8 rounded-full flex items-center justify-center border border-zinc-800 text-zinc-400 hover:text-white hover:border-white transition-colors cursor-pointer text-lg font-bold"
-            >
-              &times;
-            </button>
-            
-            {/* Seletor de Tipo de Item */}
-            <div className="flex gap-2 p-1 rounded-2xl bg-zinc-900/60 border border-zinc-900 mb-6 max-w-xs">
-              <button 
-                type="button"
-                onClick={() => setModalTab("PARTNER")}
-                className={`flex-1 py-2 text-[9px] uppercase tracking-wider font-black rounded-xl transition-all cursor-pointer ${
-                  modalTab === "PARTNER" ? "bg-[#fd9602] text-zinc-950" : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                🏢 Salão Parceiro
-              </button>
-              <button 
-                type="button"
-                onClick={() => setModalTab("SERVICE")}
-                className={`flex-1 py-2 text-[9px] uppercase tracking-wider font-black rounded-xl transition-all cursor-pointer ${
-                  modalTab === "SERVICE" ? "bg-[#fd9602] text-zinc-950" : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                ☁️ Serviço Cloud
-              </button>
-            </div>
-
-            {modalTab === "PARTNER" ? (
-              <>
-                <h3 className="text-xl font-black uppercase tracking-wider mb-1 text-left">Cadastrar Novo Salão</h3>
-                <p className="text-[10px] text-zinc-500 font-bold mb-6 text-left">Insira os dados cadastrais do novo parceiro para liberação instantânea no Supabase.</p>
-                
-                {formMessage && (
-                  <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/25 rounded-xl text-[10px] font-bold text-amber-500 text-left">
-                    {formMessage}
-                  </div>
-                )}
-
-                <form onSubmit={handleAddPartner} className="space-y-4 text-left">
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-wider block mb-1 text-zinc-450">Nome do Estabelecimento *</label>
-                    <input 
-                      type="text" 
-                      required
-                      value={newPartner.nome}
-                      onChange={(e) => setNewPartner(prev => ({ ...prev, nome: e.target.value }))}
-                      placeholder="Ex: Studio VIP Barber"
-                      className={`w-full border rounded-xl px-4 py-3 text-xs outline-none focus:ring-2 focus:ring-[#fd9602]/25 font-bold ${
-                        isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-900/60 border-zinc-850 text-white"
-                      }`}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[10px] font-black uppercase tracking-wider block mb-1 text-zinc-450">Proprietário (Nome)</label>
-                      <input 
-                        type="text" 
-                        value={newPartner.proprietario}
-                        onChange={(e) => setNewPartner(prev => ({ ...prev, proprietario: e.target.value }))}
-                        placeholder="Ex: Carlos Silva"
-                        className={`w-full border rounded-xl px-4 py-3 text-xs outline-none focus:ring-2 focus:ring-[#fd9602]/25 font-bold ${
-                          isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-900/60 border-zinc-850 text-white"
-                        }`}
-                      />
+              {/* Header */}
+              <div className={`px-7 pt-7 pb-5 border-b ${isLight ? "border-zinc-100" : "border-zinc-800/60"}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-[#fd9602]/10 border border-[#fd9602]/20 flex items-center justify-center">
+                      <ShieldCheck className="w-5 h-5 text-[#fd9602]" />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black uppercase tracking-wider block mb-1 text-zinc-450">Telefone Comercial</label>
-                      <input 
-                        type="text" 
-                        value={newPartner.telefone}
-                        onChange={(e) => setNewPartner(prev => ({ ...prev, telefone: e.target.value }))}
-                        placeholder="Ex: (11) 99999-9999"
-                        className={`w-full border rounded-xl px-4 py-3 text-xs outline-none focus:ring-2 focus:ring-[#fd9602]/25 font-bold ${
-                          isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-900/60 border-zinc-850 text-white"
-                        }`}
-                      />
+                      <h3 className={`text-base font-black uppercase tracking-wider ${isLight ? "text-zinc-900" : "text-white"}`}>
+                        Ferramentas & Integridade
+                      </h3>
+                      <p className={`text-[10px] font-bold mt-0.5 ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>
+                        Diagnóstico, Vercel e serviços vinculados
+                      </p>
                     </div>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-wider block mb-1 text-zinc-450">Endereço Completo *</label>
-                    <input 
-                      type="text" 
-                      required
-                      value={newPartner.endereco}
-                      onChange={(e) => setNewPartner(prev => ({ ...prev, endereco: e.target.value }))}
-                      placeholder="Rua, Número, Cidade - Estado"
-                      className={`w-full border rounded-xl px-4 py-3 text-xs outline-none focus:ring-2 focus:ring-[#fd9602]/25 font-bold ${
-                        isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-900/60 border-zinc-850 text-white"
-                      }`}
-                    />
-                  </div>
-                  <div className="flex gap-4 pt-4 border-t border-zinc-800/20">
-                    <button 
-                      type="button"
-                      onClick={() => setIsAddPartnerOpen(false)}
-                      className="flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-all cursor-pointer"
-                    >
-                      Cancelar
-                    </button>
-                    <button 
-                      type="submit"
-                      className="flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl bg-[#fd9602] hover:bg-amber-600 text-white font-bold transition-all cursor-pointer"
-                    >
-                      Salvar Salão
-                    </button>
-                  </div>
-                </form>
-              </>
-            ) : (
-              <>
-                <h3 className="text-xl font-black uppercase tracking-wider mb-1 text-left">Integrar Serviço Cloud</h3>
-                <p className="text-[10px] text-zinc-500 font-bold mb-6 text-left">Vincule novas plataformas como Firebase ou AWS para monitorar telemetrias de ponta a ponta.</p>
-
-                <form onSubmit={handleAddService} className="space-y-4 text-left">
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-wider block mb-1 text-zinc-450">Nome do Serviço Cloud *</label>
-                    <input 
-                      type="text" 
-                      required
-                      value={newService.name}
-                      onChange={(e) => setNewService(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Ex: Firebase Integration"
-                      className={`w-full border rounded-xl px-4 py-3 text-xs outline-none focus:ring-2 focus:ring-[#fd9602]/25 font-bold ${
-                        isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-900/60 border-zinc-850 text-white"
-                      }`}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[10px] font-black uppercase tracking-wider block mb-1 text-zinc-450">Tipo de Serviço</label>
-                      <select 
-                        value={newService.type}
-                        onChange={(e) => setNewService(prev => ({ ...prev, type: e.target.value }))}
-                        className={`w-full border rounded-xl px-4 py-3 text-xs outline-none focus:ring-2 focus:ring-[#fd9602]/25 font-bold cursor-pointer ${
-                          isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-900/60 border-zinc-850 text-white"
-                        }`}
-                      >
-                        <option value="analytics">Analytics & Eventos</option>
-                        <option value="push">Notificações Push</option>
-                        <option value="database">NoSQL / Firestore</option>
-                        <option value="auth">Autenticação</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-black uppercase tracking-wider block mb-1 text-zinc-450">Chave de API / URL</label>
-                      <input 
-                        type="text" 
-                        value={newService.apiKey}
-                        onChange={(e) => setNewService(prev => ({ ...prev, apiKey: e.target.value }))}
-                        placeholder="Ex: AIzaSyD982K..."
-                        className={`w-full border rounded-xl px-4 py-3 text-xs outline-none focus:ring-2 focus:ring-[#fd9602]/25 font-bold ${
-                          isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-900/60 border-zinc-850 text-white"
-                        }`}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-wider block mb-1 text-zinc-450">Funcionalidades do App Utilizadas *</label>
-                    <input 
-                      type="text" 
-                      required
-                      value={newService.features}
-                      onChange={(e) => setNewService(prev => ({ ...prev, features: e.target.value }))}
-                      placeholder="Ex: Analytics, Push Notifications, Firestore"
-                      className={`w-full border rounded-xl px-4 py-3 text-xs outline-none focus:ring-2 focus:ring-[#fd9602]/25 font-bold ${
-                        isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-900/60 border-zinc-850 text-white"
-                      }`}
-                    />
-                  </div>
-                  <div className="flex gap-4 pt-4 border-t border-zinc-800/20">
-                    <button 
-                      type="button"
-                      onClick={() => setIsAddPartnerOpen(false)}
-                      className="flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-all cursor-pointer"
-                    >
-                      Cancelar
-                    </button>
-                    <button 
-                      type="submit"
-                      className="flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl bg-[#fd9602] hover:bg-amber-600 text-white font-bold transition-all cursor-pointer"
-                    >
-                      Salvar Integração
-                    </button>
-                  </div>
-                </form>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 2: STATUS DO BACKEND */}
-      {isBackendStatusOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
-          <div className={`p-8 rounded-[2.5rem] border w-full max-w-lg shadow-2xl relative transition-all duration-300 ${
-            isLight ? "bg-white border-zinc-200 text-zinc-900" : "bg-zinc-950/95 border-zinc-900 text-white"
-          }`}>
-            <button 
-              onClick={() => setIsBackendStatusOpen(false)}
-              className="absolute top-6 right-6 w-8 h-8 rounded-full flex items-center justify-center border border-zinc-800 text-zinc-400 hover:text-white hover:border-white transition-colors cursor-pointer text-lg font-bold"
-            >
-              &times;
-            </button>
-            
-            <div className="flex items-center gap-3 mb-2 justify-start text-left">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#fd9602] animate-ping" />
-              <h3 className="text-xl font-black uppercase tracking-wider">Telemetria de APIs & Infra</h3>
-            </div>
-            <p className="text-[10px] text-zinc-500 font-bold mb-6 text-left">Status em tempo real das rotas REST, serviços de nuvem integrados e latências.</p>
-            
-            <div className="space-y-4 text-left max-h-[30rem] overflow-y-auto pr-1">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-zinc-900/40 border border-zinc-900">
-                  <span className="text-[9px] text-zinc-500 uppercase font-black block">Conexão Supabase</span>
-                  <span className="text-lg font-black text-emerald-400 mt-1 block">14 ms <span className="text-[8px] text-zinc-500 font-bold">(Excelente)</span></span>
+                  <motion.button
+                    whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
+                    onClick={() => setIsAddPartnerOpen(false)}
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-colors ${
+                      isLight ? "hover:bg-zinc-100 text-zinc-400" : "hover:bg-zinc-800 text-zinc-500"
+                    }`}
+                  >
+                    <X size={15} />
+                  </motion.button>
                 </div>
-                <div className="p-4 rounded-2xl bg-zinc-900/40 border border-zinc-900">
-                  <span className="text-[9px] text-zinc-500 uppercase font-black block">Servidor REST</span>
-                  <span className="text-lg font-black text-emerald-400 mt-1 block">99.98% <span className="text-[8px] text-zinc-500 font-bold">Uptime</span></span>
-                </div>
-              </div>
 
-              {/* Serviços de Nuvem Ativos */}
-              <div className="space-y-2">
-                <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">Serviços Cloud Monitorados</span>
-                <div className="space-y-2.5">
-                  {activeServices.map((s) => (
-                    <div key={s.id} className="p-4 rounded-2xl bg-zinc-900/30 border border-zinc-900/80 flex justify-between items-center text-xs">
-                      <div>
-                        <span className="font-black text-zinc-200 block">{s.name}</span>
-                        <span className="text-[8px] text-zinc-500 font-bold block mt-0.5">Recursos: {s.features.join(", ")}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] font-bold uppercase">
-                          Operacional
-                        </span>
-                        <span className="text-[8px] text-zinc-500 font-bold block mt-0.5">{s.latency}</span>
-                      </div>
-                    </div>
+                {/* Tabs */}
+                <div className={`flex gap-1 p-1 rounded-xl ${isLight ? "bg-zinc-100" : "bg-zinc-900"}`}>
+                  {([
+                    { id: "INTEGRITY", label: "Integridade", Icon: ShieldCheck },
+                    { id: "VERCEL",    label: "Vercel",       Icon: UploadCloud },
+                    { id: "SERVICE",   label: "Serviços",     Icon: Server },
+                  ] as const).map(({ id, label, Icon }) => (
+                    <button
+                      key={id}
+                      onClick={() => setModalTab(id)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        modalTab === id
+                          ? "bg-[#fd9602] text-zinc-950"
+                          : isLight ? "text-zinc-500 hover:text-zinc-700" : "text-zinc-500 hover:text-zinc-300"
+                      }`}
+                    >
+                      <Icon size={11} /> {label}
+                    </button>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">Monitor de Requisições Recentes</span>
-                <div className="p-4 rounded-2xl bg-zinc-950 border border-zinc-900 font-mono text-[9px] text-zinc-400 space-y-2.5">
-                  <div className="flex justify-between items-center">
-                    <span>GET /rest/v1/estabelecimentos</span>
-                    <span className="text-emerald-500 font-bold">200 OK (12ms)</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>GET /rest/v1/usuarios</span>
-                    <span className="text-emerald-500 font-bold">200 OK (16ms)</span>
-                  </div>
-                  {activeServices.some(s => s.id !== "supabase") && (
-                    <div className="flex justify-between items-center">
-                      <span>POST /firebase-analytics/logEvent</span>
-                      <span className="text-emerald-500 font-bold">200 OK (28ms)</span>
-                    </div>
+              {/* Body */}
+              <div className="max-h-[26rem] overflow-y-auto">
+                <AnimatePresence mode="wait">
+
+                  {/* TAB: INTEGRIDADE */}
+                  {modalTab === "INTEGRITY" && (
+                    <motion.div
+                      key="integrity"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 10 }}
+                      className="px-7 py-5 space-y-3"
+                    >
+                      {/* Summary bar */}
+                      <div className="grid grid-cols-3 gap-3 mb-2">
+                        {[
+                          { label: "Parceiros", value: tenants.length, color: "text-[#fd9602]" },
+                          { label: "No Mapa", value: tenants.filter(t => t.lat && t.lng).length, color: "text-emerald-400" },
+                          { label: "Sem Coords", value: tenants.filter(t => !t.lat || !t.lng).length, color: "text-amber-400" },
+                        ].map((s, i) => (
+                          <div key={i} className={`p-3 rounded-2xl border text-center ${isLight ? "bg-zinc-50 border-zinc-200" : "bg-zinc-900/60 border-zinc-800/60"}`}>
+                            <span className={`text-xl font-black block ${s.color}`}>{s.value}</span>
+                            <span className={`text-[9px] font-black uppercase tracking-wider ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>{s.label}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Progresso de geocodificação ou botão de trigger */}
+                      {isGeocoding ? (
+                        <div className={`p-3 rounded-2xl border ${isLight ? "bg-zinc-50 border-zinc-200" : "bg-zinc-900/40 border-zinc-800"}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-[9px] font-black uppercase tracking-wider text-[#fd9602]">
+                              Geocodificando via OpenStreetMap…
+                            </p>
+                            <p className="text-[9px] font-black text-zinc-500">{geocodeProgress.done}/{geocodeProgress.total}</p>
+                          </div>
+                          <div className={`h-1.5 rounded-full overflow-hidden ${isLight ? "bg-zinc-200" : "bg-zinc-800"}`}>
+                            <motion.div
+                              className="h-full bg-[#fd9602] rounded-full"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${geocodeProgress.total > 0 ? (geocodeProgress.done / geocodeProgress.total) * 100 : 0}%` }}
+                              transition={{ duration: 0.4 }}
+                            />
+                          </div>
+                        </div>
+                      ) : tenants.filter(t => !t.lat && !t.lng && t.endereco).length > 0 ? (
+                        <motion.button
+                          whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                          onClick={() => { geocodingStartedRef.current = false; geocodeAllTenants(); }}
+                          className="w-full py-2.5 rounded-xl bg-[#fd9602]/10 border border-[#fd9602]/20 text-[#fd9602] text-[9px] font-black uppercase tracking-widest hover:bg-[#fd9602]/20 transition-colors cursor-pointer"
+                        >
+                          Geocodificar {tenants.filter(t => !t.lat && !t.lng).length} endereço(s) restante(s)
+                        </motion.button>
+                      ) : null}
+
+                      <p className={`text-[9px] font-black uppercase tracking-wider ${isLight ? "text-zinc-400" : "text-zinc-500"}`}>
+                        Diagnóstico por estabelecimento
+                      </p>
+
+                      {tenants.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-8 gap-2">
+                          <Building2 className="w-8 h-8 text-zinc-600" />
+                          <p className={`text-xs font-bold ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>Nenhum parceiro carregado</p>
+                        </div>
+                      ) : (
+                        tenants.map((t) => {
+                          const geocoded = !!(t.lat && t.lng);
+                          const hasAddress = !!(t.endereco && t.endereco !== "");
+                          const checks = [
+                            { label: "Mapa", ok: geocoded, pending: !geocoded && hasAddress && isGeocoding },
+                            { label: "Tel.", ok: !!(t.telefone && t.telefone !== "—") },
+                            { label: "End.", ok: hasAddress },
+                          ];
+                          const healthy = geocoded && hasAddress && (t.telefone && t.telefone !== "—");
+                          return (
+                            <div
+                              key={t.id}
+                              className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-colors ${
+                                healthy
+                                  ? isLight ? "bg-emerald-50 border-emerald-200/60" : "bg-emerald-500/5 border-emerald-500/15"
+                                  : isLight ? "bg-zinc-50 border-zinc-200" : "bg-zinc-900/40 border-zinc-800/60"
+                              }`}
+                            >
+                              <div className="min-w-0">
+                                <p className={`text-xs font-black truncate ${isLight ? "text-zinc-900" : "text-white"}`}>{t.nome}</p>
+                                <p className={`text-[9px] font-bold mt-0.5 truncate ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>
+                                  {geocoded ? `${t.lat!.toFixed(4)}, ${t.lng!.toFixed(4)}` : t.endereco || t.proprietario_nome}
+                                </p>
+                              </div>
+                              <div className="flex gap-1 shrink-0">
+                                {checks.map((c) => (
+                                  <span
+                                    key={c.label}
+                                    className={`px-2 py-0.5 rounded-full text-[8px] font-black border ${
+                                      c.pending
+                                        ? "bg-amber-500/10 border-amber-500/20 text-amber-400 animate-pulse"
+                                        : c.ok
+                                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                                          : "bg-red-500/10 border-red-500/20 text-red-400"
+                                    }`}
+                                  >
+                                    {c.pending ? "…" : c.label}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </motion.div>
                   )}
-                  <div className="flex justify-between items-center">
-                    <span>POST /rest/v1/app_versions</span>
-                    <span className="text-emerald-500 font-bold">201 CREATED (42ms)</span>
-                  </div>
-                </div>
-              </div>
 
-              <button 
-                onClick={() => setIsBackendStatusOpen(false)}
-                className="w-full py-3 text-xs font-black uppercase tracking-wider rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-all cursor-pointer"
-              >
-                Fechar Telemetria
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                  {/* TAB: VERCEL */}
+                  {modalTab === "VERCEL" && (
+                    <motion.div
+                      key="vercel"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 10 }}
+                      className="px-7 py-5 space-y-4"
+                    >
+                      <p className={`text-[9px] font-black uppercase tracking-wider ${isLight ? "text-zinc-400" : "text-zinc-500"}`}>
+                        Projetos Vercel — Região gru1 (São Paulo)
+                      </p>
 
-      {/* MODAL 3: ANÁLISE DO BANCO */}
-      {isDbAnalysisOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
-          <div className={`p-8 rounded-[2.5rem] border w-full max-w-lg shadow-2xl relative transition-all duration-300 ${
-            isLight ? "bg-white border-zinc-200 text-zinc-900" : "bg-zinc-950/95 border-zinc-900 text-white"
-          }`}>
-            <button 
-              onClick={() => setIsDbAnalysisOpen(false)}
-              className="absolute top-6 right-6 w-8 h-8 rounded-full flex items-center justify-center border border-zinc-800 text-zinc-400 hover:text-white hover:border-white transition-colors cursor-pointer text-lg font-bold"
-            >
-              &times;
-            </button>
-            
-            <div className="flex items-center gap-3 mb-2 justify-start text-left">
-              <div className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-ping" />
-              <h3 className="text-xl font-black uppercase tracking-wider">Varredura PostgreSQL & Cloud</h3>
-            </div>
-            <p className="text-[10px] text-zinc-500 font-bold mb-6 text-left">Mapeamento estrutural de tabelas, chaves e integridade de esquemas de nuvem integrados.</p>
-            
-            <div className="space-y-4 text-left max-h-[30rem] overflow-y-auto pr-1">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-zinc-900/40 border border-zinc-900">
-                  <span className="text-[9px] text-zinc-500 uppercase font-black block">Conexões Ativas PG</span>
-                  <span className="text-lg font-black text-purple-400 mt-1 block">3 / 100 <span className="text-[8px] text-zinc-500 font-bold">(Saudável)</span></span>
-                </div>
-                <div className="p-4 rounded-2xl bg-zinc-900/40 border border-zinc-900">
-                  <span className="text-[9px] text-zinc-500 uppercase font-black block">Bancos Conectados</span>
-                  <span className="text-lg font-black text-purple-400 mt-1 block">{activeServices.length} ativos <span className="text-[8px] text-zinc-500 font-bold">Instâncias</span></span>
-                </div>
-              </div>
+                      {[
+                        {
+                          name: "App Cliente (PWA)",
+                          domain: "mobile-production-46b6.up.railway.app",
+                          vercelUrl: "https://vercel.com/matheus-lucindos-projects/mobile",
+                          dir: "mobile/",
+                          color: "text-[#fd9602]",
+                          ring: "ring-[#fd9602]/20",
+                          gradientBg: "from-[#fd9602]/8 to-transparent",
+                        },
+                        {
+                          name: "App Gerente (Web)",
+                          domain: "agendei-manager",
+                          vercelUrl: "https://vercel.com/matheus-lucindos-projects/agendei",
+                          dir: "dashboard/",
+                          color: "text-blue-400",
+                          ring: "ring-blue-500/20",
+                          gradientBg: "from-blue-500/8 to-transparent",
+                        },
+                        {
+                          name: "App Gerente (Mobile)",
+                          domain: "mobile-manager",
+                          vercelUrl: "https://vercel.com/matheus-lucindos-projects/mobile-manager",
+                          dir: "mobile/ (VITE_APP_TYPE=manager)",
+                          color: "text-emerald-400",
+                          ring: "ring-emerald-500/20",
+                          gradientBg: "from-emerald-500/8 to-transparent",
+                        },
+                        {
+                          name: "Portal SaaS (SuperAdmin)",
+                          domain: "saas",
+                          vercelUrl: "https://vercel.com/matheus-lucindos-projects/saas",
+                          dir: "saas/",
+                          color: "text-purple-400",
+                          ring: "ring-purple-500/20",
+                          gradientBg: "from-purple-500/8 to-transparent",
+                        },
+                      ].map((p) => (
+                        <div
+                          key={p.name}
+                          className={`relative p-4 rounded-2xl border overflow-hidden ring-1 ${p.ring} ${
+                            isLight ? "bg-white border-zinc-200" : "bg-zinc-900/50 border-zinc-800/60"
+                          }`}
+                        >
+                          <div className={`absolute inset-0 bg-gradient-to-br ${p.gradientBg} pointer-events-none`} />
+                          <div className="relative z-10 flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                                <span className={`text-[10px] font-black ${isLight ? "text-zinc-800" : "text-white"}`}>{p.name}</span>
+                              </div>
+                              <p className={`text-[9px] font-mono font-bold ${p.color}`}>{p.domain}</p>
+                              <p className={`text-[9px] font-bold mt-1 ${isLight ? "text-zinc-400" : "text-zinc-500"}`}>
+                                Diretório: <span className="font-mono">{p.dir}</span> · Região: gru1
+                              </p>
+                            </div>
+                            <a
+                              href={p.vercelUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`shrink-0 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border transition-colors ${
+                                isLight ? "bg-zinc-100 border-zinc-200 text-zinc-600 hover:bg-zinc-200" : "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700"
+                              }`}
+                            >
+                              Dashboard →
+                            </a>
+                          </div>
+                        </div>
+                      ))}
 
-              {/* Esquemas de Bancos Cloud Integrados */}
-              <div className="space-y-2">
-                <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">Esquemas & Bancos Integrados</span>
-                <div className="space-y-2">
-                  {activeServices.map((s) => (
-                    <div key={s.id} className="p-4 rounded-2xl bg-zinc-900/30 border border-zinc-900/80 flex justify-between items-center text-xs">
-                      <div>
-                        <span className="font-black text-zinc-200 block">{s.name}</span>
-                        <span className="text-[8px] text-zinc-500 font-bold block mt-0.5">Tipo: {s.type.toUpperCase()}</span>
+                      <div className={`p-4 rounded-2xl border ${isLight ? "bg-zinc-50 border-zinc-200" : "bg-zinc-900/40 border-zinc-800/60"}`}>
+                        <p className={`text-[9px] font-black uppercase tracking-wider mb-2 ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>Backend (Spring Boot)</p>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className={`text-xs font-black ${isLight ? "text-zinc-700" : "text-zinc-200"}`}>Render / Koyeb Free Tier</p>
+                            <p className={`text-[9px] font-bold mt-0.5 ${isLight ? "text-zinc-400" : "text-zinc-500"}`}>Cold start ~30s esperado · Java 21 + Spring Boot 4</p>
+                          </div>
+                          <span className="px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[8px] font-black uppercase">
+                            Free Tier
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-emerald-400 font-mono text-[9px] font-bold">100% Saudável</span>
+                    </motion.div>
+                  )}
+
+                  {/* TAB: SERVIÇOS */}
+                  {modalTab === "SERVICE" && (
+                    <motion.div
+                      key="service"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 10 }}
+                      className="px-7 py-5"
+                    >
+                      <p className={`text-xs font-black uppercase tracking-wider mb-1 ${isLight ? "text-zinc-900" : "text-white"}`}>
+                        Integrar Serviço Cloud
+                      </p>
+                      <p className={`text-[10px] font-bold mb-5 ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>
+                        Vincule Firebase, AWS ou outra plataforma para monitorar telemetria end-to-end.
+                      </p>
+
+                      <form onSubmit={handleAddService} className="space-y-4">
+                        <div>
+                          <label className={`text-[9px] font-black uppercase tracking-wider block mb-1.5 ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>
+                            Nome do Serviço *
+                          </label>
+                          <input
+                            type="text" required value={newService.name}
+                            onChange={(e) => setNewService(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Ex: Firebase Integration"
+                            className={`w-full border rounded-2xl px-4 py-3 text-xs outline-none focus:ring-2 focus:ring-[#fd9602]/25 font-bold transition-shadow ${
+                              isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-900/60 border-zinc-800 text-white"
+                            }`}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className={`text-[9px] font-black uppercase tracking-wider block mb-1.5 ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>
+                              Tipo
+                            </label>
+                            <select
+                              value={newService.type}
+                              onChange={(e) => setNewService(prev => ({ ...prev, type: e.target.value }))}
+                              className={`w-full border rounded-2xl px-4 py-3 text-xs outline-none focus:ring-2 focus:ring-[#fd9602]/25 font-bold cursor-pointer ${
+                                isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-900/60 border-zinc-800 text-white"
+                              }`}
+                            >
+                              <option value="analytics">Analytics & Eventos</option>
+                              <option value="push">Notificações Push</option>
+                              <option value="database">NoSQL / Firestore</option>
+                              <option value="auth">Autenticação</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className={`text-[9px] font-black uppercase tracking-wider block mb-1.5 ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>
+                              Chave de API
+                            </label>
+                            <input
+                              type="text" value={newService.apiKey}
+                              onChange={(e) => setNewService(prev => ({ ...prev, apiKey: e.target.value }))}
+                              placeholder="Ex: AIzaSyD982K..."
+                              className={`w-full border rounded-2xl px-4 py-3 text-xs outline-none focus:ring-2 focus:ring-[#fd9602]/25 font-bold ${
+                                isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-900/60 border-zinc-800 text-white"
+                              }`}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className={`text-[9px] font-black uppercase tracking-wider block mb-1.5 ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>
+                            Funcionalidades Ativas *
+                          </label>
+                          <input
+                            type="text" required value={newService.features}
+                            onChange={(e) => setNewService(prev => ({ ...prev, features: e.target.value }))}
+                            placeholder="Ex: Analytics, Push Notifications, Firestore"
+                            className={`w-full border rounded-2xl px-4 py-3 text-xs outline-none focus:ring-2 focus:ring-[#fd9602]/25 font-bold ${
+                              isLight ? "bg-zinc-50 border-zinc-200 text-zinc-900" : "bg-zinc-900/60 border-zinc-800 text-white"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                          <motion.button
+                            type="button" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                            onClick={() => setIsAddPartnerOpen(false)}
+                            className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-2xl border transition-colors cursor-pointer ${
+                              isLight ? "bg-zinc-100 border-zinc-200 text-zinc-600 hover:bg-zinc-200" : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                            }`}
+                          >
+                            Cancelar
+                          </motion.button>
+                          <motion.button
+                            type="submit" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                            className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-2xl bg-[#fd9602] hover:bg-amber-600 text-zinc-950 transition-colors cursor-pointer shadow-lg shadow-[#fd9602]/20"
+                          >
+                            Salvar Integração
+                          </motion.button>
+                        </div>
+                      </form>
+                    </motion.div>
+                  )}
+
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL 2: TELEMETRIA DE APIs — glassmorphism premium */}
+      <AnimatePresence>
+        {isBackendStatusOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
+            onClick={() => setIsBackendStatusOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ type: "spring", stiffness: 360, damping: 32 }}
+              onClick={(e) => e.stopPropagation()}
+              className={`relative w-full max-w-lg rounded-[2rem] border shadow-2xl overflow-hidden ${
+                isLight ? "bg-white/95 border-zinc-200/80 text-zinc-900" : "bg-zinc-950/97 border-zinc-800/80 text-white"
+              } backdrop-blur-2xl`}
+            >
+              {/* Top accent line */}
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#fd9602]/40 to-transparent" />
+              {/* Amber glow */}
+              <div className="absolute top-0 left-0 w-full h-40 bg-[radial-gradient(ellipse_at_top_left,rgba(253,150,2,0.08),transparent_60%)] pointer-events-none" />
+
+              {/* Header */}
+              <div className={`px-7 pt-7 pb-5 border-b ${isLight ? "border-zinc-100" : "border-zinc-800/60"}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-[#fd9602]/10 border border-[#fd9602]/20 flex items-center justify-center">
+                      <Activity className="w-5 h-5 text-[#fd9602]" />
+                    </div>
+                    <div>
+                      <h3 className={`text-base font-black uppercase tracking-wider ${isLight ? "text-zinc-900" : "text-white"}`}>
+                        Telemetria de APIs & Infra
+                      </h3>
+                      <p className={`text-[10px] font-bold mt-0.5 ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>
+                        Status em tempo real das rotas REST e serviços de nuvem
+                      </p>
+                    </div>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
+                    onClick={() => setIsBackendStatusOpen(false)}
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-colors ${
+                      isLight ? "hover:bg-zinc-100 text-zinc-400" : "hover:bg-zinc-800 text-zinc-500"
+                    }`}
+                  >
+                    <X size={15} />
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="px-7 py-5 space-y-4 max-h-[26rem] overflow-y-auto">
+                {/* Mini KPI grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: "Conexão Supabase", value: "14 ms", sub: "Excelente", icon: Database, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+                    { label: "Servidor REST", value: "99.98%", sub: "Uptime", icon: Server, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+                  ].map((m, i) => (
+                    <div key={i} className={`p-4 rounded-2xl border ring-1 ring-inset ring-white/5 ${isLight ? "bg-zinc-50 border-zinc-200" : "bg-zinc-900/60 border-zinc-800/60"}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <m.icon className={`w-3.5 h-3.5 ${m.color}`} />
+                        <span className={`text-[9px] font-black uppercase tracking-wider ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>{m.label}</span>
+                      </div>
+                      <span className={`text-xl font-black ${m.color}`}>{m.value}</span>
+                      <span className={`text-[9px] font-bold ml-1 ${isLight ? "text-zinc-400" : "text-zinc-500"}`}>{m.sub}</span>
                     </div>
                   ))}
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">Esquema das Tabelas Ativas</span>
-                <div className="p-4 rounded-2xl bg-zinc-950 border border-zinc-900 font-mono text-[9px] text-zinc-400 space-y-2.5">
-                  <div className="flex justify-between items-center">
-                    <span>public.estabelecimentos</span>
-                    <span className="text-emerald-500 font-bold">Ativa & Integra ({tenants.length} salões)</span>
+                {/* Services */}
+                <div>
+                  <p className={`text-[9px] font-black uppercase tracking-wider mb-2 ${isLight ? "text-zinc-400" : "text-zinc-500"}`}>
+                    Serviços Cloud Monitorados
+                  </p>
+                  <div className="space-y-2">
+                    {activeServices.map((s) => (
+                      <div key={s.id} className={`p-3.5 rounded-2xl border flex items-center justify-between ${
+                        isLight ? "bg-zinc-50/80 border-zinc-200" : "bg-zinc-900/40 border-zinc-800/60"
+                      }`}>
+                        <div>
+                          <span className={`text-xs font-black block ${isLight ? "text-zinc-800" : "text-zinc-200"}`}>{s.name}</span>
+                          <span className={`text-[9px] font-bold block mt-0.5 ${isLight ? "text-zinc-400" : "text-zinc-500"}`}>
+                            {s.features.join(", ")}
+                          </span>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] font-black uppercase">
+                            <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                            Operacional
+                          </span>
+                          <span className={`text-[9px] font-bold block mt-1 ${isLight ? "text-zinc-400" : "text-zinc-500"}`}>{s.latency}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span>public.usuarios</span>
-                    <span className="text-emerald-500 font-bold">Ativa & Integra ({logins.length} logins)</span>
-                  </div>
-                  <div className="flex justify-between items-center flex-wrap pt-2 border-t border-zinc-900">
-                    <span className="text-purple-400">Políticas RLS Supabase:</span>
-                    <span className="text-emerald-500 font-bold">Habilitadas</span>
+                </div>
+
+                {/* Terminal log */}
+                <div>
+                  <p className={`text-[9px] font-black uppercase tracking-wider mb-2 ${isLight ? "text-zinc-400" : "text-zinc-500"}`}>
+                    Requisições Recentes
+                  </p>
+                  <div className={`p-4 rounded-2xl border font-mono text-[9px] space-y-2 ${
+                    isLight ? "bg-zinc-100 border-zinc-200 text-zinc-500" : "bg-black/40 border-zinc-800 text-zinc-400"
+                  }`}>
+                    {[
+                      { method: "GET", path: "/rest/v1/estabelecimentos", status: "200 OK", ms: "12ms" },
+                      { method: "GET", path: "/rest/v1/usuarios", status: "200 OK", ms: "16ms" },
+                      { method: "POST", path: "/rest/v1/app_versions", status: "201 CREATED", ms: "42ms" },
+                    ].map((r, i) => (
+                      <div key={i} className="flex items-center justify-between gap-4">
+                        <span className="text-[#fd9602] font-black">{r.method}</span>
+                        <span className="flex-1 truncate">{r.path}</span>
+                        <span className="text-emerald-400 font-bold shrink-0">{r.status} ({r.ms})</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              <button 
-                onClick={() => setIsDbAnalysisOpen(false)}
-                className="w-full py-3 text-xs font-black uppercase tracking-wider rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-all cursor-pointer"
-              >
-                Fechar Varredura
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              {/* Footer */}
+              <div className={`px-7 py-5 border-t ${isLight ? "border-zinc-100" : "border-zinc-800/60"}`}>
+                <motion.button
+                  whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                  onClick={() => setIsBackendStatusOpen(false)}
+                  className={`w-full py-3 text-[10px] font-black uppercase tracking-widest rounded-2xl border transition-colors cursor-pointer ${
+                    isLight ? "bg-zinc-100 border-zinc-200 text-zinc-600 hover:bg-zinc-200" : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                  }`}
+                >
+                  Fechar Telemetria
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL 3: VARREDURA POSTGRESQL — glassmorphism premium */}
+      <AnimatePresence>
+        {isDbAnalysisOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
+            onClick={() => setIsDbAnalysisOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ type: "spring", stiffness: 360, damping: 32 }}
+              onClick={(e) => e.stopPropagation()}
+              className={`relative w-full max-w-lg rounded-[2rem] border shadow-2xl overflow-hidden ${
+                isLight ? "bg-white/95 border-zinc-200/80 text-zinc-900" : "bg-zinc-950/97 border-zinc-800/80 text-white"
+              } backdrop-blur-2xl`}
+            >
+              {/* Purple accent line */}
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
+              <div className="absolute top-0 left-0 w-full h-40 bg-[radial-gradient(ellipse_at_top_right,rgba(168,85,247,0.08),transparent_60%)] pointer-events-none" />
+
+              {/* Header */}
+              <div className={`px-7 pt-7 pb-5 border-b ${isLight ? "border-zinc-100" : "border-zinc-800/60"}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                      <Database className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                      <h3 className={`text-base font-black uppercase tracking-wider ${isLight ? "text-zinc-900" : "text-white"}`}>
+                        Varredura PostgreSQL & Cloud
+                      </h3>
+                      <p className={`text-[10px] font-bold mt-0.5 ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>
+                        Mapeamento estrutural de tabelas, chaves e integridade
+                      </p>
+                    </div>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
+                    onClick={() => setIsDbAnalysisOpen(false)}
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-colors ${
+                      isLight ? "hover:bg-zinc-100 text-zinc-400" : "hover:bg-zinc-800 text-zinc-500"
+                    }`}
+                  >
+                    <X size={15} />
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="px-7 py-5 space-y-4 max-h-[26rem] overflow-y-auto">
+                {/* Mini KPI grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: "Conexões Ativas PG", value: "3 / 100", sub: "Saudável" },
+                    { label: "Bancos Conectados", value: `${activeServices.length} ativo${activeServices.length !== 1 ? "s" : ""}`, sub: "Instâncias" },
+                  ].map((m, i) => (
+                    <div key={i} className={`p-4 rounded-2xl border ring-1 ring-inset ring-white/5 ${
+                      isLight ? "bg-zinc-50 border-zinc-200" : "bg-zinc-900/60 border-zinc-800/60"
+                    }`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Database className="w-3.5 h-3.5 text-purple-400" />
+                        <span className={`text-[9px] font-black uppercase tracking-wider ${isLight ? "text-zinc-500" : "text-zinc-400"}`}>{m.label}</span>
+                      </div>
+                      <span className="text-xl font-black text-purple-400">{m.value}</span>
+                      <span className={`text-[9px] font-bold ml-1 ${isLight ? "text-zinc-400" : "text-zinc-500"}`}>{m.sub}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Integrated schemas */}
+                <div>
+                  <p className={`text-[9px] font-black uppercase tracking-wider mb-2 ${isLight ? "text-zinc-400" : "text-zinc-500"}`}>
+                    Esquemas & Bancos Integrados
+                  </p>
+                  <div className="space-y-2">
+                    {activeServices.map((s) => (
+                      <div key={s.id} className={`p-3.5 rounded-2xl border flex items-center justify-between ${
+                        isLight ? "bg-zinc-50/80 border-zinc-200" : "bg-zinc-900/40 border-zinc-800/60"
+                      }`}>
+                        <div>
+                          <span className={`text-xs font-black block ${isLight ? "text-zinc-800" : "text-zinc-200"}`}>{s.name}</span>
+                          <span className={`text-[9px] font-bold block mt-0.5 ${isLight ? "text-zinc-400" : "text-zinc-500"}`}>
+                            Tipo: {s.type.toUpperCase()}
+                          </span>
+                        </div>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] font-black uppercase">
+                          <ShieldCheck size={9} />
+                          100% Saudável
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tables schema */}
+                <div>
+                  <p className={`text-[9px] font-black uppercase tracking-wider mb-2 ${isLight ? "text-zinc-400" : "text-zinc-500"}`}>
+                    Esquema das Tabelas Ativas
+                  </p>
+                  <div className={`p-4 rounded-2xl border font-mono text-[9px] space-y-2.5 ${
+                    isLight ? "bg-zinc-100 border-zinc-200 text-zinc-500" : "bg-black/40 border-zinc-800 text-zinc-400"
+                  }`}>
+                    {[
+                      { table: "public.estabelecimentos", status: `Ativa & Integra (${tenants.length} salões)`, color: "text-emerald-400" },
+                      { table: "public.usuarios", status: `Ativa & Integra (${logins.length} logins)`, color: "text-emerald-400" },
+                    ].map((r, i) => (
+                      <div key={i} className="flex items-center justify-between gap-4">
+                        <span className="truncate">{r.table}</span>
+                        <span className={`font-bold shrink-0 ${r.color}`}>{r.status}</span>
+                      </div>
+                    ))}
+                    <div className={`flex items-center justify-between pt-2 border-t ${isLight ? "border-zinc-300" : "border-zinc-800"}`}>
+                      <span className="text-purple-400">Políticas RLS Supabase:</span>
+                      <span className="text-emerald-400 font-bold">Habilitadas</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className={`px-7 py-5 border-t ${isLight ? "border-zinc-100" : "border-zinc-800/60"}`}>
+                <motion.button
+                  whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                  onClick={() => setIsDbAnalysisOpen(false)}
+                  className={`w-full py-3 text-[10px] font-black uppercase tracking-widest rounded-2xl border transition-colors cursor-pointer ${
+                    isLight ? "bg-zinc-100 border-zinc-200 text-zinc-600 hover:bg-zinc-200" : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                  }`}
+                >
+                  Fechar Varredura
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

@@ -208,13 +208,20 @@ RLS habilitado: clientes veem apenas seus próprios agendamentos. SuperAdmin sem
 
 ---
 
-## Workflow SDD Obrigatório
+## Workflow SDD Obrigatório (Spec Kit 5 Fases)
 
-1. **Antes de qualquer task**: verificar se existe spec em `spec/design/` ou `spec/architecture/`
-2. **Criar/atualizar** `spec/history/YYYY-MM-DD_titulo.md` com TODOs
-3. **Implementar** seguindo a spec exatamente
-4. **Marcar** `[x]` no history após completar
-5. **Commit semântico**: `feat:`, `fix:`, `style:`, `docs:`, `chore:`
+Você é um Engenheiro de Software Sênior operando sob a metodologia SDD. **NUNCA** comece a programar antes de validar as 5 fases do ciclo de vida da funcionalidade.
+
+1. 💡 **Fase 1: Ideação (`spec/1_ideation/`)**: Entenda o problema. **Ação:** Leia/crie um doc refinando a ideia. Sem código ainda.
+2. 📄 **Fase 2: Especificação (`spec/2_requirements/`)**: **Ação:** Escreva as regras de negócio, fluxos e casos de uso.
+3. 🗺️ **Fase 3: Planejamento (`spec/3_plans/`)**: **Ação:** Crie o plano técnico (arquitetura, endpoints, schemas).
+4. 📋 **Fase 4: Quebra em Tasks (`spec/4_tasks/`)**: **Ação:** Crie uma checklist granular em Markdown com `[ ]`.
+5. 🛠️ **Fase 5: Execução / Implementação**:
+   - **REGRA DE OURO:** Antes de modificar código, você **DEVE** ler o arquivo atual em `spec/4_tasks/`.
+   - Após cada passo concluído, marque com um `[x]`.
+   - Atualize `spec/history/YYYY-MM-DD.md` com um log do dia.
+
+Sempre consulte as skills em `.agents/skills/` ou aguarde o usuário guiar as fases (ex: `/speckit.tasks`).
 
 ---
 

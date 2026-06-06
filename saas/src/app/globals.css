@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* MapLibre GL CSS — importado globalmente para evitar CSS chunk error com dynamic import */
+@import "maplibre-gl/dist/maplibre-gl.css";
+
 @layer base {
   body {
     @apply transition-colors duration-300;
@@ -49,4 +52,42 @@
 
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #52525b;
+}
+
+/* Skeleton shimmer loader */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: calc(400px + 100%) 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #27272a 25%,
+    #3f3f46 50%,
+    #27272a 75%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+.light .skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #e4e4e7 25%,
+    #d4d4d8 50%,
+    #e4e4e7 75%
+  );
+  background-size: 400px 100%;
+}
+
+/* MapLibre GL override — remove logo e attributions para aparência premium */
+.maplibregl-ctrl-logo,
+.maplibregl-ctrl-attrib {
+  display: none !important;
+}
+
+.maplibregl-canvas-container {
+  border-radius: 2rem;
+  overflow: hidden;
 }

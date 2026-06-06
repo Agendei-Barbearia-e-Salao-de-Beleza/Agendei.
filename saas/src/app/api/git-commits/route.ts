@@ -1,50 +1,59 @@
-import { NextResponse } from "next/server";
-import { exec } from "child_process";
-import path from "path";
+import { NextRequest, NextResponse } from "next/server"
+import { exec } from "child_process"
+import { promisify } from "node:util"
+import path from "node:path"
 
-export async function GET() {
-  return new Promise((resolve) => {
-    // Caminho da pasta mobile
-    const mobilePath = path.resolve(process.cwd(), "../mobile");
-    
-    // Comando git para listar os commits mais recentes que afetaram a pasta mobile/
-    const command = `git log -n 5 --pretty=format:"%h|%s|%an|%ad" --date=short -- "${mobilePath}"`;
-    
-    exec(command, (error, stdout, stderr) => {
-      if (error || stderr) {
-        // Fallback elegante com commits simulados de alta fidelidade do Git
-        const fallbackCommits = [
-          {
-            hash: "a4f89d1",
-            message: "feat(auth): add google sign-in and biometrics verification",
-            author: "SuperAdmin Team",
-            date: "2026-05-22"
-          },
-          {
-            hash: "f7d921b",
-            message: "fix(home): resolve visual clipping in mobile appointments modal",
-            author: "Lead Mobile Developer",
-            date: "2026-05-20"
-          },
-          {
-            hash: "c2b5e9a",
-            message: "perf(telemetry): optimize background push updates notification latency",
-            author: "Backend DevOps Specialist",
-            date: "2026-05-18"
-          }
-        ];
-        return resolve(NextResponse.json({ commits: fallbackCommits }));
-      }
-      
-      const commits = stdout
-        .split("\n")
-        .filter(line => line.trim().length > 0)
-        .map(line => {
-          const [hash, message, author, date] = line.split("|");
-          return { hash: hash || "unknown", message: message || "Commit sem mensagem", author: author || "Autor", date: date || "Hoje" };
-        });
-        
-      resolve(NextResponse.json({ commits }));
-    });
-  });
+const execAsync = promisify(exec)
+
+// Raiz do repositório (um nível acima de saas/)
+const REPO_ROOT = path.resolve(process.cwd(), "..")
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const app = searchParams.get("app") as "mobile" | "manager" | null
+
+  if (!app || !["mobile", "manager"].includes(app)) {
+    return NextResponse.json(
+      { commits: [], error: 'Parâmetro "app" obrigatório: "mobile" ou "manager"' },
+      { status: 400 }
+    )
+  }
+
+  const gitCmd = `git -C "${REPO_ROOT}" log -n 15 --pretty=format:"%H|%s|%an|%aI" -- "${app}/"`
+
+  try {
+    const { stdout, stderr } = await execAsync(gitCmd, { timeout: 8000 })
+
+    if (stderr && !stdout) {
+      return NextResponse.json(
+        { commits: [], error: `Erro ao ler histórico git: ${stderr.trim()}` },
+        { status: 503 }
+      )
+    }
+
+    const commits = stdout
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        const [hash, message, author, date] = line.split("|")
+        return {
+          hash: hash.slice(0, 7),
+          fullHash: hash,
+          message: message || "",
+          author: author || "",
+          date: date || "",
+          app,
+          status: "PENDING" as const,
+        }
+      })
+
+    return NextResponse.json({ commits, error: null })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Erro desconhecido"
+    // git não está disponível neste ambiente (ex: Vercel serverless)
+    return NextResponse.json(
+      { commits: [], error: `Git não disponível neste ambiente: ${message}` },
+      { status: 503 }
+    )
+  }
 }
